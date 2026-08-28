@@ -1,9 +1,13 @@
-import { Redirect } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { LogoMark } from "../components/Logo";
+import { PrimaryButton } from "../components/ui";
 import { useAuth } from "../lib/AuthProvider";
 import { hasCompletedFirstRun } from "../lib/firstRun";
-import { colors } from "../lib/theme";
+import { reloadApp } from "../lib/reload";
+import { colors, spacing, type } from "../lib/theme";
+import { useStuckWatchdog } from "../lib/useStuckWatchdog";
 
 /**
  * The entry route. Decides, once, where a visitor actually belongs:
@@ -24,9 +28,17 @@ import { colors } from "../lib/theme";
  * A connection error is shown here rather than leaving the app spinning.
  */
 export default function Index() {
+  const router = useRouter();
   const { session, loading, familyLoading, child, profile, connectionError } = useAuth();
   const [firstRunChecked, setFirstRunChecked] = useState(false);
   const [firstRunComplete, setFirstRunComplete] = useState(false);
+  const isLoadingGate = loading || (session && familyLoading) || (child && !firstRunChecked);
+  // The very first thing this app does is `supabase.auth.getSession()` —
+  // if a stored session's refresh token hangs the client instead of
+  // resolving or rejecting (see lib/useStuckWatchdog.ts), `loading` never
+  // flips false and every visitor lands on a spinner forever, before
+  // they've even reached onboarding.
+  const stuck = useStuckWatchdog(Boolean(isLoadingGate));
 
   useEffect(() => {
     let alive = true;
@@ -53,10 +65,22 @@ export default function Index() {
     };
   }, [child]);
 
-  if (loading || (session && familyLoading) || (child && !firstRunChecked)) {
+  if (isLoadingGate) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.cream }}>
-        <ActivityIndicator color={colors.warmTaupe} />
+      <View style={styles.gate}>
+        {stuck ? (
+          <>
+            <LogoMark size={40} />
+            <Text style={styles.stuckText}>
+              This is taking longer than it should. Reloading should fix it.
+            </Text>
+            <View style={styles.stuckReload}>
+              <PrimaryButton tone="taupe" title="Reload" onPress={() => reloadApp(router)} />
+            </View>
+          </>
+        ) : (
+          <ActivityIndicator color={colors.warmTaupe} />
+        )}
       </View>
     );
   }
@@ -72,3 +96,24 @@ export default function Index() {
 
   return <Redirect href="/home" />;
 }
+
+const styles = StyleSheet.create({
+  gate: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.cream,
+    paddingHorizontal: spacing.xl,
+    gap: spacing.md,
+  },
+  stuckText: {
+    ...type.body,
+    color: colors.textMuted,
+    textAlign: "center",
+  },
+  stuckReload: {
+    width: "100%",
+    maxWidth: 280,
+    marginTop: spacing.sm,
+  },
+});
