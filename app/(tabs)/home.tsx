@@ -16,6 +16,7 @@ import {
 import Svg, { Path } from "react-native-svg";
 import { ActivityCollapsedRow, ActivityDoneRow, ActivityExpandedCard, EndOfDay, FeaturedActivityCard } from "../../components/ActivityCard";
 import { GuidedTourDialog } from "../../components/GuidedTourDialog";
+import { LogoMark } from "../../components/Logo";
 import { PrimaryButton } from "../../components/ui";
 import { useAuth, type Child, type Profile } from "../../lib/AuthProvider";
 import { computeAge, developmentalAgeMonths, stageLabel } from "../../lib/childAge";
@@ -43,7 +44,9 @@ import {
   type CareArea,
   type CareTopic,
 } from "../../lib/parentCare";
+import { reloadApp } from "../../lib/reload";
 import { useGuidedTourStep } from "../../lib/useGuidedTourStep";
+import { useStuckWatchdog } from "../../lib/useStuckWatchdog";
 import { useTodaysPlan } from "../../lib/useTodaysPlan";
 import { colors, radius, spacing, type } from "../../lib/theme";
 
@@ -108,6 +111,10 @@ export default function Home() {
   // child, so more than one child's plan can be on screen (swipeable) at
   // once instead of just the single active child's.
   const { plan, loading, error } = useTodaysPlan(child?.id ?? null);
+  // Covers both this hook's own load() and `child` itself never arriving
+  // — a session left wedged after a desynced tab (see AuthProvider's
+  // fetchFamily) can leave either one hanging with no error to show.
+  const stuck = useStuckWatchdog(!child || (loading && !plan));
 
   const entrance = useRef(new Animated.Value(0)).current;
 
@@ -217,8 +224,21 @@ export default function Home() {
   if (!child || (loading && !plan)) {
     return (
       <View style={styles.screen}>
-        <View style={styles.inner}>
-          <Text style={styles.loading}>Setting up your plan…</Text>
+        <View style={[styles.inner, styles.loadingInner]}>
+          {/* Every other wait in the app — making.tsx, welcome.tsx — leads
+              with this mark. This screen was the one place a parent saw
+              plain text instead, right after finishing onboarding. */}
+          <LogoMark size={40} />
+          <Text style={styles.loading}>
+            {stuck
+              ? "This is taking longer than it should. Reloading should fix it."
+              : "Setting up your plan…"}
+          </Text>
+          {stuck && (
+            <View style={styles.stuckReload}>
+              <PrimaryButton tone="taupe" title="Reload" onPress={() => reloadApp(router)} />
+            </View>
+          )}
         </View>
       </View>
     );
@@ -1013,10 +1033,21 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
   },
+  loadingInner: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.md,
+  },
   loading: {
     ...type.body,
     color: colors.textMuted,
-    paddingTop: spacing.lg,
+    textAlign: "center",
+  },
+  stuckReload: {
+    width: "100%",
+    maxWidth: 280,
+    marginTop: spacing.sm,
   },
 
   // Header — stepped down so the activity title is the largest text here.

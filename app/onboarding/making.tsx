@@ -9,7 +9,14 @@ import * as family from "../../lib/db/family";
 import * as plans from "../../lib/db/plans";
 import { ensureSession } from "../../lib/db/session";
 import { useOnboarding } from "../../lib/OnboardingProvider";
+import { reloadApp } from "../../lib/reload";
 import { colors, fonts, radius, spacing, typeScale } from "../../lib/theme";
+import { useStuckWatchdog } from "../../lib/useStuckWatchdog";
+
+// How long the save is allowed to run silently before this screen assumes
+// it's wedged (see useStuckWatchdog) rather than just slow. Comfortably
+// above NAVIGATE_AT so a normal save never trips it.
+const STUCK_AFTER = 10000;
 
 // Calm, human facts — never fake-technical. Rotate underneath a real
 // progress fill so the wait reads as "getting ready", not "processing".
@@ -48,8 +55,14 @@ export default function Making() {
    */
   const [saveError, setSaveError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  const [navigated, setNavigated] = useState(false);
   const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startedAtRef = useRef(Date.now());
+  // True for as long as we're waiting on a save with nothing to show for
+  // it yet — flips `stuck` on if that goes on too long. A session left
+  // wedged from a desynced tab (see lib/useStuckWatchdog.ts) hangs here
+  // silently: no error, no navigation, just this screen forever.
+  const stuck = useStuckWatchdog(!saveError && !navigated, STUCK_AFTER);
 
   const barProgress = useRef(new Animated.Value(0)).current;
   const entrance = useRef(new Animated.Value(0)).current;
@@ -206,10 +219,10 @@ export default function Making() {
 
       // Hold the "Ready." beat if the save finished early.
       const elapsed = Date.now() - startedAtRef.current;
-      navTimerRef.current = setTimeout(
-        () => router.replace("/home?guidedTour=1&step=0&next=milestones"),
-        Math.max(0, NAVIGATE_AT - elapsed)
-      );
+      navTimerRef.current = setTimeout(() => {
+        setNavigated(true);
+        router.replace("/home?guidedTour=1&step=0&next=milestones");
+      }, Math.max(0, NAVIGATE_AT - elapsed));
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Something went wrong.");
     }
@@ -248,6 +261,11 @@ export default function Making() {
               We couldn&rsquo;t finish setting up your family. Nothing is lost, your
               answers are still here.
             </Text>
+          ) : stuck ? (
+            <Text style={styles.errorText}>
+              This is taking longer than it should. Your answers are saved
+              — reloading should get you straight in.
+            </Text>
           ) : !ready ? (
             <Animated.Text
               style={[
@@ -273,6 +291,15 @@ export default function Making() {
             {/* The underlying cause, kept small. Useful while this is in
                 testing; the sentence above is what actually matters. */}
             <Text style={styles.errorDetail}>{saveError}</Text>
+          </View>
+        )}
+
+        {stuck && !saveError && (
+          <View style={styles.retryWrap}>
+            {/* Not "Try again": a wedged session (the usual cause here)
+                hangs the same way on a retry. A reload is what actually
+                clears it — see lib/reload.ts. */}
+            <PrimaryButton tone="taupe" title="Reload" onPress={() => reloadApp(router)} />
           </View>
         )}
       </Animated.View>
