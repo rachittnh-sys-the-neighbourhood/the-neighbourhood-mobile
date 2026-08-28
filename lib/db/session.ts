@@ -172,10 +172,32 @@ export async function signInWithApple(): Promise<void> {
  * point the tokens Supabase attached to the redirect URL become this
  * device's session.
  *
+ * Web is a separate path (see below): there is no system browser tab to
+ * hand off to, and `WebBrowser`'s web shim opens Google in a popup via
+ * `window.open()`, which mobile browsers — and plenty of desktop ones —
+ * block unless it happens synchronously inside the click that triggered
+ * it. Awaiting `signInWithOAuth` first, as this function always did,
+ * guarantees it never does. A full-page redirect can't be blocked because
+ * it isn't a new window at all.
+ *
  * Resolves silently if the parent backs out of the browser sheet, same as
  * the Apple path above.
  */
 export async function signInWithGoogle(): Promise<void> {
+  if (Platform.OS === "web") {
+    // Supabase attaches the session to this URL's hash fragment on
+    // return; detectSessionInUrl (web only — see lib/supabase.ts) reads
+    // it back out once the page reloads here, and the app's normal
+    // session-driven routing (app/index.tsx) takes it from there.
+    const redirectTo = window.location.origin + "/";
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo, skipBrowserRedirect: false },
+    });
+    if (error) throw new DbError("session.signInWithGoogle", error);
+    return; // the page is navigating away; there is no "after" on web
+  }
+
   const redirectTo = Linking.createURL("auth-callback");
 
   const { data, error } = await supabase.auth.signInWithOAuth({
