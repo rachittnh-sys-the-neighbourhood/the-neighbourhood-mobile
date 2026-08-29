@@ -4,6 +4,7 @@ import Svg, { Path } from "react-native-svg";
 import { ActivityVideo } from "./ActivityVideo";
 import { kitItemsFor } from "../lib/devKit";
 import { DOMAIN_LABEL, type Activity, type Domain } from "../lib/db/types";
+import { storyForActivity } from "../lib/storiesLibrary";
 import { colors, radius, spacing, type } from "../lib/theme";
 
 /**
@@ -222,6 +223,7 @@ export function ActivityExpandedCard({
   // Matched on the activity's own band rather than the child's, so a
   // swapped-in activity for an adjacent stage still suggests the right thing.
   const kitItem = kitItemsFor(activity.materials, activity.age_band)[0];
+  const story = storyForActivity(activity.id);
   const steps = (activity.instructions ?? "")
     .split(/\r?\n/)
     .map((line) => line.replace(/^\s*\d+[.)]\s*/, "").trim())
@@ -282,6 +284,25 @@ export function ActivityExpandedCard({
           </Pressable>
         )}
       </View>
+
+      {/* One specific story, not the whole library — see
+          lib/storiesLibrary.ts storyForActivity. Only the handful of
+          activities that are genuinely "read a story with your child"
+          carry a link here. */}
+      {story && (
+        <Pressable
+          onPress={() => router.push(`/child/story/${story.id}`)}
+          style={styles.storyLinkBlock}
+          accessibilityRole="button"
+          accessibilityLabel={`Read the story: ${story.title}`}
+        >
+          <View style={styles.storyLinkCopy}>
+            <Text style={styles.blockLabel}>STORY TO TRY</Text>
+            <Text style={styles.storyLinkTitle}>{story.title}</Text>
+          </View>
+          <ChevronRight />
+        </Pressable>
+      )}
 
       <View style={styles.actionRow}>
         {isDone ? (
@@ -556,6 +577,22 @@ const styles = StyleSheet.create({
     ...type.meta,
     color: colors.warmTaupe,
     marginTop: spacing.sm,
+  },
+  storyLinkBlock: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  storyLinkCopy: { flex: 1 },
+  storyLinkTitle: {
+    ...type.label,
+    color: colors.charcoal,
+    marginTop: 2,
   },
   activityVideo: {
     width: "100%",

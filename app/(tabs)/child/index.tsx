@@ -46,6 +46,7 @@ const ICONS: Record<ChildSection["slug"], FeatureIconName> = {
   kit: "kit",
   reports: "reports",
   guide: "guide",
+  stories: "story",
 };
 
 // The main grid is everything not filed under Library — see
