@@ -6,7 +6,9 @@ import { useAuth } from "../../../lib/AuthProvider";
 import { computeAge } from "../../../lib/childAge";
 import * as family from "../../../lib/db/family";
 import {
+  FATHER_ACTIVITY_CATEGORY_LABEL,
   MOTHER_ACTIVITY_CATEGORY_LABEL,
+  type FatherActivity,
   type MotherActivity,
 } from "../../../lib/db/types";
 import { usePalette } from "../../../lib/ModeProvider";
@@ -21,6 +23,7 @@ import {
 } from "../../../lib/parentCare";
 import { isRecoveryRelevant } from "../../../lib/recoveryRelevance";
 import { fonts, radius, spacing, typeScale } from "../../../lib/theme";
+import { useTodaysFatherPlan } from "../../../lib/useTodaysFatherPlan";
 import { useTodaysMotherPlan } from "../../../lib/useTodaysMotherPlan";
 
 const BIRTH_OPTIONS: { value: DeliveryType; label: string }[] = [
@@ -34,6 +37,13 @@ const TIME_OF_DAY_LABEL: Record<MotherActivity["time_of_day"], string> = {
   morning: "Morning",
   evening: "Evening",
   during_nap: "During a nap",
+};
+
+const FATHER_TIME_OF_DAY_LABEL: Record<FatherActivity["time_of_day"], string> = {
+  anytime: "Anytime",
+  morning: "Morning",
+  evening: "Evening",
+  night: "Night",
 };
 
 /**
@@ -71,10 +81,16 @@ export default function ParentToday() {
   );
   const recoveryFramingApplies = isRecoveryRelevant(ageMonths);
   const showsRecovery = recoveryFramingApplies && profile.role !== "father";
+  const showsFatherSupport = recoveryFramingApplies && profile.role === "father";
 
   // Never answered at all — distinct from an explicit "prefer_not_to_say",
-  // which is a real answer and shouldn't be asked again every visit.
-  const needsBirthConfirmation = showsRecovery && authProfile?.birth_method == null;
+  // which is a real answer and shouldn't be asked again every visit. Fathers
+  // are never asked their partner's birth method during onboarding (see
+  // lib/OnboardingProvider.tsx asksBirthingQuestions), so this is the first
+  // time a father sees this question — same `profiles.birth_method` field,
+  // reused to mean "his partner's delivery type" rather than his own.
+  const needsBirthConfirmation =
+    (showsRecovery || showsFatherSupport) && authProfile?.birth_method == null;
 
   const [savingBirth, setSavingBirth] = useState(false);
   const handleConfirmBirth = async (value: DeliveryType) => {
@@ -92,6 +108,15 @@ export default function ParentToday() {
   const motherPlanProfileId = showsRecovery && !needsBirthConfirmation ? session?.user?.id ?? null : null;
   const { plan: motherPlan, loading: motherPlanLoading, swapping, swap: swapMotherActivity } =
     useTodaysMotherPlan(motherPlanProfileId);
+
+  const fatherPlanProfileId =
+    showsFatherSupport && !needsBirthConfirmation ? session?.user?.id ?? null : null;
+  const {
+    plan: fatherPlan,
+    loading: fatherPlanLoading,
+    swapping: fatherSwapping,
+    swap: swapFatherActivity,
+  } = useTodaysFatherPlan(fatherPlanProfileId);
 
   const firstName = parentName?.trim().split(" ")[0];
 
@@ -260,6 +285,69 @@ export default function ParentToday() {
                 >
                   <Text style={[styles.swapLabel, { color: p.primary }]}>
                     {swapping === activity.category ? "Swapping…" : "Try something else"}
+                  </Text>
+                </Pressable>
+              </Card>
+            ))
+          )}
+        </View>
+      )}
+
+      {/* A father's own support set — parallel to the mother's Recovery
+          block above, but scoped to what he actually does: supporting her,
+          bonding with the baby, the relationship, his own wellbeing,
+          becoming a father, and the practical load. */}
+      {showsFatherSupport && (
+        <View style={styles.block}>
+          <SectionLabel>For you, this month</SectionLabel>
+
+          {needsBirthConfirmation ? (
+            <Card style={[styles.actionCard, styles.birthPromptCard]}>
+              <Text style={[styles.sectionTitle, { color: p.text }]}>
+                How did your partner give birth?
+              </Text>
+              <Text style={[styles.sectionBody, { color: p.textMuted }]}>
+                So today's suggestions actually fit where you both are.
+              </Text>
+              <View style={styles.birthOptionRow}>
+                {BIRTH_OPTIONS.map((option) => (
+                  <Pressable
+                    key={option.value}
+                    disabled={savingBirth}
+                    onPress={() => handleConfirmBirth(option.value)}
+                    style={[styles.birthOption, { borderColor: p.border }]}
+                  >
+                    <Text style={[styles.birthOptionLabel, { color: p.text }]}>
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              {savingBirth && <ActivityIndicator style={{ marginTop: spacing.sm }} />}
+            </Card>
+          ) : fatherPlanLoading ? (
+            <ActivityIndicator style={{ marginTop: spacing.lg }} />
+          ) : (
+            fatherPlan?.activities.map((activity) => (
+              <Card key={activity.id} style={[styles.actionCard, styles.recoveryActivityCard]}>
+                <Text style={[styles.recoveryActivityCategory, { color: p.primary }]}>
+                  {FATHER_ACTIVITY_CATEGORY_LABEL[activity.category].toUpperCase()}
+                </Text>
+                <Text style={[styles.sectionTitle, { color: p.text }]}>{activity.title}</Text>
+                <Text style={[styles.sectionBody, { color: p.textMuted }]}>
+                  {activity.description}
+                </Text>
+                <Text style={[styles.recoveryActivityMeta, { color: p.textMuted }]}>
+                  {activity.duration_label} · {FATHER_TIME_OF_DAY_LABEL[activity.time_of_day]}
+                  {activity.with_baby === "yes" ? " · With baby" : ""}
+                </Text>
+                <Pressable
+                  disabled={fatherSwapping === activity.category}
+                  onPress={() => swapFatherActivity(activity.category)}
+                  style={styles.swapButton}
+                >
+                  <Text style={[styles.swapLabel, { color: p.primary }]}>
+                    {fatherSwapping === activity.category ? "Swapping…" : "Try something else"}
                   </Text>
                 </Pressable>
               </Card>

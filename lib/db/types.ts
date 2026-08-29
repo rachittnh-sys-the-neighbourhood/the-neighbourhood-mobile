@@ -373,6 +373,83 @@ export type MotherDailyPlan = {
   swaps: Partial<Record<MotherActivityCategory, number>>;
 };
 
+// --- Father postpartum support ----------------------------------------
+
+/**
+ * The father's own daily support set — mirrors MotherActivity/MotherDailyPlan
+ * above, but scoped to what a father actually does: supporting her recovery,
+ * bonding with the baby, the couple relationship, his own wellbeing,
+ * becoming a father, and the practical/mental load. Fathers are never asked
+ * their own birth method during onboarding (see lib/OnboardingProvider.tsx
+ * asksBirthingQuestions) — `applies_to` here reads `profiles.birth_method`
+ * as the partner's delivery type, asked for the first time in the You
+ * section itself when a father reaches this content.
+ */
+export const FATHER_ACTIVITY_CATEGORIES = [
+  "supporting_her_recovery",
+  "bonding_with_baby",
+  "couple_relationship",
+  "your_own_wellbeing",
+  "becoming_a_father",
+  "practical_load",
+] as const;
+export type FatherActivityCategory = (typeof FATHER_ACTIVITY_CATEGORIES)[number];
+
+export const FATHER_ACTIVITY_CATEGORY_LABEL: Record<FatherActivityCategory, string> = {
+  supporting_her_recovery: "Supporting her recovery",
+  bonding_with_baby: "Bonding with baby",
+  couple_relationship: "Couple relationship",
+  your_own_wellbeing: "Your own wellbeing",
+  becoming_a_father: "Becoming a father",
+  practical_load: "Practical load",
+};
+
+/** "all" = every father regardless of his partner's birth method. */
+export type FatherActivityRelevance = "all" | "vaginal" | "caesarean";
+export type FatherActivityTimeOfDay = "anytime" | "morning" | "evening" | "night";
+export type FatherActivityEffort = "gentle" | "moderate";
+export type FatherActivityWithBaby = "yes" | "no" | "optional";
+
+export type FatherActivity = {
+  id: string;
+  category: FatherActivityCategory;
+  month_postpartum: number;
+  applies_to: FatherActivityRelevance;
+  title: string;
+  description: string;
+  /** Null for "Ongoing" activities — prefer duration_label for display. */
+  duration_minutes: number | null;
+  duration_label: string;
+  time_of_day: FatherActivityTimeOfDay;
+  with_baby: FatherActivityWithBaby;
+  effort_level: FatherActivityEffort;
+  /** What to do next, once this one is established. */
+  next_step: string | null;
+};
+
+export type FatherDailyPlanRow = {
+  id: string;
+  profile_id: string;
+  plan_date: string; // family-local date
+  supporting_her_recovery_activity_id: string | null;
+  bonding_with_baby_activity_id: string | null;
+  couple_relationship_activity_id: string | null;
+  your_own_wellbeing_activity_id: string | null;
+  becoming_a_father_activity_id: string | null;
+  practical_load_activity_id: string | null;
+  swaps: Partial<Record<FatherActivityCategory, number>>;
+};
+
+/** A father plan with its activities resolved — what screens actually render. */
+export type FatherDailyPlan = {
+  id: string;
+  planDate: string;
+  /** Always 6, in FATHER_ACTIVITY_CATEGORIES order, nulls dropped — some
+   *  months have sparser content than others, so fewer can render. */
+  activities: FatherActivity[];
+  swaps: Partial<Record<FatherActivityCategory, number>>;
+};
+
 export type CopilotConversation = {
   id: string;
   child_id: string;
