@@ -20,7 +20,7 @@
  */
 export type ChildSection = {
   /** Route segment under app/(tabs)/child/ */
-  slug: "milestones" | "guide" | "kit" | "vaccinations" | "meals" | "reports";
+  slug: "milestones" | "guide" | "kit" | "vaccinations" | "meals" | "reports" | "stories";
   title: string;
   /** One short line, shown on the card. */
   description: string;
@@ -64,6 +64,12 @@ export const CHILD_SECTIONS: ChildSection[] = [
     slug: "guide",
     title: "The Guide",
     description: "Courses and live workshops, expert-backed.",
+    group: "library",
+  },
+  {
+    slug: "stories",
+    title: "Stories",
+    description: "Read-aloud stories for the first three years.",
     group: "library",
   },
 ];

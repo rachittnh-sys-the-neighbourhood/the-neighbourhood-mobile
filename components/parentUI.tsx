@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { usePalette } from "../lib/ModeProvider";
 import { fonts, radius, spacing, typeScale } from "../lib/theme";
@@ -42,7 +42,7 @@ export function Card({
 }: {
   children: React.ReactNode;
   onPress?: () => void;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   padded?: boolean;
 }) {
   const p = usePalette();
