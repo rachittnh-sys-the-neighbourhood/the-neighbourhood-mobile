@@ -1,9 +1,14 @@
 import { useRouter } from "expo-router";
-import { useMemo } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Card, Chevron, PageHeading, SectionLabel } from "../../../components/parentUI";
 import { useAuth } from "../../../lib/AuthProvider";
 import { computeAge } from "../../../lib/childAge";
+import * as family from "../../../lib/db/family";
+import {
+  MOTHER_ACTIVITY_CATEGORY_LABEL,
+  type MotherActivity,
+} from "../../../lib/db/types";
 import { usePalette } from "../../../lib/ModeProvider";
 import {
   STAGE_LABEL,
@@ -12,9 +17,24 @@ import {
   elapsedPhrase,
   mealsFor,
   topicBySlug,
+  type DeliveryType,
 } from "../../../lib/parentCare";
 import { isRecoveryRelevant } from "../../../lib/recoveryRelevance";
 import { fonts, radius, spacing, typeScale } from "../../../lib/theme";
+import { useTodaysMotherPlan } from "../../../lib/useTodaysMotherPlan";
+
+const BIRTH_OPTIONS: { value: DeliveryType; label: string }[] = [
+  { value: "vaginal", label: "Vaginal birth" },
+  { value: "caesarean", label: "Caesarean" },
+  { value: "prefer_not_to_say", label: "Rather not say" },
+];
+
+const TIME_OF_DAY_LABEL: Record<MotherActivity["time_of_day"], string> = {
+  anytime: "Anytime",
+  morning: "Morning",
+  evening: "Evening",
+  during_nap: "During a nap",
+};
 
 /**
  * The parent's own daily companion — reached from the "Today" card on
@@ -42,7 +62,7 @@ function greeting(hour: number) {
 export default function ParentToday() {
   const router = useRouter();
   const p = usePalette();
-  const { parentName, child, profile: authProfile } = useAuth();
+  const { session, parentName, child, profile: authProfile, refreshFamily } = useAuth();
 
   const ageMonths = child ? computeAge(child.date_of_birth)?.totalMonths ?? 0 : 0;
   const profile = useMemo(
@@ -50,6 +70,28 @@ export default function ParentToday() {
     [ageMonths, authProfile],
   );
   const recoveryFramingApplies = isRecoveryRelevant(ageMonths);
+  const showsRecovery = recoveryFramingApplies && profile.role !== "father";
+
+  // Never answered at all — distinct from an explicit "prefer_not_to_say",
+  // which is a real answer and shouldn't be asked again every visit.
+  const needsBirthConfirmation = showsRecovery && authProfile?.birth_method == null;
+
+  const [savingBirth, setSavingBirth] = useState(false);
+  const handleConfirmBirth = async (value: DeliveryType) => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    setSavingBirth(true);
+    try {
+      await family.updateProfile(userId, { birth_method: value });
+      await refreshFamily();
+    } finally {
+      setSavingBirth(false);
+    }
+  };
+
+  const motherPlanProfileId = showsRecovery && !needsBirthConfirmation ? session?.user?.id ?? null : null;
+  const { plan: motherPlan, loading: motherPlanLoading, swapping, swap: swapMotherActivity } =
+    useTodaysMotherPlan(motherPlanProfileId);
 
   const firstName = parentName?.trim().split(" ")[0];
 
@@ -154,9 +196,9 @@ export default function ParentToday() {
       </View>
 
       {/* A father's relevant support lives in "For Dads" instead — this
-          card is specifically about the birthing parent's own body, so it
-          never shows for him, the same rule Care and Home already apply. */}
-      {recoveryFramingApplies && profile.role !== "father" && (
+          section is specifically about the birthing parent's own body, so
+          it never shows for him, the same rule Care and Home already apply. */}
+      {showsRecovery && (
         <View style={styles.block}>
           <SectionLabel>Recovery</SectionLabel>
           <Card onPress={() => router.push("/you/care")} style={styles.recoveryCard}>
@@ -165,10 +207,64 @@ export default function ParentToday() {
             </Text>
             <Text style={[styles.recoveryTitle, { color: p.text }]}>{recoveryLine}</Text>
             <View style={styles.learnRow}>
-              <Text style={[styles.learnLink, { color: p.primary }]}>Learn more</Text>
+              <Text style={[styles.learnLink, { color: p.primary }]}>Read the full guide</Text>
               <Chevron />
             </View>
           </Card>
+
+          {needsBirthConfirmation ? (
+            <Card style={[styles.actionCard, styles.birthPromptCard]}>
+              <Text style={[styles.sectionTitle, { color: p.text }]}>
+                What type of birth did you have?
+              </Text>
+              <Text style={[styles.sectionBody, { color: p.textMuted }]}>
+                So today's recovery activities actually fit your body.
+              </Text>
+              <View style={styles.birthOptionRow}>
+                {BIRTH_OPTIONS.map((option) => (
+                  <Pressable
+                    key={option.value}
+                    disabled={savingBirth}
+                    onPress={() => handleConfirmBirth(option.value)}
+                    style={[styles.birthOption, { borderColor: p.border }]}
+                  >
+                    <Text style={[styles.birthOptionLabel, { color: p.text }]}>
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              {savingBirth && <ActivityIndicator style={{ marginTop: spacing.sm }} />}
+            </Card>
+          ) : motherPlanLoading ? (
+            <ActivityIndicator style={{ marginTop: spacing.lg }} />
+          ) : (
+            motherPlan?.activities.map((activity) => (
+              <Card key={activity.id} style={[styles.actionCard, styles.recoveryActivityCard]}>
+                <Text style={[styles.recoveryActivityCategory, { color: p.primary }]}>
+                  {MOTHER_ACTIVITY_CATEGORY_LABEL[activity.category].toUpperCase()}
+                </Text>
+                <Text style={[styles.sectionTitle, { color: p.text }]}>{activity.title}</Text>
+                <Text style={[styles.sectionBody, { color: p.textMuted }]}>
+                  {activity.description}
+                </Text>
+                <Text style={[styles.recoveryActivityMeta, { color: p.textMuted }]}>
+                  {activity.duration_minutes > 0 ? `${activity.duration_minutes} min · ` : ""}
+                  {TIME_OF_DAY_LABEL[activity.time_of_day]}
+                  {activity.with_baby === "yes" ? " · With baby" : ""}
+                </Text>
+                <Pressable
+                  disabled={swapping === activity.category}
+                  onPress={() => swapMotherActivity(activity.category)}
+                  style={styles.swapButton}
+                >
+                  <Text style={[styles.swapLabel, { color: p.primary }]}>
+                    {swapping === activity.category ? "Swapping…" : "Try something else"}
+                  </Text>
+                </Pressable>
+              </Card>
+            ))
+          )}
         </View>
       )}
 
@@ -329,6 +425,48 @@ const styles = StyleSheet.create({
   },
   learnCard: {
     padding: spacing.lg,
+  },
+  birthPromptCard: {
+    marginTop: spacing.md,
+  },
+  birthOptionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  birthOption: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  birthOptionLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: typeScale.bodySmall,
+  },
+  recoveryActivityCard: {
+    marginTop: spacing.md,
+  },
+  recoveryActivityCategory: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.caption,
+    letterSpacing: 1.2,
+    marginBottom: spacing.xs,
+  },
+  recoveryActivityMeta: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.caption,
+    lineHeight: typeScale.caption * 1.45,
+    marginTop: spacing.sm,
+  },
+  swapButton: {
+    marginTop: spacing.md,
+    alignSelf: "flex-start",
+  },
+  swapLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.bodySmall,
   },
   footer: {
     fontFamily: fonts.body,
