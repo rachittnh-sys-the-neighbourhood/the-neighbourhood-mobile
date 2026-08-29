@@ -307,6 +307,72 @@ export type ChildVaccination = {
   notes: string | null;
 };
 
+// --- Mother postpartum recovery ---------------------------------------
+
+/**
+ * The mother's own daily recovery set — distinct from the static
+ * "Postpartum Care" library (lib/parentCare.ts CARE_TOPICS), which stays
+ * as read-only reference reading. This is the actionable, rotating daily
+ * activities, mirroring the child's activities/daily_plans model but
+ * scoped to month_postpartum (1–12) and the mother's birth method instead
+ * of age_band and domain.
+ */
+export const MOTHER_ACTIVITY_CATEGORIES = [
+  "physical_recovery",
+  "emotional_wellness",
+  "mother_baby_bonding",
+  "couple_connection",
+] as const;
+export type MotherActivityCategory = (typeof MOTHER_ACTIVITY_CATEGORIES)[number];
+
+export const MOTHER_ACTIVITY_CATEGORY_LABEL: Record<MotherActivityCategory, string> = {
+  physical_recovery: "Physical recovery",
+  emotional_wellness: "Emotional wellness",
+  mother_baby_bonding: "Bonding with baby",
+  couple_connection: "Couple connection",
+};
+
+/** "all" = every mother regardless of birth method. */
+export type MotherActivityRelevance = "all" | "vaginal" | "caesarean";
+export type MotherActivityTimeOfDay = "anytime" | "morning" | "evening" | "during_nap";
+export type MotherActivityEffort = "gentle" | "moderate";
+export type MotherActivityWithBaby = "yes" | "no" | "optional";
+
+export type MotherActivity = {
+  id: string;
+  category: MotherActivityCategory;
+  month_postpartum: number;
+  applies_to: MotherActivityRelevance;
+  title: string;
+  description: string;
+  duration_minutes: number;
+  time_of_day: MotherActivityTimeOfDay;
+  with_baby: MotherActivityWithBaby;
+  effort_level: MotherActivityEffort;
+  /** What changes about this activity in later months, when given. */
+  progression_notes: string | null;
+};
+
+export type MotherDailyPlanRow = {
+  id: string;
+  profile_id: string;
+  plan_date: string; // family-local date
+  physical_recovery_activity_id: string | null;
+  emotional_wellness_activity_id: string | null;
+  mother_baby_bonding_activity_id: string | null;
+  couple_connection_activity_id: string | null;
+  swaps: Partial<Record<MotherActivityCategory, number>>;
+};
+
+/** A mother plan with its activities resolved — what screens actually render. */
+export type MotherDailyPlan = {
+  id: string;
+  planDate: string;
+  /** Always four, in MOTHER_ACTIVITY_CATEGORIES order, nulls dropped. */
+  activities: MotherActivity[];
+  swaps: Partial<Record<MotherActivityCategory, number>>;
+};
+
 export type CopilotConversation = {
   id: string;
   child_id: string;
