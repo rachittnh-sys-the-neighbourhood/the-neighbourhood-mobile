@@ -250,7 +250,7 @@ export default function Vaccinations() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.intro}>
-        A gentle record of {child?.name ?? "your little one"}&rsquo;s vaccines — tap
+        A gentle record of {child?.name ?? "your little one"}&rsquo;s vaccines: tap
         anything already done. Your paediatrician always has the final word.
       </Text>
 
@@ -355,7 +355,7 @@ export default function Vaccinations() {
 
       {/* Sources are named per tier above, so this is the disclaimer only. */}
       <Text style={styles.footnote}>
-        A record to help you keep track — not a substitute for your paediatrician&rsquo;s
+        A record to help you keep track, not a substitute for your paediatrician&rsquo;s
         advice.
       </Text>
 

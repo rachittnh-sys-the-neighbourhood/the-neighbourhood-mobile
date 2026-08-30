@@ -263,8 +263,8 @@ export default function Making() {
             </Text>
           ) : stuck ? (
             <Text style={styles.errorText}>
-              This is taking longer than it should. Your answers are saved
-              — reloading should get you straight in.
+              This is taking longer than it should. Your answers are saved,
+              reloading should get you straight in.
             </Text>
           ) : !ready ? (
             <Animated.Text
