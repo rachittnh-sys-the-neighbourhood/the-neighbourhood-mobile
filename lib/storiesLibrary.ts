@@ -48,16 +48,16 @@ export function storiesForAgeBand(ageBand: AgeBand): Story[] {
  * to actually read.
  */
 const ACTIVITY_STORY_LINK: Record<string, string> = {
-  "read-aloud-any-text-m0_3": "chanda-mama-comes-to-see-you-m0_3",
+  "read-aloud-m0_3": "chanda-mama-comes-to-see-you-m0_3",
   "reading-together-daily-m16_18": "the-thirsty-crow-m16_18",
-  "show-empathy-in-books-m16_18": "the-lost-chappal-m16_18",
+  "show-empathy-books-m16_18": "the-lost-chappal-m16_18",
   "story-re-tell-m19_21": "the-big-big-turnip-m19_21",
   "story-prediction-m22_24": "where-does-the-sun-go-m22_24",
   "story-from-memory-m25_27": "titli-titli-the-butterfly-m25_27",
-  "ask-how-others-feel-m25_27": "the-broken-cup-m25_27",
+  "how-others-feel-m25_27": "the-broken-cup-m25_27",
   "storytelling-from-memory-m28_30": "kaun-aaya-who-came-to-the-door-m28_30",
   "simple-inference-m28_30": "the-big-feeling-m28_30",
-  "retell-a-story-sequence-m34_36": "the-foolish-brahmin-and-the-pot-of-rice-m34_36",
+  "retell-story-m34_36": "the-foolish-brahmin-and-the-pot-of-rice-m34_36",
 };
 
 /** The one story this activity links to, if it's a reading activity. */

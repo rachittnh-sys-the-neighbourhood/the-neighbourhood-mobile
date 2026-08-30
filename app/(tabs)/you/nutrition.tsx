@@ -9,7 +9,7 @@ import {
   SectionLabel,
 } from "../../../components/parentUI";
 import { useAuth } from "../../../lib/AuthProvider";
-import { computeAge } from "../../../lib/childAge";
+import { computeAge, youngestChild } from "../../../lib/childAge";
 import { usePalette } from "../../../lib/ModeProvider";
 import {
   MEAL_SLOTS,
@@ -38,12 +38,15 @@ import { fonts, radius, spacing, typeScale } from "../../../lib/theme";
  */
 export default function Nutrition() {
   const p = usePalette();
-  const { child, profile: authProfile } = useAuth();
+  const { children, profile: authProfile } = useAuth();
   const [openNutrients, setOpenNutrients] = useState(false);
   const [openGroceries, setOpenGroceries] = useState(false);
   const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
 
-  const ageMonths = child ? computeAge(child.date_of_birth)?.totalMonths ?? 0 : 0;
+  // The parent's own postpartum stage follows the youngest child, not
+  // whichever child is active in the Kids tab switcher — see today.tsx.
+  const recoveryChild = youngestChild(children);
+  const ageMonths = recoveryChild ? computeAge(recoveryChild.date_of_birth)?.totalMonths ?? 0 : 0;
   const profile = useMemo(() => deriveProfile(ageMonths, authProfile), [ageMonths, authProfile]);
   const nutrients = useMemo(() => nutrientsFor(profile), [profile]);
   const groceries = useMemo(() => groceriesFor(profile), [profile]);

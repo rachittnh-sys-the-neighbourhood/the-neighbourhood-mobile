@@ -12,7 +12,7 @@ import {
 import { Card } from "../../../components/parentUI";
 import { GuidedTourDialog } from "../../../components/GuidedTourDialog";
 import { useAuth } from "../../../lib/AuthProvider";
-import { computeAge } from "../../../lib/childAge";
+import { computeAge, youngestChild } from "../../../lib/childAge";
 import { markFirstRunComplete, markHomeCoachComplete } from "../../../lib/firstRun";
 import { usePalette } from "../../../lib/ModeProvider";
 import {
@@ -81,7 +81,7 @@ export default function YouHub() {
   const pathname = usePathname();
   const params = useLocalSearchParams<{ guidedTour?: string; next?: string; step?: string }>();
   const p = usePalette();
-  const { parentName, profile: authProfile, child } = useAuth();
+  const { parentName, profile: authProfile, children } = useAuth();
   const [feeling, setFeeling] = useState<FeelingKey>("tired");
 
   // The tour's final stop — see child/guide.tsx: only the focused screen
@@ -102,7 +102,10 @@ export default function YouHub() {
     router.replace("/home?tourComplete=1");
   };
 
-  const ageMonths = child ? computeAge(child.date_of_birth)?.totalMonths ?? 0 : 0;
+  // The parent's own postpartum stage follows the youngest child, not
+  // whichever child is active in the Kids tab switcher — see today.tsx.
+  const recoveryChild = youngestChild(children);
+  const ageMonths = recoveryChild ? computeAge(recoveryChild.date_of_birth)?.totalMonths ?? 0 : 0;
 
   // Role/birth type/feeding method were asked once, during main
   // onboarding — see lib/AuthProvider.tsx's `profile` and
