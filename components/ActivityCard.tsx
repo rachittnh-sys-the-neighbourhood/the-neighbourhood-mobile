@@ -304,6 +304,12 @@ export function ActivityExpandedCard({
         </Pressable>
       )}
 
+      {activity.source && (
+        <View style={styles.sourceBlock}>
+          <Text style={styles.sourceText}>Source: {activity.source}</Text>
+        </View>
+      )}
+
       <View style={styles.actionRow}>
         {isDone ? (
           // Already logged today. Shown as a quiet marker rather than a live
@@ -593,6 +599,13 @@ const styles = StyleSheet.create({
     ...type.label,
     color: colors.charcoal,
     marginTop: 2,
+  },
+  sourceBlock: {
+    marginTop: spacing.md,
+  },
+  sourceText: {
+    ...type.meta,
+    color: colors.textMuted,
   },
   activityVideo: {
     width: "100%",

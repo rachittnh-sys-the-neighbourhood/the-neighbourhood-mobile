@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Card, Chevron, PageHeading, SectionLabel } from "../../../components/parentUI";
 import { useAuth } from "../../../lib/AuthProvider";
-import { computeAge } from "../../../lib/childAge";
+import { computeAge, youngestChild } from "../../../lib/childAge";
 import * as family from "../../../lib/db/family";
 import {
   FATHER_ACTIVITY_CATEGORY_LABEL,
@@ -72,9 +72,14 @@ function greeting(hour: number) {
 export default function ParentToday() {
   const router = useRouter();
   const p = usePalette();
-  const { session, parentName, child, profile: authProfile, refreshFamily } = useAuth();
+  const { session, parentName, children, profile: authProfile, refreshFamily } = useAuth();
 
-  const ageMonths = child ? computeAge(child.date_of_birth)?.totalMonths ?? 0 : 0;
+  // The parent's own postpartum framing follows whichever child was born
+  // most recently, not whichever child happens to be active in the Kids
+  // tab switcher — this screen is about the parent, and there's only one
+  // birth that framing can be counting from. See lib/childAge.ts.
+  const recoveryChild = youngestChild(children);
+  const ageMonths = recoveryChild ? computeAge(recoveryChild.date_of_birth)?.totalMonths ?? 0 : 0;
   const profile = useMemo(
     () => deriveProfile(ageMonths, authProfile),
     [ageMonths, authProfile],

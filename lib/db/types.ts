@@ -131,6 +131,11 @@ export type Activity = {
    *  Null when the source content had nothing genuine to split out — the
    *  UI falls back to a per-domain line rather than showing a gap. */
   benefit: string | null;
+  /** Citation(s) the activity is aligned with — e.g. "AAP Safe Sleep and
+   *  Tummy Time; WHO Motor Development; IAP". Semicolon-separated, shown
+   *  verbatim on the activity card. Null for older content rows that
+   *  predate this field. */
+  source: string | null;
 };
 
 export type Milestone = {

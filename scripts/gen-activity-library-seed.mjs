@@ -1,14 +1,7 @@
 /**
  * Generates the activities seed migration from content/activity_library.csv
  * (1,149 activities across 28 three-month age bands and 7 developmental
- * areas) — the replacement content source for the `activities` table,
- * superseding the 56 activities in lib/todaysPlan.ts.
- *
- * A separate script from gen-seed.mjs, deliberately: gen-seed.mjs's output
- * (20260726092000_seed_content.sql) is already applied to the remote
- * project, and Supabase skips already-applied migration versions on push
- * regardless of local content changes — editing that file wouldn't reach
- * the remote. This writes a NEW, later-timestamped migration instead.
+ * areas) — the replacement content source for the `activities` table.
  *
  *   node scripts/gen-activity-library-seed.mjs
  *
@@ -33,21 +26,13 @@
  * 20260808100000_widen_activity_bands.sql — so all 28 of the CSV's bands
  * are kept, not re-bucketed into the original 7.
  *
- * WHAT / HOW / WHY split (added for the Home redesign that stopped
- * showing the same "How To Do It" sentence twice — once as the preview
- * description, once again under HOW): the CSV only ever gives one blob of
- * text per activity, so this mechanically splits it on sentence
- * boundaries rather than inventing content that isn't there.
- *   1 sentence  -> why = that sentence; instructions = the same sentence
- *                  (nothing else exists to show); benefit = null.
- *   2 sentences -> why = first; instructions = second; benefit = null.
- *   3+ sentences -> why = first; instructions = the middle sentence(s);
- *                  benefit = last (in this content, the closing sentence
- *                  is consistently the rationale — "...helps them control
- *                  speed and direction", "...builds the script for real
- *                  situations").
- * When benefit ends up null, home.tsx falls back to one honest, generic
- * sentence per developmental domain rather than a per-activity guess.
+ * The CSV (as of activity_library_explained_ALL with sources.xlsx) gives
+ * Description, Why It Matters and How To Do It as separate authored
+ * fields — they map straight to why / benefit / instructions, no sentence
+ * splitting needed. An earlier CSV revision only had one combined "How To
+ * Do It" blob per activity and mechanically split it on sentence
+ * boundaries; that heuristic is gone now that the source content itself
+ * is split.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -56,11 +41,15 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
 const CSV_PATH = resolve(root, "content/activity_library.csv");
-// 20260808120000_seed_activity_library.sql (the original target of this
-// script) is already applied remotely, so this content change — splitting
-// why/instructions/benefit apart — needs its own new-timestamped file,
-// same as any other migration once the previous one has shipped.
-const OUT = "supabase/migrations/20260810091000_split_activity_why_how_benefit.sql";
+// Split into batches (like the activity_variations_batch_* migrations
+// before it) rather than one ~700KB file — each insert stays a
+// reasonably sized, individually-applicable migration.
+const DELETE_OUT = "supabase/migrations/20260830061600_activity_library_delete_stale.sql";
+// Each batch needs its own timestamp — Supabase keys migrations off the
+// leading digits, not the rest of the filename — so this counts one
+// minute up per batch starting after the delete migration above.
+const BATCH_BASE_TIMESTAMP = 20260830070000;
+const BATCH_SIZE = 100;
 
 const AREA_TO_DOMAIN = {
   "Gross Motor": "motor",
@@ -143,50 +132,9 @@ function parseAgeBand(label) {
   return { band: `y${years}_${monthsPart}`, lowerMonths: years * 12 + monthsPart };
 }
 
-/**
- * Splits on sentence-ending punctuation, keeping it attached to each piece.
- * Quote-aware: several activities embed a short line of dialogue in single
- * quotes (e.g. "During play: 'You have 4 blocks. Can you give me 2?' Guided
- * sharing builds..."), and splitting mid-quote produced dangling fragments
- * like a lone trailing apostrophe. Sentence terminators inside an open
- * quote don't count as a boundary.
- */
-function splitSentences(text) {
-  const sentences = [];
-  let current = "";
-  let inQuote = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    current += ch;
-    if (ch === "'") inQuote = !inQuote;
-    if (!inQuote && /[.!?]/.test(ch) && !/[.!?]/.test(text[i + 1] ?? "")) {
-      sentences.push(current.trim());
-      current = "";
-    }
-  }
-  if (current.trim()) sentences.push(current.trim());
-  return sentences.filter(Boolean);
-}
-
-/** See the WHAT/HOW/WHY comment at the top of this file. */
-function splitWhatHowWhy(text) {
-  const sentences = splitSentences(text);
-  if (sentences.length <= 1) {
-    return { why: text, instructions: text, benefit: null };
-  }
-  if (sentences.length === 2) {
-    return { why: sentences[0], instructions: sentences[1], benefit: null };
-  }
-  return {
-    why: sentences[0],
-    instructions: sentences.slice(1, -1).join("\n"),
-    benefit: sentences[sentences.length - 1],
-  };
-}
-
-/** "5–10" → { minutes: 8, label: "5–10 min" }. "Ongoing" → { minutes: null, label: "Ongoing" }. */
+/** "5–10 min" → { minutes: 8, label: "5–10 min" }. "Ongoing" → { minutes: null, label: "Ongoing" }. */
 function parseDuration(raw) {
-  const trimmed = raw.trim();
+  const trimmed = raw.trim().replace(/\s*min$/i, "").trim();
   if (/^ongoing$/i.test(trimmed)) return { minutes: null, label: "Ongoing" };
   const rangeMatch = trimmed.match(/^(\d+)–(\d+)$/);
   if (rangeMatch) {
@@ -212,11 +160,14 @@ const seenIds = new Set();
 for (const row of table.slice(1)) {
   if (row.every((c) => c === "")) continue; // trailing blank line
   const title = row[col["Activity Name"]].trim();
+  const description = row[col["Description"]].trim();
+  const whyItMatters = row[col["Why It Matters"]].trim();
   const howTo = row[col["How To Do It"]].trim();
   const area = row[col["Developmental Area"]].trim();
   const durationRaw = row[col["Duration (min)"]].trim();
   const materials = row[col["Materials Required"]].trim();
   const ageBandLabel = row[col["Age Band"]].trim();
+  const source = row[col["Source"]].trim();
 
   const domain = AREA_TO_DOMAIN[area];
   if (!domain) throw new Error(`unmapped developmental area "${area}" for "${title}"`);
@@ -228,58 +179,65 @@ for (const row of table.slice(1)) {
   if (seenIds.has(id)) throw new Error(`duplicate activity id "${id}"`);
   seenIds.add(id);
 
-  const { why, instructions, benefit } = splitWhatHowWhy(howTo);
-
   activities.push({
     id,
     domain,
     age_band: band,
     title,
-    why,
+    why: description,
     duration_minutes: minutes,
     duration_label: durationLabel,
     materials: materials || "None",
-    instructions,
-    benefit,
+    instructions: howTo,
+    benefit: whyItMatters,
+    source,
   });
 }
 
 // ---------------------------------------------------------------------
-// Emit
+// Emit: one delete migration, then N insert-batch migrations.
 // ---------------------------------------------------------------------
-const lines = [];
-lines.push("-- GENERATED by scripts/gen-activity-library-seed.mjs — do not edit by hand.");
-lines.push("-- Regenerate after a content edit:  node scripts/gen-activity-library-seed.mjs");
-lines.push("--");
-lines.push(`-- Replaces the activities seeded by 20260726092000_seed_content.sql (the`);
-lines.push(`-- original 56, from lib/todaysPlan.ts) with ${activities.length} activities from`);
-lines.push("-- content/activity_library.csv, across 28 age bands. Requires");
-lines.push("-- 20260808100000_widen_activity_bands.sql and");
-lines.push("-- 20260808110000_fine_grained_age_band_for.sql to have already run.");
-lines.push("--");
-lines.push("-- Idempotent: the delete removes anything not in this content set (which");
-lines.push("-- includes the old 56), the insert upserts everything in it.");
-lines.push("");
+const deleteLines = [
+  "-- GENERATED by scripts/gen-activity-library-seed.mjs — do not edit by hand.",
+  "--",
+  "-- Full content replacement from activity_library_explained_ALL with sources.xlsx",
+  `-- (${activities.length} activities, in 20260830070000_activity_library_batch_*.sql).`,
+  "-- Most titles changed from the previous content set, so most ids are new;",
+  "-- this drops everything not in the new content set, which",
+  "-- daily_plans/activity_log tolerate gracefully (ON DELETE SET NULL). Requires",
+  "-- 20260830061549_activity_source_column.sql to have already run.",
+  "",
+  `delete from activities where id not in (${activities.map((a) => q(a.id)).join(", ")});`,
+  "",
+];
+writeFileSync(resolve(root, DELETE_OUT), deleteLines.join("\n"));
+console.log(`wrote ${DELETE_OUT}`);
 
-lines.push(`delete from activities where id not in (${activities.map((a) => q(a.id)).join(", ")});`);
-lines.push(
-  "insert into activities (id, domain, age_band, title, why, duration_minutes, duration_label, materials, instructions, benefit) values"
-);
-lines.push(
-  activities
-    .map(
-      (a) =>
-        `  (${q(a.id)}, ${q(a.domain)}::domain, ${q(a.age_band)}::age_band, ${q(a.title)}, ${q(a.why)}, ${a.duration_minutes ?? "null"}, ${q(a.duration_label)}, ${q(a.materials)}, ${q(a.instructions)}, ${q(a.benefit)})`
-    )
-    .join(",\n")
-);
-lines.push(
-  "on conflict (id) do update set domain = excluded.domain, age_band = excluded.age_band, title = excluded.title, why = excluded.why, duration_minutes = excluded.duration_minutes, duration_label = excluded.duration_label, materials = excluded.materials, instructions = excluded.instructions, benefit = excluded.benefit;"
-);
-lines.push("");
-
-writeFileSync(resolve(root, OUT), lines.join("\n") + "\n");
-console.log(`wrote ${OUT} (${activities.length} activities)`);
+const batchCount = Math.ceil(activities.length / BATCH_SIZE);
+for (let i = 0; i < batchCount; i++) {
+  const batch = activities.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE);
+  const num = String(i).padStart(2, "0");
+  const timestamp = BATCH_BASE_TIMESTAMP + i; // +1 to the seconds digit per batch
+  const lines = [
+    "-- GENERATED by scripts/gen-activity-library-seed.mjs — do not edit by hand.",
+    `-- Batch ${num}/${String(batchCount - 1).padStart(2, "0")} of the activity_library_explained_ALL`,
+    "-- with sources.xlsx content replacement. Requires",
+    "-- 20260830061600_activity_library_delete_stale.sql to have already run.",
+    "",
+    "insert into activities (id, domain, age_band, title, why, duration_minutes, duration_label, materials, instructions, benefit, source) values",
+    batch
+      .map(
+        (a) =>
+          `  (${q(a.id)}, ${q(a.domain)}::domain, ${q(a.age_band)}::age_band, ${q(a.title)}, ${q(a.why)}, ${a.duration_minutes ?? "null"}, ${q(a.duration_label)}, ${q(a.materials)}, ${q(a.instructions)}, ${q(a.benefit)}, ${q(a.source)})`
+      )
+      .join(",\n"),
+    "on conflict (id) do update set domain = excluded.domain, age_band = excluded.age_band, title = excluded.title, why = excluded.why, duration_minutes = excluded.duration_minutes, duration_label = excluded.duration_label, materials = excluded.materials, instructions = excluded.instructions, benefit = excluded.benefit, source = excluded.source;",
+    "",
+  ];
+  const out = `supabase/migrations/${timestamp}_activity_library_batch_${num}.sql`;
+  writeFileSync(resolve(root, out), lines.join("\n"));
+  console.log(`wrote ${out} (${batch.length} activities)`);
+}
 
 // ---------------------------------------------------------------------
 // Coverage report — the invariant swap logic depends on: every

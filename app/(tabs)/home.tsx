@@ -1,6 +1,6 @@
-import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
+import { useLocalSearchParams, useNavigation, usePathname, useRouter } from "expo-router";
 import { useScreenFocus } from "../../lib/useScreenFocus";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -81,6 +81,7 @@ function todayLabel(): string {
  */
 export default function Home() {
   const router = useRouter();
+  const navigation = useNavigation();
   const pathname = usePathname();
   const params = useLocalSearchParams<{
     guidedTour?: string;
@@ -114,7 +115,18 @@ export default function Home() {
   // Covers both this hook's own load() and `child` itself never arriving
   // — a session left wedged after a desynced tab (see AuthProvider's
   // fetchFamily) can leave either one hanging with no error to show.
-  const stuck = useStuckWatchdog(!child || (loading && !plan));
+  const isLoadingGate = !child || (loading && !plan);
+  const stuck = useStuckWatchdog(isLoadingGate);
+
+  // The loading gate below already leads with its own centered LogoMark
+  // (see the render below) — the tab header's mark (set in (tabs)/_layout.tsx)
+  // would otherwise show a second one at the same time, right after
+  // finishing onboarding, until the real Home content is ready.
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitle: () => (isLoadingGate ? null : <LogoMark size={26} />),
+    });
+  }, [navigation, isLoadingGate]);
 
   const entrance = useRef(new Animated.Value(0)).current;
 
@@ -221,7 +233,7 @@ export default function Home() {
     router.replace("/home");
   };
 
-  if (!child || (loading && !plan)) {
+  if (isLoadingGate) {
     return (
       <View style={styles.screen}>
         <View style={[styles.inner, styles.loadingInner]}>

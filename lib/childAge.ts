@@ -72,6 +72,23 @@ export const CORRECTION_UNTIL_MONTHS = 24;
 /** Structural, so this module stays free of a db/types import. */
 type ChildLike = { date_of_birth: string; gestational_weeks?: number | null };
 
+/**
+ * The most recently born child — not whichever is active in the Kids tab
+ * switcher (see lib/AuthProvider.tsx `child` vs `children`). A parent's own
+ * postpartum recovery content (Mother's/Father's daily plan, the "week N"
+ * framing) should always follow the youngest child, since that's whose
+ * birth the recovery is from, regardless of which child's screen the
+ * parent happens to be looking at.
+ */
+export function youngestChild<T extends { date_of_birth: string }>(
+  children: T[],
+): T | null {
+  if (children.length === 0) return null;
+  return children.reduce((youngest, c) =>
+    c.date_of_birth > youngest.date_of_birth ? c : youngest,
+  );
+}
+
 export function isPreterm(gestationalWeeks: number | null | undefined): boolean {
   return typeof gestationalWeeks === "number" && gestationalWeeks < FULL_TERM_WEEKS;
 }

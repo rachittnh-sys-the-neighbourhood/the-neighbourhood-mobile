@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Card, CareNote, Chevron, PageHeading, SectionLabel } from "../../../components/parentUI";
 import { useAuth } from "../../../lib/AuthProvider";
-import { computeAge } from "../../../lib/childAge";
+import { computeAge, youngestChild } from "../../../lib/childAge";
 import { usePalette } from "../../../lib/ModeProvider";
 import {
   CARE_AREAS,
@@ -90,7 +90,7 @@ function fatherReassurance(weeksPostpartum: number): { eyebrow: string; body: st
 export default function Recovery() {
   const router = useRouter();
   const p = usePalette();
-  const { child, profile: authProfile } = useAuth();
+  const { children, profile: authProfile } = useAuth();
   /**
    * When opened from a specific card on You's hub (e.g. "Sleep"), `area`
    * narrows the library to just that one area instead of the full list —
@@ -100,7 +100,10 @@ export default function Recovery() {
    */
   const { area: areaFilter } = useLocalSearchParams<{ area?: CareArea }>();
 
-  const ageMonths = child ? computeAge(child.date_of_birth)?.totalMonths ?? 0 : 0;
+  // The parent's own postpartum stage follows the youngest child, not
+  // whichever child is active in the Kids tab switcher — see today.tsx.
+  const recoveryChild = youngestChild(children);
+  const ageMonths = recoveryChild ? computeAge(recoveryChild.date_of_birth)?.totalMonths ?? 0 : 0;
   const profile = useMemo(
     () => deriveProfile(ageMonths, authProfile),
     [ageMonths, authProfile],
