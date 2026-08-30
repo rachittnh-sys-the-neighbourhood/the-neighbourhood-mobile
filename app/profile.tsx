@@ -46,7 +46,7 @@ export default function Profile() {
         {child && (
           <View style={styles.card}>
             <Text style={styles.childName}>{child.name}</Text>
-            <Text style={styles.childMeta}>{age?.label ?? "—"} old</Text>
+            <Text style={styles.childMeta}>{age ? `${age.label} old` : "Age not set"}</Text>
           </View>
         )}
 
