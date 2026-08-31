@@ -30,13 +30,6 @@ import {
   markSwipedActivityPager,
 } from "../../lib/firstRun";
 import {
-  mealsFor as kidMealsFor,
-  slotsForStage,
-  stageForAgeMonths,
-  type KidMeal,
-  type MealSlot,
-} from "../../lib/kidMealPlanner";
-import {
   bridgesFor,
   deriveProfile,
   topicsForProfile,
@@ -306,15 +299,6 @@ export default function Home() {
   const dayIndex = Math.floor(Date.now() / 86_400_000);
   const careTopic = careTopics.length > 0 ? careTopics[dayIndex % careTopics.length] : null;
 
-  // A stage-appropriate meal ("TOGETHER") and an outstanding milestone
-  // ("WORTH NOTICING") are independent — both can show, since the spec for
-  // this section is "a reliable place to notice something about your
-  // child", not a single alternating slot. Nothing is invented to fill
-  // either; each renders only when something genuine is available.
-  const mealStage = stageForAgeMonths(ageMonths);
-  const mealSlots = slotsForStage(mealStage);
-  const mealSlot = mealSlots[0] ?? null;
-  const mealIdea = mealSlot ? kidMealsFor(mealStage, mealSlot.key)[0] ?? null : null;
   const milestoneRecommendation = nextMilestone
     ? {
         eyebrow: `WATCH FOR · ${DOMAIN_LABEL[nextMilestone.domain].toUpperCase()}`,
@@ -368,17 +352,6 @@ export default function Home() {
             area={topCareArea}
             topic={careTopic}
           />
-
-          {mealSlot && mealIdea && (
-            <>
-              <SectionLabel accent={colors.softSand}>TOGETHER</SectionLabel>
-              <MealIdeaCard
-                slot={mealSlot}
-                meal={mealIdea}
-                onPress={() => router.push("/child/meals")}
-              />
-            </>
-          )}
 
           {milestoneRecommendation && (
             <>
@@ -950,35 +923,6 @@ function ForYouCard({
   );
 }
 
-/**
- * One meal idea for today, staged to the child's feeding age and framed as
- * shared time rather than a child-only task — cooking or feeding together
- * is the brief's own example of "together" content. Home decides whether
- * a stage-appropriate meal exists at all; this component only renders it.
- */
-function MealIdeaCard({
-  slot,
-  meal,
-  onPress,
-}: {
-  slot: { key: MealSlot; label: string; window: string };
-  meal: KidMeal;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      style={({ pressed }) => [styles.mealIdeaCard, pressed && { opacity: 0.75 }]}
-    >
-      <Text style={styles.mealIdeaEyebrow}>{slot.window.toUpperCase()} · COOK TOGETHER</Text>
-      <Text style={styles.mealIdeaTitle}>{meal.title}</Text>
-      <Text style={styles.mealIdeaBody}>{meal.blurb}</Text>
-      <Text style={styles.mealIdeaLink}>{meal.minutes} min · see the full plan →</Text>
-    </Pressable>
-  );
-}
-
 function CopilotHomeCard({ onPress }: { onPress: (prompt: string) => void }) {
   const [prompt, setPrompt] = useState("");
   const submit = () => onPress(prompt.trim());
@@ -1252,37 +1196,6 @@ const styles = StyleSheet.create({
     ...type.meta,
     color: colors.textMuted,
     marginTop: spacing.xs,
-  },
-  mealIdeaCard: {
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    backgroundColor: "rgba(201, 165, 142, 0.16)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(150, 110, 70, 0.16)",
-    shadowColor: colors.charcoal,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 14,
-    elevation: 1,
-  },
-  mealIdeaEyebrow: {
-    ...type.eyebrow,
-    color: colors.warmTaupe,
-  },
-  mealIdeaTitle: {
-    ...type.title,
-    color: colors.charcoal,
-    marginTop: 6,
-  },
-  mealIdeaBody: {
-    ...type.body,
-    color: colors.textMuted,
-    marginTop: 6,
-  },
-  mealIdeaLink: {
-    ...type.label,
-    color: colors.warmTaupe,
-    marginTop: spacing.md,
   },
   copilotModule: {
     marginTop: spacing.xxl,
