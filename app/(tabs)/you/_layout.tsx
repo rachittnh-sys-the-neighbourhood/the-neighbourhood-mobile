@@ -37,7 +37,11 @@ export default function YouLayout() {
       <Stack.Screen name="index" options={{ title: "You", headerRight: () => <AvatarButton /> }} />
       <Stack.Screen name="today" options={{ title: "Today" }} />
       <Stack.Screen name="nutrition" options={{ title: "Nutrition" }} />
-      <Stack.Screen name="care" options={{ title: "Care" }} />
+      {/* Titled "You" rather than "Care" — every WELL BEING tile on the hub
+          pushes here, and the header should still read as "you're still in
+          your own space", not name a screen concept the parent never
+          chose to open. */}
+      <Stack.Screen name="care" options={{ title: "You" }} />
     </Stack>
   );
 }
