@@ -7,18 +7,22 @@ import {
   FeatureGroupLabel,
   FeatureIcon,
   HubHeader,
+  MicroLearningCard,
   type FeatureIconName,
 } from "../../../components/FeatureHub";
+import { CourseCard } from "../../../components/LearningUI";
 import { Card } from "../../../components/parentUI";
 import { GuidedTourDialog } from "../../../components/GuidedTourDialog";
 import { useAuth } from "../../../lib/AuthProvider";
 import { computeAge, youngestChild } from "../../../lib/childAge";
 import { markFirstRunComplete, markHomeCoachComplete } from "../../../lib/firstRun";
+import { COURSES } from "../../../lib/learning";
 import { usePalette } from "../../../lib/ModeProvider";
 import {
   deliveryPhrase,
   deriveProfile,
   elapsedPhrase,
+  recommendedTopicsForProfile,
   visibleCareAreas,
   type CareArea,
 } from "../../../lib/parentCare";
@@ -168,6 +172,34 @@ export default function YouHub() {
     return area.blurb;
   };
 
+  // The single most relevant read right now — same selection logic as
+  // Home's "For You" (see home.tsx), offset so the two don't necessarily
+  // show the exact same pick on the same day.
+  const forYouToday = recommendedTopicsForProfile(profile, ageMonths, 1, 3)[0] ?? null;
+  const forYouTodayArea = forYouToday
+    ? careAreas.find((a) => a.key === forYouToday.area) ?? null
+    : null;
+
+  // "Your Stage" — a small, curated pair rather than the whole library.
+  const stageTopics = recommendedTopicsForProfile(profile, ageMonths, 2, 0);
+  const stageTopicArea = (topic: (typeof stageTopics)[number]) =>
+    careAreas.find((a) => a.key === topic.area) ?? null;
+
+  // One course, contextually — never the whole catalogue up front. Loosely
+  // matched to the top visible care area so it feels chosen, not random;
+  // falls back to the first course when nothing maps cleanly.
+  const COURSE_CATEGORY_FOR_AREA: Partial<Record<CareArea, string>> = {
+    sleep: "sleep",
+    feeding: "feeding",
+    nutrition: "feeding",
+    mental: "wellbeing",
+    physical: "wellbeing",
+    relationships: "behaviour",
+    fathering: "wellbeing",
+  };
+  const matchedCategory = careAreas[0] ? COURSE_CATEGORY_FOR_AREA[careAreas[0].key] : undefined;
+  const recommendedCourse = COURSES.find((c) => c.category === matchedCategory) ?? COURSES[0];
+
   return (
     <ScrollView
       style={{ backgroundColor: p.bg }}
@@ -204,6 +236,22 @@ export default function YouHub() {
         <Text style={[styles.checkCopy, { color: p.textMuted }]}>{LIGHTER_DAY[feeling]}</Text>
       </Card>
 
+      {/* "Help me navigate being a parent," one recommendation at a time —
+          not a library to scan. Picked the same way Home's "For You" is,
+          just offset so the two don't repeat each other on the same day. */}
+      {forYouToday && (
+        <>
+          <FeatureGroupLabel>FOR YOU TODAY</FeatureGroupLabel>
+          <MicroLearningCard
+            eyebrow={forYouTodayArea?.label ?? "For you"}
+            title={forYouToday.title}
+            reason={forYouToday.blurb}
+            minutes={forYouToday.minutes}
+            onPress={() => router.push(`/care/${forYouToday.slug}`)}
+          />
+        </>
+      )}
+
       {/* Zone 1, above the fold: the one obvious first action. Today and
           Nutrition are both daily, changing things — the parent should
           never have to scan the whole library just to check in. */}
@@ -224,10 +272,31 @@ export default function YouHub() {
         />
       </FeatureGrid>
 
-      {/* Zone 2: the reference library — same cards as before, just moved
-          below the daily zone since they're read less often and change
-          far less. */}
-      <FeatureGroupLabel>PARENT CARE LIBRARY</FeatureGroupLabel>
+      {/* "What may help you right now" — a curated pair, not the library.
+          Explore your stage → is the door into the full Care screen for
+          anyone who wants more than two reads. */}
+      {stageTopics.length > 0 && (
+        <>
+          <FeatureGroupLabel>YOUR STAGE</FeatureGroupLabel>
+          {stageTopics.map((topic) => (
+            <MicroLearningCard
+              key={topic.slug}
+              eyebrow={stageTopicArea(topic)?.label ?? "Your stage"}
+              title={topic.title}
+              reason={topic.blurb}
+              minutes={topic.minutes}
+              onPress={() => router.push(`/care/${topic.slug}`)}
+            />
+          ))}
+          <Pressable onPress={() => router.push("/you/care")} hitSlop={8} style={styles.exploreLink}>
+            <Text style={[styles.exploreLinkText, { color: p.primary }]}>Explore your stage →</Text>
+          </Pressable>
+        </>
+      )}
+
+      {/* Zone: the reference library, organised by area — for browsing over
+          time rather than today's one recommendation. */}
+      <FeatureGroupLabel>YOUR JOURNEY</FeatureGroupLabel>
       <FeatureGrid>
         {careAreas.map((area) => (
           <FeatureCard
@@ -239,14 +308,20 @@ export default function YouHub() {
             onPress={() => router.push(`/you/care?area=${area.key}`)}
           />
         ))}
-
-        <FeatureCard
-          icon={<FeatureIcon name="guide" color={p.primary} />}
-          title="The Guide"
-          description="Courses and live workshops, expert-backed."
-          onPress={() => router.push("/child/guide")}
-        />
       </FeatureGrid>
+
+      {/* "I want to understand this properly" — one course, contextually
+          recommended, not a marketplace. See all courses → is the door
+          into the full catalogue (app/(tabs)/child/courses.tsx). */}
+      {recommendedCourse && (
+        <>
+          <FeatureGroupLabel>GO DEEPER</FeatureGroupLabel>
+          <CourseCard course={recommendedCourse} onPress={() => router.push(`/child/course/${recommendedCourse.slug}`)} />
+          <Pressable onPress={() => router.push("/child/courses")} hitSlop={8} style={styles.exploreLink}>
+            <Text style={[styles.exploreLinkText, { color: p.primary }]}>See all courses →</Text>
+          </Pressable>
+        </>
+      )}
 
       {guidedTour && (
         <GuidedTourDialog
@@ -304,5 +379,13 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.72,
+  },
+  exploreLink: {
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  exploreLinkText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.bodySmall,
   },
 });

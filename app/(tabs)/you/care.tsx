@@ -161,7 +161,7 @@ export default function Recovery() {
       </Card>
 
       {!areaFilter && !isFather && (
-        <Card style={styles.stageCard} onPress={() => router.push("/you/today")}>
+        <Card style={styles.stageCard} onPress={() => router.push("/you")}>
           <View style={styles.rowBetween}>
             <Text style={[styles.stageSerif, { color: p.primary }]}>How are you feeling today?</Text>
             <Chevron />

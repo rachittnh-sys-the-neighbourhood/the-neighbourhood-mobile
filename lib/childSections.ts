@@ -7,73 +7,78 @@
  * exactly one tap from the Child landing screen (two from Home), which is
  * the depth budget the IA allows.
  *
- * Order is priority order — the grid renders in this sequence, most
- * frequently useful first. "Activities" deliberately isn't here: that's
- * Home's job (the daily plan), and a card here that just deep-links back
- * to a different tab would undercut "everything here is about my child,
- * in one place."
+ * `group` places each card into the labelled zone the Child landing screen
+ * renders it under — DISCOVER, THIS STAGE, CARE, JOURNEY or WHAT YOU NEED
+ * (see app/(tabs)/child/index.tsx). This is a curated companion, not a
+ * feature catalogue, so the zones exist to give each card a reason for
+ * being there, not to turn six cards into six equally-weighted tiles.
+ * "Activities" deliberately isn't here: that's Home's job (the daily
+ * plan), and a card here that just deep-links back to a different tab
+ * would undercut "everything here is about my child, in one place."
  *
  * This list is age-invariant: a 2-week-old and a 7-year-old see the same
- * six cards in the same order. Age changes what's INSIDE a section —
+ * cards in the same zones. Age changes what's INSIDE a section —
  * vaccination entries thin out, milestone density drops, kit
- * recommendations advance, meal stage moves on — never which sections exist.
+ * recommendations advance, meal stage moves on, This Stage's recommended
+ * reads change — never which sections exist.
  */
+export type ChildSectionGroup = "discover" | "stage" | "care" | "journey" | "need";
+
 export type ChildSection = {
   /** Route segment under app/(tabs)/child/ */
   slug: "milestones" | "guide" | "kit" | "vaccinations" | "meals" | "reports" | "stories";
   title: string;
   /** One short line, shown on the card. */
   description: string;
-  /**
-   * Unset sections render in the main grid. "library" sections render in
-   * their own group below it — still one tap away and just as much a card
-   * as any other, just filed under reference material rather than daily
-   * or growth-tracking use. See CHILD_SECTIONS / LIBRARY_SECTIONS below.
-   */
-  group?: "library";
+  group: ChildSectionGroup;
 };
 
 export const CHILD_SECTIONS: ChildSection[] = [
   {
-    slug: "meals",
-    title: "Meal Planner",
-    description: "Feeding guidance staged to where they actually are.",
-  },
-  {
     slug: "milestones",
     title: "Discoveries",
     description: "What's typical now, and what they've already done.",
+    group: "discover",
+  },
+  {
+    slug: "guide",
+    title: "This Stage",
+    description: "What matters for your child right now.",
+    group: "stage",
+  },
+  {
+    slug: "meals",
+    title: "Meal Planner",
+    description: "Feeding guidance staged to where they actually are.",
+    group: "care",
   },
   {
     slug: "vaccinations",
     title: "Vaccinations",
     description: "The schedule, what's given, and what's due.",
-  },
-  {
-    slug: "kit",
-    title: "Development Kit",
-    description: "The kit they're on, and what's next.",
-  },
-  {
-    slug: "reports",
-    title: "Reports",
-    description: "Quiet weekly and monthly summaries.",
-    group: "library",
-  },
-  {
-    slug: "guide",
-    title: "The Guide",
-    description: "Courses and live workshops, expert-backed.",
-    group: "library",
+    group: "care",
   },
   {
     slug: "stories",
     title: "Stories",
     description: "Read-aloud stories for the first three years.",
-    group: "library",
+    group: "care",
+  },
+  {
+    slug: "reports",
+    title: "Progress",
+    description: "Discoveries, activities and patterns over time.",
+    group: "journey",
+  },
+  {
+    slug: "kit",
+    title: "Development Kit",
+    description: "The kit they're on, and what's next.",
+    group: "need",
   },
 ];
 
-export const LIBRARY_SECTIONS = CHILD_SECTIONS.filter((s) => s.group === "library");
+export const sectionsInGroup = (group: ChildSectionGroup): ChildSection[] =>
+  CHILD_SECTIONS.filter((s) => s.group === group);
 
 export const childHref = (slug: ChildSection["slug"]) => `/child/${slug}` as const;

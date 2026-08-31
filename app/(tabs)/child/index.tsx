@@ -14,30 +14,37 @@ import {
 import { GuidedTourDialog } from "../../../components/GuidedTourDialog";
 import { useAuth } from "../../../lib/AuthProvider";
 import { computeAge, developmentalAgeMonths } from "../../../lib/childAge";
-import { CHILD_SECTIONS, LIBRARY_SECTIONS, childHref, type ChildSection } from "../../../lib/childSections";
+import { sectionsInGroup, childHref, type ChildSection } from "../../../lib/childSections";
+import { recommendedChildStageTopics } from "../../../lib/childStageTopics";
 import * as growth from "../../../lib/db/growth";
-import type { Domain, VaccinationScheduleItem } from "../../../lib/db/types";
+import type { Domain, Milestone, VaccinationScheduleItem } from "../../../lib/db/types";
 import { markFirstRunComplete, markHomeCoachComplete } from "../../../lib/firstRun";
-import { STAGE_LABEL, stageForAgeMonths } from "../../../lib/kidMealPlanner";
+import {
+  mealsFor as kidMealsFor,
+  slotsForStage,
+  STAGE_LABEL,
+  stageForAgeMonths,
+} from "../../../lib/kidMealPlanner";
 import { colors, fonts, spacing, typeScale } from "../../../lib/theme";
 import { useGuidedTourStep } from "../../../lib/useGuidedTourStep";
 import { useTodaysPlan } from "../../../lib/useTodaysPlan";
 
 /**
- * Child's landing hub — a feature grid, not a scrolling list under section
- * headers. Everything about understanding, supporting and tracking the
- * child is one screen, one tap away, visible without scrolling to
- * discover it exists.
+ * Child's landing hub.
  *
- * "Today's activities" deliberately isn't a card here — that's Home's job,
- * and a card that just deep-links back to a different tab would undercut
- * "everything here is about my child, in one place." See
- * lib/childSections.ts for the full reasoning.
+ * Reorganised around the parent's mental model rather than a flat feature
+ * grid: TODAY leads with three small, honest answers (Try / Notice / Eat)
+ * before anything else, then THIS STAGE / DISCOVER / CARE / JOURNEY / WHAT
+ * YOU NEED each get their own zone — a card's group is what earns it a
+ * label, not just its existence (see lib/childSections.ts).
+ *
+ * "Today's activities" (Try) mirrors what Home already shows for this
+ * exact child — intentionally, since a parent who came here from Child
+ * rather than Home should see the same plan, not a different one.
  *
  * Status text on a card is only ever a REAL, already-loaded value (how
- * many milestones noticed, when the next vaccination is due) — never a
- * fabricated number. A card with nothing honest to say just shows its
- * description alone.
+ * many milestones noticed, when the next vaccination is due, which reads
+ * are recommended right now) — never a fabricated number.
  */
 const ICONS: Record<ChildSection["slug"], FeatureIconName> = {
   meals: "meal",
@@ -49,9 +56,18 @@ const ICONS: Record<ChildSection["slug"], FeatureIconName> = {
   stories: "story",
 };
 
-// The main grid is everything not filed under Library — see
-// lib/childSections.ts for what "library" means and why.
-const MAIN_SECTIONS = CHILD_SECTIONS.filter((s) => s.group !== "library");
+const GROUP_LABEL: Record<ChildSection["group"], string> = {
+  discover: "DISCOVER",
+  stage: "THIS STAGE",
+  care: "CARE",
+  journey: "JOURNEY",
+  need: "WHAT YOU NEED",
+};
+
+// Render order for the zones below TODAY, matching the product's own
+// mental model: notice something → understand the stage → day-to-day care
+// → the story over time → what might help.
+const GROUP_ORDER: ChildSection["group"][] = ["discover", "stage", "care", "journey", "need"];
 
 export default function ChildHome() {
   const router = useRouter();
@@ -73,6 +89,7 @@ export default function ChildHome() {
 
   const [milestoneStats, setMilestoneStats] = useState<{ achieved: number; total: number } | null>(null);
   const [nextVaccination, setNextVaccination] = useState<VaccinationScheduleItem | null>(null);
+  const [nextMilestone, setNextMilestone] = useState<Milestone | null>(null);
 
   // Same "today's plan" the Home tab reads — see components/ActivityCard.tsx.
   // Collapsed by default here too; nothing auto-expands.
@@ -119,6 +136,12 @@ export default function ChildHome() {
       ]);
       setMilestoneStats({ achieved: achieved.length, total: current.length });
 
+      const achievedIds = new Set(achieved.map((m) => m.milestone_id));
+      const outstanding = current.filter((m) => !achievedIds.has(m.id));
+      // Rotates by day, same idea as Home's own pick — see home.tsx.
+      const dayIndex = Math.floor(Date.now() / 86_400_000);
+      setNextMilestone(outstanding.length > 0 ? outstanding[dayIndex % outstanding.length] : null);
+
       const recordedIds = new Set(recorded.map((v) => v.vaccination_id));
       const ageDays = Math.floor(
         (Date.now() - new Date(`${child.date_of_birth}T00:00:00`).getTime()) / 86_400_000
@@ -141,6 +164,18 @@ export default function ChildHome() {
     router.replace("/home");
   };
 
+  // The same meal-of-the-day pick Home makes for this exact child — see
+  // home.tsx's mealStage/mealSlot/mealIdea. Duplicated rather than shared
+  // as a hook because it's three short lines and the two screens have
+  // slightly different fallback needs; if it grows, it should move to a
+  // shared selector.
+  const mealStage = stageForAgeMonths(ageMonths);
+  const mealSlots = slotsForStage(mealStage);
+  const mealSlot = mealSlots[0] ?? null;
+  const mealIdea = mealSlot ? kidMealsFor(mealStage, mealSlot.key)[0] ?? null : null;
+
+  const recommendedStageTopics = recommendedChildStageTopics(ageMonths, 2);
+
   const statusFor = (slug: ChildSection["slug"]): string | undefined => {
     switch (slug) {
       case "milestones":
@@ -149,15 +184,19 @@ export default function ChildHome() {
         return nextVaccination ? `Due around ${nextVaccination.age_label}` : "Up to date";
       case "meals":
         return STAGE_LABEL[stageForAgeMonths(ageMonths)];
+      case "guide":
+        return recommendedStageTopics.length > 0
+          ? `Recommended: ${recommendedStageTopics.map((t) => t.title).join(" · ")}`
+          : undefined;
       default:
         return undefined;
     }
   };
 
   /**
-   * Only three sections get their caption rewritten per child — the ones
-   * with real, already-loaded data to draw on (age, next vaccination).
-   * Development Kit and Reports are still backend scaffolds with nothing
+   * Only sections with real, already-loaded data to draw on get a
+   * personalized caption (age, next vaccination, recommended reads).
+   * Development Kit and Progress are still backend scaffolds with nothing
    * genuine to say beyond the static line (see lib/childSections.ts), so
    * they fall through unchanged rather than being personalized with
    * nothing but the child's name.
@@ -176,6 +215,8 @@ export default function ChildHome() {
         return nextVaccination
           ? `${child.name}'s next: ${nextVaccination.vaccine_name}.`
           : `${child.name}'s schedule, up to date for now.`;
+      case "kit":
+        return `Based on what ${child.name} is exploring right now.`;
       default:
         return section.description;
     }
@@ -209,9 +250,11 @@ export default function ChildHome() {
           </Pressable>
         </View>
 
+        <FeatureGroupLabel>TODAY</FeatureGroupLabel>
+
         {activities.length > 0 && (
           <>
-            <FeatureGroupLabel>TODAY'S ACTIVITIES</FeatureGroupLabel>
+            <Text style={styles.subLabel}>TRY</Text>
             {allDone && dayCollapsed ? (
               <View style={styles.activityList}>
                 <EndOfDay
@@ -275,34 +318,58 @@ export default function ChildHome() {
           </>
         )}
 
-        <FeatureGroupLabel>EXPLORE</FeatureGroupLabel>
-        <FeatureGrid>
-          {MAIN_SECTIONS.map((section) => (
-            <FeatureCard
-              key={section.slug}
-              icon={<FeatureIcon name={ICONS[section.slug]} color={colors.warmTaupe} />}
-              title={section.title}
-              description={descriptionFor(section)}
-              status={statusFor(section.slug)}
-              onPress={() => router.push(childHref(section.slug))}
-              highlighted={guidedTour && section.slug === "milestones"}
-            />
-          ))}
-        </FeatureGrid>
+        {nextMilestone && (
+          <>
+            <Text style={styles.subLabel}>NOTICE</Text>
+            <Pressable
+              style={({ pressed }) => [styles.todayRow, pressed && styles.pressed]}
+              onPress={() => router.push("/child/milestones")}
+              accessibilityRole="button"
+            >
+              <Text style={styles.todayRowTitle}>{nextMilestone.description}</Text>
+              <Text style={styles.todayRowBody}>Typical for this age. No rush, just something to notice.</Text>
+            </Pressable>
+          </>
+        )}
 
-        <FeatureGroupLabel>LIBRARY</FeatureGroupLabel>
-        <FeatureGrid>
-          {LIBRARY_SECTIONS.map((section) => (
-            <FeatureCard
-              key={section.slug}
-              icon={<FeatureIcon name={ICONS[section.slug]} color={colors.warmTaupe} />}
-              title={section.title}
-              description={section.description}
-              status={statusFor(section.slug)}
-              onPress={() => router.push(childHref(section.slug))}
-            />
-          ))}
-        </FeatureGrid>
+        {mealSlot && mealIdea && (
+          <>
+            <Text style={styles.subLabel}>EAT</Text>
+            <Pressable
+              style={({ pressed }) => [styles.todayRow, pressed && styles.pressed]}
+              onPress={() => router.push("/child/meals")}
+              accessibilityRole="button"
+            >
+              <Text style={styles.todayRowTitle}>{mealIdea.title}</Text>
+              <Text style={styles.todayRowBody}>
+                {mealSlot.window} · {mealIdea.minutes} min
+              </Text>
+            </Pressable>
+          </>
+        )}
+
+        {GROUP_ORDER.map((group) => {
+          const sections = sectionsInGroup(group);
+          if (sections.length === 0) return null;
+          return (
+            <View key={group}>
+              <FeatureGroupLabel>{GROUP_LABEL[group]}</FeatureGroupLabel>
+              <FeatureGrid>
+                {sections.map((section) => (
+                  <FeatureCard
+                    key={section.slug}
+                    icon={<FeatureIcon name={ICONS[section.slug]} color={colors.warmTaupe} />}
+                    title={section.title}
+                    description={descriptionFor(section)}
+                    status={statusFor(section.slug)}
+                    onPress={() => router.push(childHref(section.slug))}
+                    highlighted={guidedTour && section.slug === "milestones"}
+                  />
+                ))}
+              </FeatureGrid>
+            </View>
+          );
+        })}
       </ScrollView>
       {guidedTour && (
         <GuidedTourDialog
@@ -369,5 +436,36 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
     fontSize: typeScale.caption,
     color: colors.warmTaupe,
+  },
+  subLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.caption,
+    letterSpacing: 1.1,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  todayRow: {
+    padding: spacing.md,
+    borderRadius: 14,
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(96, 79, 60, 0.1)",
+    marginBottom: spacing.md,
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  todayRowTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.bodySmall,
+    color: colors.charcoal,
+  },
+  todayRowBody: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.caption,
+    lineHeight: typeScale.caption * 1.4,
+    color: colors.textMuted,
+    marginTop: 3,
   },
 });
