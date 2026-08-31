@@ -346,6 +346,11 @@ export default function ParentToday() {
                   {activity.duration_label} · {FATHER_TIME_OF_DAY_LABEL[activity.time_of_day]}
                   {activity.with_baby === "yes" ? " · With baby" : ""}
                 </Text>
+                {activity.source && (
+                  <Text style={[styles.recoverySourceText, { color: p.textMuted }]}>
+                    Source: {activity.source}
+                  </Text>
+                )}
                 <Pressable
                   disabled={fatherSwapping === activity.category}
                   onPress={() => swapFatherActivity(activity.category)}
@@ -552,6 +557,12 @@ const styles = StyleSheet.create({
     fontSize: typeScale.caption,
     lineHeight: typeScale.caption * 1.45,
     marginTop: spacing.sm,
+  },
+  recoverySourceText: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.caption,
+    lineHeight: typeScale.caption * 1.45,
+    marginTop: spacing.xs,
   },
   swapButton: {
     marginTop: spacing.md,

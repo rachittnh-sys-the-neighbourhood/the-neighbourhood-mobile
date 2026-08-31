@@ -1,10 +1,11 @@
 /** Age math shared across onboarding and the Home tab. */
 
 export const MILESTONES_START_MONTHS = 3;
-/** The library's oldest tracked stage is 5–6 years — see
- *  supabase/migrations/20260726092000_seed_content.sql. Past this, there's
- *  genuinely nothing more to check, not a data gap to paper over. */
-export const MILESTONES_END_MONTHS = 72;
+/** The library's oldest tracked stage is 6y9m–7y — see
+ *  supabase/migrations/20260830080500_milestones_batch_00.sql onward. Past
+ *  this, there's genuinely nothing more to check, not a data gap to paper
+ *  over. */
+export const MILESTONES_END_MONTHS = 84;
 
 export function canShowMilestones(totalMonths: number): boolean {
   return totalMonths >= MILESTONES_START_MONTHS;

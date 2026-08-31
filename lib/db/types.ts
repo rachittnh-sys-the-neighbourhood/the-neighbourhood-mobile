@@ -147,6 +147,10 @@ export type Milestone = {
   typical_age_min_months: number;
   typical_age_max_months: number;
   guide: { try?: string; watch?: string; see?: string } | null;
+  /** Citation(s) this milestone is aligned with — e.g. "CDC Learn the Signs
+   *  (9 months); AAP Bright Futures; IAP". Null for older content rows that
+   *  predate this field. */
+  source: string | null;
 };
 
 /**
@@ -430,6 +434,10 @@ export type FatherActivity = {
   effort_level: FatherActivityEffort;
   /** What to do next, once this one is established. */
   next_step: string | null;
+  /** Citation(s) this activity is aligned with — e.g. "NICE Postnatal Care;
+   *  ILO maternity and paternity protection guidance; FOGSI". Null for
+   *  older content rows that predate this field. */
+  source: string | null;
 };
 
 export type FatherDailyPlanRow = {

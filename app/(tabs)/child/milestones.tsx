@@ -24,7 +24,16 @@ import {
 } from "../../../lib/childAge";
 import * as growth from "../../../lib/db/growth";
 import * as plans from "../../../lib/db/plans";
-import { DOMAIN_LABEL, DOMAINS, type Activity, type DailyPlan, type Milestone, type Domain } from "../../../lib/db/types";
+import {
+  ACTIVITY_LIBRARY_AGE_BANDS,
+  AGE_BAND_LABEL,
+  DOMAIN_LABEL,
+  DOMAINS,
+  type Activity,
+  type DailyPlan,
+  type Milestone,
+  type Domain,
+} from "../../../lib/db/types";
 import { EMAIL_OTP_READY } from "../../../lib/authMode";
 import { markFirstRunComplete, markHomeCoachComplete } from "../../../lib/firstRun";
 import { hasAskedToSecure, markAskedToSecure } from "../../../lib/secureAccountPrompt";
@@ -35,30 +44,29 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const STAGE_ORDER = [
-  "0–3 months",
-  "4–6 months",
-  "7–9 months",
-  "10–12 months",
-  "1–2 years",
-  "2–3 years",
-  "3–4 years",
-  "4–5 years",
-  "5–6 years",
-];
+// Matches the 28 age bands milestones are now seeded at (see
+// supabase/migrations/20260830080500_milestones_batch_00.sql onward) —
+// finer-grained than the old 9 yearly-ish stages, out to 7 years.
+const STAGE_ORDER = ACTIVITY_LIBRARY_AGE_BANDS.map((band) => AGE_BAND_LABEL[band]);
 
 type InitialPhase = "check" | "celebrate" | "recommendations";
 
+/** "m7_9" -> 9. "y3_0" -> 39 (a y-band is a 3-month window starting at its
+ *  years/months point, so the upper bound is start + 3). Mirrors
+ *  scripts/gen-activity-library-seed.mjs's parseAgeBand. */
+function ageBandUpperBoundMonths(band: string): number {
+  const monthsMatch = band.match(/^m(\d+)_(\d+)$/);
+  if (monthsMatch) return Number(monthsMatch[2]);
+  const yearsMatch = band.match(/^y(\d+)_(\d+)$/);
+  if (yearsMatch) return Number(yearsMatch[1]) * 12 + Number(yearsMatch[2]) + 3;
+  throw new Error(`cannot parse age band "${band}"`);
+}
+
 function getStageLabelForAge(months: number): string {
-  if (months <= 3) return "0–3 months";
-  if (months <= 6) return "4–6 months";
-  if (months <= 9) return "7–9 months";
-  if (months <= 12) return "10–12 months";
-  if (months <= 24) return "1–2 years";
-  if (months <= 35) return "2–3 years";
-  if (months <= 47) return "3–4 years";
-  if (months <= 59) return "4–5 years";
-  return "5–6 years";
+  for (const band of ACTIVITY_LIBRARY_AGE_BANDS) {
+    if (months <= ageBandUpperBoundMonths(band)) return AGE_BAND_LABEL[band];
+  }
+  return AGE_BAND_LABEL[ACTIVITY_LIBRARY_AGE_BANDS[ACTIVITY_LIBRARY_AGE_BANDS.length - 1]];
 }
 
 function getNextStageLabel(currentLabel: string): string | null {
@@ -433,7 +441,7 @@ export default function Milestones() {
           </Text>
           <Text style={styles.initialAgeNote}>
             {beyondRange
-              ? "Discovery tracking here covers birth to 6 years. Nothing further to check for now."
+              ? "Discovery tracking here covers birth to 7 years. Nothing further to check for now."
               : `Showing a few discoveries for the ${currentStage} stage.`}
           </Text>
 
@@ -990,6 +998,13 @@ function MilestoneCard({
             <View style={styles.detailBlock}>
               <Text style={styles.detailLabel}>Watch For</Text>
               <Text style={styles.detailBody}>{watchFor}</Text>
+            </View>
+          )}
+
+          {/* Source */}
+          {milestone.source && (
+            <View style={styles.detailBlock}>
+              <Text style={styles.sourceText}>Source: {milestone.source}</Text>
             </View>
           )}
 
@@ -1676,6 +1691,12 @@ const styles = StyleSheet.create({
     fontSize: typeScale.bodySmall,
     lineHeight: typeScale.bodySmall * 1.5,
     color: colors.charcoal,
+  },
+  sourceText: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.caption,
+    lineHeight: typeScale.caption * 1.45,
+    color: colors.textMuted,
   },
   noteBlock: {
     marginTop: spacing.xs,
