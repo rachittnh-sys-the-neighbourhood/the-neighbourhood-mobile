@@ -45,14 +45,21 @@ export default function ChildStageTopicScreen() {
           {CHILD_STAGE_DOMAIN_LABEL[topic.domain].toUpperCase()} · {topic.minutes} MIN READ
         </Text>
         <Text style={styles.title}>{topic.title}</Text>
-        <Text style={styles.reason}>{topic.reason}</Text>
 
-        {topic.sections.map((section) => (
-          <View key={section.heading} style={styles.section}>
-            <Text style={styles.heading}>{section.heading}</Text>
-            <Text style={styles.body}>{section.body}</Text>
-          </View>
-        ))}
+        <View style={styles.section}>
+          {topic.paragraphs.map((paragraph, index) => (
+            <Text key={index} style={styles.body}>
+              {paragraph}
+            </Text>
+          ))}
+        </View>
+
+        <View style={styles.takeaway}>
+          <Text style={styles.takeawayLabel}>KEY TAKEAWAY</Text>
+          <Text style={styles.takeawayText}>{topic.reason}</Text>
+        </View>
+
+        <Text style={styles.sourceText}>Source: {topic.source}</Text>
 
         <Pressable
           onPress={() =>
@@ -90,27 +97,43 @@ const styles = StyleSheet.create({
     lineHeight: typeScale.display * 1.16,
     color: colors.charcoal,
   },
-  reason: {
-    fontFamily: fonts.serifItalic,
-    fontSize: typeScale.h3,
-    lineHeight: typeScale.h3 * 1.45,
-    color: colors.textMuted,
-    marginTop: spacing.md,
-  },
   section: {
-    marginTop: spacing.xl,
-  },
-  heading: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.h3,
-    color: colors.charcoal,
-    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
+    gap: spacing.md,
   },
   body: {
     fontFamily: fonts.body,
     fontSize: typeScale.body,
     lineHeight: typeScale.body * 1.68,
     color: colors.textMuted,
+  },
+  takeaway: {
+    marginTop: spacing.xl,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: "rgba(139, 116, 91, 0.1)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(96, 79, 60, 0.14)",
+  },
+  takeawayLabel: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.1,
+    color: colors.warmTaupe,
+    marginBottom: 4,
+  },
+  takeawayText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: typeScale.bodySmall,
+    lineHeight: typeScale.bodySmall * 1.5,
+    color: colors.charcoal,
+  },
+  sourceText: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.caption,
+    lineHeight: typeScale.caption * 1.45,
+    color: colors.textMuted,
+    marginTop: spacing.md,
   },
   missing: {
     flex: 1,
