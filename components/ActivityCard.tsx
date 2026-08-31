@@ -183,12 +183,17 @@ export function FeaturedActivityCard({
           onPress={onToggleMoreIdeas}
           style={({ pressed }) => [styles.moreIdeasRow, pressed && { opacity: 0.6 }]}
           accessibilityRole="button"
-          accessibilityLabel={moreIdeasOpen ? "Hide more ideas" : "Show more ideas"}
+          accessibilityLabel={
+            moreIdeasOpen ? "Hide other focus areas for today" : "Show other focus areas for today"
+          }
         >
           <Text style={styles.moreIdeasRowText}>
             {moreIdeasOpen
-              ? "Fewer ideas"
-              : `${moreIdeasCount} more ${moreIdeasCount === 1 ? "idea" : "ideas"} for today`}
+              ? "Hide other areas"
+              : // Naming the domains, not just a bare count — the point isn't
+                // "N alternates to this one activity", it's "N other
+                // developmental areas also have something today".
+                `+${moreIdeasCount} other ${moreIdeasCount === 1 ? "area" : "areas"} today`}
           </Text>
           <View style={moreIdeasOpen && styles.moreIdeasChevronOpen}>
             <ChevronRight />
