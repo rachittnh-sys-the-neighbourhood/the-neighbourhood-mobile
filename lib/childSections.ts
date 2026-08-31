@@ -7,11 +7,17 @@
  * exactly one tap from the Child landing screen (two from Home), which is
  * the depth budget the IA allows.
  *
- * `group` places each card into the labelled zone the Child landing screen
- * renders it under — DISCOVER, THIS STAGE, CARE, JOURNEY or WHAT YOU NEED
- * (see app/(tabs)/child/index.tsx). This is a curated companion, not a
- * feature catalogue, so the zones exist to give each card a reason for
- * being there, not to turn six cards into six equally-weighted tiles.
+ * `group` places each card into one of five conceptual zones — discover,
+ * stage, care, journey or need. The Child landing screen (see
+ * app/(tabs)/child/index.tsx) renders `discover`/`stage` as two of the
+ * EXPLORE tiles (alongside the ad-hoc Notice and Eat teasers) and merges
+ * `care`, `journey` and `need` into a single visual CARE tile group. The
+ * zones stay distinct here even though three of them currently render
+ * under one on-screen label, because what's genuinely in each differs and
+ * a future screen may want to tell them apart again. This is a curated
+ * companion, not a feature catalogue, so the zones exist to give each
+ * card a reason for being there, not to turn six cards into six
+ * equally-weighted tiles.
  * "Activities" deliberately isn't here: that's Home's job (the daily
  * plan), and a card here that just deep-links back to a different tab
  * would undercut "everything here is about my child, in one place."
