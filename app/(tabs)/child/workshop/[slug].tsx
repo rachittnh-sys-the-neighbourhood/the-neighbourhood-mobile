@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     paddingVertical: spacing.md,
     borderRadius: radius.pill,
-    backgroundColor: colors.warmTaupe,
+    backgroundColor: colors.sageDark,
     alignItems: "center",
   },
   registerButtonDone: {

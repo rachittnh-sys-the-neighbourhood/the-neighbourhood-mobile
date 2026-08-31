@@ -283,7 +283,7 @@ export default function Making() {
         {saveError && (
           <View style={styles.retryWrap}>
             <PrimaryButton
-              tone="taupe"
+              tone="accent"
               title="Try again"
               onPress={retry}
               loading={retrying}
@@ -299,7 +299,7 @@ export default function Making() {
             {/* Not "Try again": a wedged session (the usual cause here)
                 hangs the same way on a retry. A reload is what actually
                 clears it — see lib/reload.ts. */}
-            <PrimaryButton tone="taupe" title="Reload" onPress={() => reloadApp(router)} />
+            <PrimaryButton tone="accent" title="Reload" onPress={() => reloadApp(router)} />
           </View>
         )}
       </Animated.View>

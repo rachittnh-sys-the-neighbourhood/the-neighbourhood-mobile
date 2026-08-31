@@ -83,12 +83,13 @@ export function PrimaryButton({
   loading?: boolean;
   disabled?: boolean;
   /**
-   * "taupe" is the in-app brand action (Home's Start button). "charcoal"
-   * stays the default so onboarding and the pre-auth screens are
-   * unaffected by this — worth revisiting once the whole app has had a
-   * visual pass, since two primary colours is one too many.
+   * "accent" is the in-app brand action (Home's Start button), in the
+   * app's dark-sage "pop" colour (see colors.sageDark in lib/theme.ts).
+   * "charcoal" stays the default so onboarding and the pre-auth screens
+   * are unaffected by this — worth revisiting once the whole app has had
+   * a visual pass, since two primary colours is one too many.
    */
-  tone?: "charcoal" | "taupe";
+  tone?: "charcoal" | "accent";
 }) {
   const isDisabled = disabled || loading;
   return (
@@ -100,7 +101,7 @@ export function PrimaryButton({
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       style={({ pressed }) => [
         styles.primaryButton,
-        tone === "taupe" && styles.primaryButtonTaupe,
+        tone === "accent" && styles.primaryButtonAccent,
         isDisabled && styles.primaryButtonDisabled,
         pressed && !isDisabled && styles.primaryButtonPressed,
       ]}
@@ -195,8 +196,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 48,
   },
-  primaryButtonTaupe: {
-    backgroundColor: colors.warmTaupe,
+  primaryButtonAccent: {
+    backgroundColor: colors.sageDark,
   },
   primaryButtonPressed: {
     opacity: 0.85,

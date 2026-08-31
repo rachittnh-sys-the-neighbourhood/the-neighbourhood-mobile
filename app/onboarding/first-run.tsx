@@ -262,7 +262,7 @@ export default function FirstRun() {
         footer={
           <View style={styles.footerStack}>
             <PrimaryButton
-              tone="taupe"
+              tone="accent"
               title={selected.size ? "Continue to today's plan" : "Continue without marking"}
               onPress={() => setPhase("plan")}
             />

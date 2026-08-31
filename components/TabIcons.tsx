@@ -40,8 +40,8 @@ export function HomeIcon({ color, focused }: IconProps) {
 
 /**
  * Ask — the one tab with a persistent circular backdrop, so it reads as
- * the row's central action without leaving the row. Solid warmTaupe (the
- * app's existing primary/CTA colour, already what the Ask composer's own
+ * the row's central action without leaving the row. Solid sageDark (the
+ * app's dark-sage CTA "pop" colour, already what the Ask composer's own
  * button uses on Home) rather than a pale tint, so it reads as "the main
  * thing you can do here" — a constant, not a selected-state colour that
  * happens to change with focus like the other four tabs.
@@ -70,7 +70,7 @@ const askIconStyles = StyleSheet.create({
     borderRadius: 19,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.warmTaupe,
+    backgroundColor: colors.sageDark,
     marginTop: -6,
     marginBottom: 6,
     shadowColor: colors.charcoal,

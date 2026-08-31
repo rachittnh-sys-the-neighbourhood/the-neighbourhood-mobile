@@ -2,6 +2,7 @@ import { Tabs, useRouter } from "expo-router";
 import { AvatarButton } from "../../components/AvatarButton";
 import { LogoMark } from "../../components/Logo";
 import { AskTabIcon, ChildIcon, CommunityIcon, HomeIcon, YouIcon } from "../../components/TabIcons";
+import { useMode } from "../../lib/ModeProvider";
 import { colors, spacing, type } from "../../lib/theme";
 
 /**
@@ -32,6 +33,12 @@ import { colors, spacing, type } from "../../lib/theme";
  */
 export default function TabsLayout() {
   const router = useRouter();
+  // The bar itself is one permanent shell shared by all five tabs, so it
+  // can't read a per-screen palette the way You's own Stack does — it has
+  // to pick, per render, whether the CURRENT route is in You/Care and
+  // theme itself to match, same wayfinding cue as the header change (see
+  // lib/ModeProvider.tsx).
+  const { palette, isParent } = useMode();
 
   return (
     <Tabs
@@ -43,11 +50,15 @@ export default function TabsLayout() {
           color: colors.charcoal,
         },
         headerRight: () => <AvatarButton />,
-        tabBarActiveTintColor: colors.charcoal,
-        tabBarInactiveTintColor: colors.textMuted,
+        // In You/Care, the active icon matches the parent palette's own
+        // primary so it doesn't clash with the greener bar background;
+        // everywhere else it's the app's dark-sage "pop" accent (see
+        // colors.sageDark) rather than plain charcoal.
+        tabBarActiveTintColor: isParent ? palette.primary : colors.sageDark,
+        tabBarInactiveTintColor: isParent ? palette.textMuted : colors.textMuted,
         tabBarStyle: {
-          backgroundColor: colors.cream,
-          borderTopColor: colors.border,
+          backgroundColor: isParent ? palette.bg : colors.cream,
+          borderTopColor: isParent ? palette.border : colors.border,
           paddingTop: spacing.xs,
           paddingBottom: spacing.sm,
           height: 76,

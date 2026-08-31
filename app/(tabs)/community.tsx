@@ -833,7 +833,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radius.pill,
-    backgroundColor: colors.warmTaupe,
+    backgroundColor: colors.sageDark,
   },
   retryButtonText: {
     fontFamily: fonts.bodySemiBold,

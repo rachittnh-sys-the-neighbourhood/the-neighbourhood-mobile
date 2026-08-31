@@ -75,7 +75,7 @@ export default function Index() {
               This is taking longer than it should. Reloading should fix it.
             </Text>
             <View style={styles.stuckReload}>
-              <PrimaryButton tone="taupe" title="Reload" onPress={() => reloadApp(router)} />
+              <PrimaryButton tone="accent" title="Reload" onPress={() => reloadApp(router)} />
             </View>
           </>
         ) : (
