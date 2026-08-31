@@ -10,13 +10,11 @@ import {
   MicroLearningCard,
   type FeatureIconName,
 } from "../../../components/FeatureHub";
-import { CourseCard } from "../../../components/LearningUI";
 import { Card } from "../../../components/parentUI";
 import { GuidedTourDialog } from "../../../components/GuidedTourDialog";
 import { useAuth } from "../../../lib/AuthProvider";
 import { computeAge, youngestChild } from "../../../lib/childAge";
 import { markFirstRunComplete, markHomeCoachComplete } from "../../../lib/firstRun";
-import { COURSES } from "../../../lib/learning";
 import { usePalette } from "../../../lib/ModeProvider";
 import {
   deliveryPhrase,
@@ -185,21 +183,6 @@ export default function YouHub() {
   const stageTopicArea = (topic: (typeof stageTopics)[number]) =>
     careAreas.find((a) => a.key === topic.area) ?? null;
 
-  // One course, contextually — never the whole catalogue up front. Loosely
-  // matched to the top visible care area so it feels chosen, not random;
-  // falls back to the first course when nothing maps cleanly.
-  const COURSE_CATEGORY_FOR_AREA: Partial<Record<CareArea, string>> = {
-    sleep: "sleep",
-    feeding: "feeding",
-    nutrition: "feeding",
-    mental: "wellbeing",
-    physical: "wellbeing",
-    relationships: "behaviour",
-    fathering: "wellbeing",
-  };
-  const matchedCategory = careAreas[0] ? COURSE_CATEGORY_FOR_AREA[careAreas[0].key] : undefined;
-  const recommendedCourse = COURSES.find((c) => c.category === matchedCategory) ?? COURSES[0];
-
   return (
     <ScrollView
       style={{ backgroundColor: p.bg }}
@@ -273,8 +256,9 @@ export default function YouHub() {
       </FeatureGrid>
 
       {/* "What may help you right now" — a curated pair, not the library.
-          Explore your stage → is the door into the full Care screen for
-          anyone who wants more than two reads. */}
+          No link into the full Care area list here any more: WELL BEING
+          below already covers that ground, so a second door into the same
+          content just duplicated it. */}
       {stageTopics.length > 0 && (
         <>
           <FeatureGroupLabel>YOUR STAGE</FeatureGroupLabel>
@@ -288,15 +272,12 @@ export default function YouHub() {
               onPress={() => router.push(`/care/${topic.slug}`)}
             />
           ))}
-          <Pressable onPress={() => router.push("/you/care")} hitSlop={8} style={styles.exploreLink}>
-            <Text style={[styles.exploreLinkText, { color: p.primary }]}>Explore your stage →</Text>
-          </Pressable>
         </>
       )}
 
       {/* Zone: the reference library, organised by area — for browsing over
           time rather than today's one recommendation. */}
-      <FeatureGroupLabel>YOUR JOURNEY</FeatureGroupLabel>
+      <FeatureGroupLabel>WELL BEING</FeatureGroupLabel>
       <FeatureGrid>
         {careAreas.map((area) => (
           <FeatureCard
@@ -309,19 +290,6 @@ export default function YouHub() {
           />
         ))}
       </FeatureGrid>
-
-      {/* "I want to understand this properly" — one course, contextually
-          recommended, not a marketplace. See all courses → is the door
-          into the full catalogue (app/(tabs)/child/courses.tsx). */}
-      {recommendedCourse && (
-        <>
-          <FeatureGroupLabel>GO DEEPER</FeatureGroupLabel>
-          <CourseCard course={recommendedCourse} onPress={() => router.push(`/child/course/${recommendedCourse.slug}`)} />
-          <Pressable onPress={() => router.push("/child/courses")} hitSlop={8} style={styles.exploreLink}>
-            <Text style={[styles.exploreLinkText, { color: p.primary }]}>See all courses →</Text>
-          </Pressable>
-        </>
-      )}
 
       {guidedTour && (
         <GuidedTourDialog
@@ -379,13 +347,5 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.72,
-  },
-  exploreLink: {
-    marginTop: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  exploreLinkText: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.bodySmall,
   },
 });
