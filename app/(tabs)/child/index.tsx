@@ -2,27 +2,31 @@ import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
 import { useScreenFocus } from "../../../lib/useScreenFocus";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { ActivityCollapsedRow, ActivityDoneRow, ActivityExpandedCard, EndOfDay } from "../../../components/ActivityCard";
+import {
+  ActivityExpandedCard,
+  EndOfDay,
+  FeaturedActivityCard,
+} from "../../../components/ActivityCard";
 import {
   FeatureCard,
   FeatureGrid,
   FeatureGroupLabel,
   FeatureIcon,
   HubHeader,
+  MicroLearningCard,
   type FeatureIconName,
 } from "../../../components/FeatureHub";
 import { GuidedTourDialog } from "../../../components/GuidedTourDialog";
 import { useAuth } from "../../../lib/AuthProvider";
 import { computeAge, developmentalAgeMonths } from "../../../lib/childAge";
-import { sectionsInGroup, childHref, type ChildSection } from "../../../lib/childSections";
-import { recommendedChildStageTopics } from "../../../lib/childStageTopics";
+import { CHILD_SECTIONS, sectionsInGroup, childHref, type ChildSection } from "../../../lib/childSections";
+import { CHILD_STAGE_DOMAIN_LABEL, recommendedChildStageTopics } from "../../../lib/childStageTopics";
 import * as growth from "../../../lib/db/growth";
 import type { Domain, Milestone, VaccinationScheduleItem } from "../../../lib/db/types";
 import { markFirstRunComplete, markHomeCoachComplete } from "../../../lib/firstRun";
 import {
   mealsFor as kidMealsFor,
   slotsForStage,
-  STAGE_LABEL,
   stageForAgeMonths,
 } from "../../../lib/kidMealPlanner";
 import { colors, fonts, spacing, typeScale } from "../../../lib/theme";
@@ -32,19 +36,21 @@ import { useTodaysPlan } from "../../../lib/useTodaysPlan";
 /**
  * Child's landing hub.
  *
- * Reorganised around the parent's mental model rather than a flat feature
- * grid: TODAY leads with three small, honest answers (Try / Notice / Eat)
- * before anything else, then THIS STAGE / DISCOVER / CARE / JOURNEY / WHAT
- * YOU NEED each get their own zone — a card's group is what earns it a
- * label, not just its existence (see lib/childSections.ts).
+ * TODAY leads with three small, honest answers (Try / Notice / Eat) before
+ * anything else — Try shows exactly one recommended activity, the other
+ * three folded behind "More ideas" (same pattern as Home's own activity
+ * card, see components/ActivityCard.tsx), rather than four rows of real
+ * estate every single time.
  *
- * "Today's activities" (Try) mirrors what Home already shows for this
- * exact child — intentionally, since a parent who came here from Child
- * rather than Home should see the same plan, not a different one.
+ * Below TODAY, each remaining section earns its own small zone (see
+ * lib/childSections.ts), but a zone whose card is mostly self-explanatory
+ * (Discoveries, a single recommended This Stage read) doesn't repeat its
+ * own name as both a section label and a card title — the label alone, or
+ * the card's real content, carries the meaning once.
  *
- * Status text on a card is only ever a REAL, already-loaded value (how
- * many milestones noticed, when the next vaccination is due, which reads
- * are recommended right now) — never a fabricated number.
+ * A group's cards lay out two-to-a-row EXCEPT the odd one out, which
+ * stretches to a full-width row instead of leaving a dangling gap next to
+ * an empty column (see FeatureCard's `wide` prop).
  */
 const ICONS: Record<ChildSection["slug"], FeatureIconName> = {
   meals: "meal",
@@ -92,9 +98,9 @@ export default function ChildHome() {
   const [nextMilestone, setNextMilestone] = useState<Milestone | null>(null);
 
   // Same "today's plan" the Home tab reads — see components/ActivityCard.tsx.
-  // Collapsed by default here too; nothing auto-expands.
   const { plan, completed, complete, swap } = useTodaysPlan(child?.id ?? null);
   const [expandedDomain, setExpandedDomain] = useState<Domain | null>(null);
+  const [moreIdeasOpen, setMoreIdeasOpen] = useState(false);
   const cardOpacity = useRef(new Animated.Value(1)).current;
 
   const activities = plan?.activities ?? [];
@@ -124,6 +130,12 @@ export default function ChildHome() {
     },
     [cardOpacity]
   );
+
+  // The one activity Try leads with: the next undone activity in
+  // orderDomains' order (see lib/todaysPlan.ts) — same idea as Home's
+  // ChildDayActivities. The rest fold behind "More ideas".
+  const featured = activities.find((a) => !completed.includes(a.domain)) ?? activities[0];
+  const otherActivities = activities.filter((a) => a.domain !== featured?.domain);
 
   const loadStats = useCallback(async () => {
     if (!child) return;
@@ -174,20 +186,13 @@ export default function ChildHome() {
   const mealSlot = mealSlots[0] ?? null;
   const mealIdea = mealSlot ? kidMealsFor(mealStage, mealSlot.key)[0] ?? null : null;
 
-  const recommendedStageTopics = recommendedChildStageTopics(ageMonths, 2);
+  const recommendedStageTopics = recommendedChildStageTopics(ageMonths, 1);
+  const topStageTopic = recommendedStageTopics[0] ?? null;
 
   const statusFor = (slug: ChildSection["slug"]): string | undefined => {
     switch (slug) {
-      case "milestones":
-        return milestoneStats ? `${milestoneStats.achieved} noticed so far` : undefined;
       case "vaccinations":
         return nextVaccination ? `Due around ${nextVaccination.age_label}` : "Up to date";
-      case "meals":
-        return STAGE_LABEL[stageForAgeMonths(ageMonths)];
-      case "guide":
-        return recommendedStageTopics.length > 0
-          ? `Recommended: ${recommendedStageTopics.map((t) => t.title).join(" · ")}`
-          : undefined;
       default:
         return undefined;
     }
@@ -195,19 +200,17 @@ export default function ChildHome() {
 
   /**
    * Only sections with real, already-loaded data to draw on get a
-   * personalized caption (age, next vaccination, recommended reads).
-   * Development Kit and Progress are still backend scaffolds with nothing
-   * genuine to say beyond the static line (see lib/childSections.ts), so
-   * they fall through unchanged rather than being personalized with
-   * nothing but the child's name.
+   * personalized caption (age, next vaccination). Development Kit and
+   * Progress are still backend scaffolds with nothing genuine to say
+   * beyond the static line (see lib/childSections.ts), so they fall
+   * through unchanged rather than being personalized with nothing but the
+   * child's name.
    */
   const descriptionFor = (section: ChildSection): string => {
     if (!child || !age) return section.description;
     switch (section.slug) {
       case "meals":
         return `Feeding guidance for ${child.name}, at ${age.label}.`;
-      case "milestones":
-        return `What's typical for ${child.name} at ${age.label}.`;
       case "vaccinations":
         // The due date already lives in the status line below (see
         // statusFor) — repeating it here just duplicated the same phrase
@@ -220,6 +223,43 @@ export default function ChildHome() {
       default:
         return section.description;
     }
+  };
+
+  /** Renders one zone's cards two-to-a-row, except the odd one out (or a
+   *  lone single card), which gets a full-width row instead of a dangling
+   *  half-empty gap. */
+  const renderGroupCards = (sections: ChildSection[]) => {
+    const hasOddOne = sections.length % 2 === 1;
+    const paired = hasOddOne ? sections.slice(0, -1) : sections;
+    const odd = hasOddOne ? sections[sections.length - 1] : null;
+    return (
+      <>
+        {paired.length > 0 && (
+          <FeatureGrid>
+            {paired.map((section) => (
+              <FeatureCard
+                key={section.slug}
+                icon={<FeatureIcon name={ICONS[section.slug]} color={colors.warmTaupe} />}
+                title={section.title}
+                description={descriptionFor(section)}
+                status={statusFor(section.slug)}
+                onPress={() => router.push(childHref(section.slug))}
+              />
+            ))}
+          </FeatureGrid>
+        )}
+        {odd && (
+          <FeatureCard
+            wide
+            icon={<FeatureIcon name={ICONS[odd.slug]} color={colors.warmTaupe} />}
+            title={odd.title}
+            description={descriptionFor(odd)}
+            status={statusFor(odd.slug)}
+            onPress={() => router.push(childHref(odd.slug))}
+          />
+        )}
+      </>
+    );
   };
 
   return (
@@ -265,53 +305,76 @@ export default function ChildHome() {
               </View>
             ) : (
               <View style={styles.activityList}>
-                {activities.map((activity) => {
-                  const isDone = completed.includes(activity.domain);
-
-                  // Expansion is checked before completion so a done
-                  // activity can still be reopened — see ActivityDoneRow.
-                  if (activity.domain === expandedDomain) {
-                    return (
-                      <Animated.View key={activity.domain} style={{ opacity: cardOpacity }}>
-                        <ActivityExpandedCard
-                          activity={activity}
-                          canSwap
-                          isDone={isDone}
-                          onComplete={() => {
-                            complete(activity);
-                            setExpandedDomain(null);
-                          }}
-                          onSwap={() => fadeSwap(activity.domain, () => swap(activity.domain))}
-                          onCollapse={() => setExpandedDomain(null)}
-                        />
-                      </Animated.View>
-                    );
-                  }
-
-                  if (isDone) {
-                    return (
-                      <ActivityDoneRow
-                        key={activity.domain}
-                        activity={activity}
-                        onPress={() => setExpandedDomain(activity.domain)}
+                {featured &&
+                  (featured.domain === expandedDomain ? (
+                    <Animated.View style={{ opacity: cardOpacity }}>
+                      <ActivityExpandedCard
+                        activity={featured}
+                        canSwap
+                        isDone={completed.includes(featured.domain)}
+                        onComplete={() => {
+                          complete(featured);
+                          setExpandedDomain(null);
+                        }}
+                        onSwap={() => fadeSwap(featured.domain, () => swap(featured.domain))}
+                        onCollapse={() => setExpandedDomain(null)}
                       />
-                    );
-                  }
-
-                  return (
-                    <ActivityCollapsedRow
-                      key={activity.domain}
-                      activity={activity}
-                      onPress={() => setExpandedDomain(activity.domain)}
+                    </Animated.View>
+                  ) : (
+                    <FeaturedActivityCard
+                      activity={featured}
+                      moreIdeasCount={otherActivities.length}
+                      moreIdeasOpen={moreIdeasOpen}
+                      onOpen={() => setExpandedDomain(featured.domain)}
+                      onToggleMoreIdeas={() => setMoreIdeasOpen((v) => !v)}
                     />
-                  );
-                })}
+                  ))}
+
+                {otherActivities.length > 0 && moreIdeasOpen && (
+                  <View style={styles.moreIdeasList}>
+                    {otherActivities.map((activity) => {
+                      const isDone = completed.includes(activity.domain);
+                      if (activity.domain === expandedDomain) {
+                        return (
+                          <Animated.View key={activity.domain} style={{ opacity: cardOpacity }}>
+                            <ActivityExpandedCard
+                              activity={activity}
+                              canSwap
+                              isDone={isDone}
+                              onComplete={() => {
+                                complete(activity);
+                                setExpandedDomain(null);
+                              }}
+                              onSwap={() => fadeSwap(activity.domain, () => swap(activity.domain))}
+                              onCollapse={() => setExpandedDomain(null)}
+                            />
+                          </Animated.View>
+                        );
+                      }
+                      return (
+                        <Pressable
+                          key={activity.domain}
+                          onPress={() => setExpandedDomain(activity.domain)}
+                          style={({ pressed }) => [styles.todayRow, pressed && styles.pressed]}
+                        >
+                          <Text style={styles.todayRowTitle}>{activity.title}</Text>
+                          <Text style={styles.todayRowBody}>
+                            {isDone ? "Done" : activity.duration_label ?? ""}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
+
                 {allDone && (
-                  <EndOfDay
-                    childName={child?.name ?? "your child"}
-                    collapsed={false}
-                    onToggle={() => setDayCollapsed(true)}
-                  />
+                  <View style={{ marginTop: spacing.sm }}>
+                    <EndOfDay
+                      childName={child?.name ?? "your child"}
+                      collapsed={false}
+                      onToggle={() => setDayCollapsed(true)}
+                    />
+                  </View>
                 )}
               </View>
             )}
@@ -322,12 +385,12 @@ export default function ChildHome() {
           <>
             <Text style={styles.subLabel}>NOTICE</Text>
             <Pressable
-              style={({ pressed }) => [styles.todayRow, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.todayCard, pressed && styles.pressed]}
               onPress={() => router.push("/child/milestones")}
               accessibilityRole="button"
             >
-              <Text style={styles.todayRowTitle}>{nextMilestone.description}</Text>
-              <Text style={styles.todayRowBody}>Typical for this age. No rush, just something to notice.</Text>
+              <Text style={styles.todayCardTitle}>{nextMilestone.description}</Text>
+              <Text style={styles.todayCardBody}>Typical for this age. No rush, just something to notice.</Text>
             </Pressable>
           </>
         )}
@@ -336,37 +399,53 @@ export default function ChildHome() {
           <>
             <Text style={styles.subLabel}>EAT</Text>
             <Pressable
-              style={({ pressed }) => [styles.todayRow, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.todayCard, pressed && styles.pressed]}
               onPress={() => router.push("/child/meals")}
               accessibilityRole="button"
             >
-              <Text style={styles.todayRowTitle}>{mealIdea.title}</Text>
-              <Text style={styles.todayRowBody}>
+              <Text style={styles.todayCardTitle}>{mealIdea.title}</Text>
+              <Text style={styles.todayCardBody}>
                 {mealSlot.window} · {mealIdea.minutes} min
               </Text>
             </Pressable>
           </>
         )}
 
-        {GROUP_ORDER.map((group) => {
+        {/* DISCOVER — a simple icon+text row, not a card repeating the same
+            name as the section label above it. No count/status here: that
+            detail belongs on the Discoveries screen itself, once opened. */}
+        <FeatureGroupLabel>DISCOVER</FeatureGroupLabel>
+        <Pressable
+          onPress={() => router.push(childHref("milestones"))}
+          style={({ pressed }) => [styles.simpleRow, pressed && styles.pressed]}
+        >
+          <FeatureIcon name="milestone" color={colors.warmTaupe} />
+          <Text style={styles.simpleRowText}>Discoveries</Text>
+          <Text style={styles.simpleRowChevron}>{"›"}</Text>
+        </Pressable>
+
+        {/* THIS STAGE — the top recommended read stands in for the section;
+            no card also titled "This Stage" repeating the label above it. */}
+        {topStageTopic && (
+          <>
+            <FeatureGroupLabel>THIS STAGE</FeatureGroupLabel>
+            <MicroLearningCard
+              eyebrow={CHILD_STAGE_DOMAIN_LABEL[topStageTopic.domain]}
+              title={topStageTopic.title}
+              reason={topStageTopic.reason}
+              minutes={topStageTopic.minutes}
+              onPress={() => router.push(childHref("guide"))}
+            />
+          </>
+        )}
+
+        {GROUP_ORDER.filter((g) => g === "care" || g === "journey" || g === "need").map((group) => {
           const sections = sectionsInGroup(group);
           if (sections.length === 0) return null;
           return (
             <View key={group}>
               <FeatureGroupLabel>{GROUP_LABEL[group]}</FeatureGroupLabel>
-              <FeatureGrid>
-                {sections.map((section) => (
-                  <FeatureCard
-                    key={section.slug}
-                    icon={<FeatureIcon name={ICONS[section.slug]} color={colors.warmTaupe} />}
-                    title={section.title}
-                    description={descriptionFor(section)}
-                    status={statusFor(section.slug)}
-                    onPress={() => router.push(childHref(section.slug))}
-                    highlighted={guidedTour && section.slug === "milestones"}
-                  />
-                ))}
-              </FeatureGrid>
+              {renderGroupCards(sections)}
             </View>
           );
         })}
@@ -397,6 +476,10 @@ const styles = StyleSheet.create({
   },
   activityList: {
     marginBottom: spacing.lg,
+  },
+  moreIdeasList: {
+    marginTop: spacing.sm,
+    gap: spacing.xs,
   },
   childRow: {
     flexDirection: "row",
@@ -446,6 +529,29 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   todayRow: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 12,
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(96, 79, 60, 0.1)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  todayRowTitle: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: typeScale.bodySmall,
+    color: colors.charcoal,
+    flexShrink: 1,
+    marginRight: spacing.sm,
+  },
+  todayRowBody: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.caption,
+    color: colors.textMuted,
+  },
+  todayCard: {
     padding: spacing.md,
     borderRadius: 14,
     backgroundColor: colors.white,
@@ -456,16 +562,32 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.7,
   },
-  todayRowTitle: {
+  todayCardTitle: {
     fontFamily: fonts.bodySemiBold,
     fontSize: typeScale.bodySmall,
     color: colors.charcoal,
   },
-  todayRowBody: {
+  todayCardBody: {
     fontFamily: fonts.body,
     fontSize: typeScale.caption,
     lineHeight: typeScale.caption * 1.4,
     color: colors.textMuted,
     marginTop: 3,
+  },
+  simpleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  simpleRowText: {
+    flex: 1,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.bodySmall,
+    color: colors.charcoal,
+  },
+  simpleRowChevron: {
+    fontSize: 18,
+    color: colors.textMuted,
   },
 });
