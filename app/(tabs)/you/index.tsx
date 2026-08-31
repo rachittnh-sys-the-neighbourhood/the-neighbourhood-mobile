@@ -86,7 +86,7 @@ export default function YouHub() {
   const params = useLocalSearchParams<{ guidedTour?: string; next?: string; step?: string }>();
   const p = usePalette();
   const { parentName, profile: authProfile, children } = useAuth();
-  const [feeling, setFeeling] = useState<FeelingKey>("tired");
+  const [feeling, setFeeling] = useState<FeelingKey>("bright");
 
   // The tour's final stop — see child/guide.tsx: only the focused screen
   // on matching route with the right step may show a tour dialog.

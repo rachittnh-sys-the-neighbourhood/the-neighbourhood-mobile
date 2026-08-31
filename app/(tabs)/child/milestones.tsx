@@ -798,6 +798,17 @@ export default function Milestones() {
             )}
           </View>
         )}
+
+        {/* One shared citation for the whole screen, rather than repeating
+            a "Source: ..." line on every card — the per-milestone value
+            was identical across an entire age band anyway (the same
+            checkpoint citation copied onto each milestone in it), so
+            showing it once here loses nothing genuine. */}
+        {milestonesAvailable && (
+          <Text style={styles.citationFooter}>
+            Sourced from CDC, ASHA, AAP Bright Futures and IAP.
+          </Text>
+        )}
       </ScrollView>
       <SecureAccountPrompt
         visible={showSecurePrompt}
@@ -919,7 +930,6 @@ function MilestoneCard({
     setNoteText(achievedNote ?? "");
   }, [achievedNote]);
 
-  const whyItMatters = milestone.guide?.see ?? "A beautiful leap forward in your child's capabilities.";
   const tryActivity = milestone.guide?.try ?? null;
   const watchFor = milestone.guide?.watch ?? null;
 
@@ -981,12 +991,6 @@ function MilestoneCard({
       {/* Expanded Sub-details */}
       {isExpanded && (
         <View style={styles.expandedContent}>
-          {/* Why it Matters */}
-          <View style={styles.detailBlock}>
-            <Text style={styles.detailLabel}>Why It Matters</Text>
-            <Text style={styles.detailBody}>{whyItMatters}</Text>
-          </View>
-
           {/* Try This Activity */}
           {tryActivity && (
             <View style={styles.detailBlock}>
@@ -1000,13 +1004,6 @@ function MilestoneCard({
             <View style={styles.detailBlock}>
               <Text style={styles.detailLabel}>Watch For</Text>
               <Text style={styles.detailBody}>{watchFor}</Text>
-            </View>
-          )}
-
-          {/* Source */}
-          {milestone.source && (
-            <View style={styles.detailBlock}>
-              <Text style={styles.sourceText}>Source: {milestone.source}</Text>
             </View>
           )}
 
@@ -1694,11 +1691,14 @@ const styles = StyleSheet.create({
     lineHeight: typeScale.bodySmall * 1.5,
     color: colors.charcoal,
   },
-  sourceText: {
+  citationFooter: {
     fontFamily: fonts.body,
     fontSize: typeScale.caption,
     lineHeight: typeScale.caption * 1.45,
     color: colors.textMuted,
+    textAlign: "center",
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
   },
   noteBlock: {
     marginTop: spacing.xs,
