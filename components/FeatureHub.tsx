@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { usePalette } from "../lib/ModeProvider";
-import { fonts, radius, spacing, typeScale } from "../lib/theme";
+import { colors, fonts, radius, spacing, typeScale } from "../lib/theme";
 
 /**
  * The shared hub shell for Child and You — one card system, one grid, one
@@ -93,8 +93,13 @@ export function FeatureCard({
             {description}
           </Text>
         </View>
+        {/* Fixed dark-sage rather than p.primary — a status is a real,
+            already-known value worth noticing (a due date, a count), and
+            reads as such in the same accent colour everywhere, in both
+            Child's and You's palettes, rather than blending into whichever
+            mode's own brand colour the card happens to render in. */}
         {status && (
-          <Text style={[styles.cardStatus, { color: p.primary }]} numberOfLines={1}>
+          <Text style={[styles.cardStatus, { color: colors.sageDark }]} numberOfLines={1}>
             {status}
           </Text>
         )}
@@ -120,7 +125,7 @@ export function FeatureCard({
         {description}
       </Text>
       {status && (
-        <Text style={[styles.cardStatus, { color: p.primary }]} numberOfLines={1}>
+        <Text style={[styles.cardStatus, { color: colors.sageDark }]} numberOfLines={1}>
           {status}
         </Text>
       )}

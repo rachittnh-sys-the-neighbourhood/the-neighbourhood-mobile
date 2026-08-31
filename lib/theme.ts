@@ -11,6 +11,12 @@ export const colors = {
   cream: "#F3EEE7", // backgrounds
   charcoal: "#2C2C2C", // text and headings
   sage: "#A8B5A4", // accent / success states
+  // A darker, more saturated sage — not a success/state color like `sage`
+  // above, but the "pop" accent for primary CTA buttons, status pills and
+  // the active tab bar icon: the one thing on a screen that should read as
+  // unmistakably actionable, the way Nurche/Nestology use a solid dark
+  // green for their main buttons and badges.
+  sageDark: "#71846D",
   white: "#FFFDFC", // cards and clean space
 
   // Derived, not in the PRD table, but needed for real UI: muted text,

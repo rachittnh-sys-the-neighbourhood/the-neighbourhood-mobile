@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.warmTaupe,
+    backgroundColor: colors.sageDark,
     borderRadius: radius.pill,
   },
   backButtonText: {
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   sendButton: {
-    backgroundColor: colors.warmTaupe,
+    backgroundColor: colors.sageDark,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     borderRadius: radius.pill,

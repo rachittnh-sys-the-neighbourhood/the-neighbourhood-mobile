@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxl,
     paddingVertical: spacing.md,
     borderRadius: radius.pill,
-    backgroundColor: colors.warmTaupe,
+    backgroundColor: colors.sageDark,
     alignItems: "center",
   },
   completeButtonDone: {

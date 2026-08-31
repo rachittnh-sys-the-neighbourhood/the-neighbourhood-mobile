@@ -248,7 +248,7 @@ export default function Home() {
           </Text>
           {stuck && (
             <View style={styles.stuckReload}>
-              <PrimaryButton tone="taupe" title="Reload" onPress={() => reloadApp(router)} />
+              <PrimaryButton tone="accent" title="Reload" onPress={() => reloadApp(router)} />
             </View>
           )}
         </View>
@@ -822,7 +822,7 @@ function HomeCoachMark({
               <View key={index} style={[styles.coachDot, index === step && styles.coachDotActive]} />
             ))}
           </View>
-          <PrimaryButton title={isLast ? "Begin" : "Next"} tone="taupe" onPress={onNext} />
+          <PrimaryButton title={isLast ? "Begin" : "Next"} tone="accent" onPress={onNext} />
         </View>
       </View>
     </Modal>
@@ -1325,7 +1325,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.warmTaupe,
+    backgroundColor: colors.sageDark,
   },
   copilotAskText: {
     ...type.label,

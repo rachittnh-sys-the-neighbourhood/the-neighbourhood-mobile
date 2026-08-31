@@ -122,7 +122,7 @@ export default function AskQuestion() {
         <View style={styles.footer}>
           <PrimaryButton
             title={submitting ? "Posting question…" : "Post to Community"}
-            tone="taupe"
+            tone="accent"
             onPress={handleSubmit}
             disabled={!questionText.trim() || submitting}
             loading={submitting}

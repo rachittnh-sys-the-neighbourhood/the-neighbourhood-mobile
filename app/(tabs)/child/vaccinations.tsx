@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     borderRadius: radius.pill,
-    backgroundColor: colors.warmTaupe,
+    backgroundColor: colors.sageDark,
   },
   modalPrimaryButtonText: {
     fontFamily: fonts.bodySemiBold,

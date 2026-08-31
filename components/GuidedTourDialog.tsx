@@ -144,7 +144,7 @@ export function GuidedTourDialog({
               />
             </View>
           )}
-          <PrimaryButton title={primaryTitle} tone="taupe" onPress={() => finish(onPrimary)} />
+          <PrimaryButton title={primaryTitle} tone="accent" onPress={() => finish(onPrimary)} />
         </Animated.View>
       </View>
     </Modal>

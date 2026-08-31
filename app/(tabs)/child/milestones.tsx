@@ -351,7 +351,7 @@ export default function Milestones() {
         </ScrollView>
         <View style={styles.initialFooter}>
           <PrimaryButton
-            tone="taupe"
+            tone="accent"
             title={initialTransition ? "Opening your Neighbourhood..." : "See today's recommendations"}
             onPress={finishOnboarding}
             disabled={initialTransition}
@@ -402,7 +402,7 @@ export default function Milestones() {
         </ScrollView>
         <View style={styles.initialFooter}>
           <PrimaryButton
-            tone="taupe"
+            tone="accent"
             title={
               initialTransition
                 ? "Opening your Neighbourhood..."
@@ -530,7 +530,7 @@ export default function Milestones() {
         </ScrollView>
         <View style={styles.initialFooter}>
           <PrimaryButton
-            tone="taupe"
+            tone="accent"
             title="Continue"
             onPress={() => setInitialPhase("celebrate")}
           />
@@ -1737,7 +1737,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   noteSaveButtonActive: {
-    backgroundColor: colors.warmTaupe,
+    backgroundColor: colors.sageDark,
   },
   noteSaveText: {
     fontFamily: fonts.bodySemiBold,
