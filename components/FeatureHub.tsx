@@ -90,6 +90,49 @@ export function FeatureCard({
   );
 }
 
+/**
+ * One micro-learning recommendation — the knowledge layer's card shape,
+ * shared by Home's "For You", Child's "This Stage" and You's "For You
+ * Today" / "Your Stage" (see lib/childStageTopics.ts and lib/parentCare.ts
+ * for the two content sources this renders). Deliberately not a
+ * `FeatureCard`: this is a single recommendation making its case — title,
+ * one-line reason, reading time, a clear "Read" — not a grid tile pointing
+ * at a destination.
+ */
+export function MicroLearningCard({
+  eyebrow,
+  title,
+  reason,
+  minutes,
+  onPress,
+}: {
+  /** e.g. a domain name or care-area label. */
+  eyebrow: string;
+  title: string;
+  /** One sentence: why this matters right now. */
+  reason: string;
+  minutes: number;
+  onPress: () => void;
+}) {
+  const p = usePalette();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => [
+        styles.microCard,
+        { backgroundColor: p.surface, borderColor: p.border },
+        pressed && styles.pressed,
+      ]}
+    >
+      <Text style={[styles.microEyebrow, { color: p.primary }]}>{eyebrow.toUpperCase()}</Text>
+      <Text style={[styles.microTitle, { color: p.text }]}>{title}</Text>
+      <Text style={[styles.microReason, { color: p.textMuted }]}>{reason}</Text>
+      <Text style={[styles.microCta, { color: p.primary }]}>{minutes} min · Read →</Text>
+    </Pressable>
+  );
+}
+
 const ICON_SIZE = 16;
 
 /** Icons shared between Child's and You's cards, so the same concept (e.g. feeding) always draws the same way. */
@@ -256,6 +299,34 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
     fontSize: typeScale.bodySmall,
     lineHeight: typeScale.bodySmall * 1.3,
+  },
+  microCard: {
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: spacing.sm,
+  },
+  microEyebrow: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.caption,
+    letterSpacing: 1.2,
+  },
+  microTitle: {
+    fontFamily: fonts.bodyBold,
+    fontSize: typeScale.h3,
+    lineHeight: typeScale.h3 * 1.25,
+    marginTop: 6,
+  },
+  microReason: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.bodySmall,
+    lineHeight: typeScale.bodySmall * 1.5,
+    marginTop: 6,
+  },
+  microCta: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.caption,
+    marginTop: spacing.md,
   },
   cardDescription: {
     fontFamily: fonts.body,

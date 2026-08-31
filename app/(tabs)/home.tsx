@@ -306,23 +306,23 @@ export default function Home() {
   const dayIndex = Math.floor(Date.now() / 86_400_000);
   const careTopic = careTopics.length > 0 ? careTopics[dayIndex % careTopics.length] : null;
 
-  // The second recommendation: a stage-appropriate meal when there is
-  // one, otherwise an outstanding milestone for this exact age band —
-  // never both, and never neither if either is genuinely available.
-  // Nothing is invented to fill this slot.
+  // A stage-appropriate meal ("TOGETHER") and an outstanding milestone
+  // ("WORTH NOTICING") are independent — both can show, since the spec for
+  // this section is "a reliable place to notice something about your
+  // child", not a single alternating slot. Nothing is invented to fill
+  // either; each renders only when something genuine is available.
   const mealStage = stageForAgeMonths(ageMonths);
   const mealSlots = slotsForStage(mealStage);
   const mealSlot = mealSlots[0] ?? null;
   const mealIdea = mealSlot ? kidMealsFor(mealStage, mealSlot.key)[0] ?? null : null;
-  const milestoneRecommendation =
-    !mealIdea && nextMilestone
-      ? {
-          eyebrow: `WATCH FOR · ${DOMAIN_LABEL[nextMilestone.domain].toUpperCase()}`,
-          title: nextMilestone.description,
-          body: "Typical for this age. No rush, just something to notice.",
-          onPress: () => router.push("/child/milestones"),
-        }
-      : null;
+  const milestoneRecommendation = nextMilestone
+    ? {
+        eyebrow: `WATCH FOR · ${DOMAIN_LABEL[nextMilestone.domain].toUpperCase()}`,
+        title: nextMilestone.description,
+        body: "Typical for this age. No rush, just something to notice.",
+        onPress: () => router.push("/child/milestones"),
+      }
+    : null;
 
   return (
     <View style={styles.screen}>
@@ -369,7 +369,7 @@ export default function Home() {
             topic={careTopic}
           />
 
-          {mealSlot && mealIdea ? (
+          {mealSlot && mealIdea && (
             <>
               <SectionLabel accent={colors.softSand}>TOGETHER</SectionLabel>
               <MealIdeaCard
@@ -378,18 +378,18 @@ export default function Home() {
                 onPress={() => router.push("/child/meals")}
               />
             </>
-          ) : (
-            milestoneRecommendation && (
-              <>
-                <SectionLabel accent={colors.softSand}>WORTH NOTICING</SectionLabel>
-                <DiscoveryRow
-                  eyebrow={milestoneRecommendation.eyebrow}
-                  title={milestoneRecommendation.title}
-                  body={milestoneRecommendation.body}
-                  onPress={milestoneRecommendation.onPress}
-                />
-              </>
-            )
+          )}
+
+          {milestoneRecommendation && (
+            <>
+              <SectionLabel accent={colors.softSand}>WORTH NOTICING</SectionLabel>
+              <DiscoveryRow
+                eyebrow={milestoneRecommendation.eyebrow}
+                title={milestoneRecommendation.title}
+                body={milestoneRecommendation.body}
+                onPress={milestoneRecommendation.onPress}
+              />
+            </>
           )}
 
           {reminder && (

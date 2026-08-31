@@ -1592,6 +1592,37 @@ export function visibleCareAreas(
     .filter((area) => area.topicCount > 0);
 }
 
+/**
+ * Up to `count` recommended topics for "Your Stage" / Home's "For You" —
+ * pooled across every area currently visible to this parent (the same
+ * visibleCareAreas gate everything else uses), then rotated by day so the
+ * same one doesn't show forever. `offset` lets two call sites on the same
+ * screen (e.g. a single "for today" pick and a "your stage" pair) draw
+ * different topics from the same pool rather than repeating each other.
+ * Spreads across distinct areas where the pool is large enough to allow it.
+ */
+export function recommendedTopicsForProfile(
+  profile: ParentProfile,
+  childAgeMonths: number,
+  count = 2,
+  offset = 0,
+): CareTopic[] {
+  const areas = visibleCareAreas(profile.role, childAgeMonths, profile.delivery);
+  const pool = areas.flatMap((area) => topicsForProfile(profile.delivery, area.key));
+  if (pool.length === 0) return [];
+
+  const dayIndex = Math.floor(Date.now() / 86_400_000) + offset;
+  const picked: CareTopic[] = [];
+  const usedAreas = new Set<CareArea>();
+  for (let i = 0; i < pool.length && picked.length < count; i++) {
+    const topic = pool[(dayIndex + i) % pool.length];
+    if (usedAreas.has(topic.area) && picked.length < pool.length - 1) continue;
+    usedAreas.add(topic.area);
+    picked.push(topic);
+  }
+  return picked;
+}
+
 /* ------------------------------------------------------------------ */
 /* The bridge between modes                                            */
 /* ------------------------------------------------------------------ */
