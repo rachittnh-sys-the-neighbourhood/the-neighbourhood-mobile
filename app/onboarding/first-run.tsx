@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
+import { LogoMark } from "../../components/Logo";
 import { FadeIn, OnboardingScreen } from "../../components/onboarding";
 import { GhostButton, PrimaryButton } from "../../components/ui";
 import { useAuth } from "../../lib/AuthProvider";
@@ -237,7 +238,7 @@ export default function FirstRun() {
               },
             ]}
           >
-            <LogoGlyph />
+            <LogoMark size={40} />
           </Animated.View>
           <Text style={styles.welcomeTitle}>Welcome to The Neighbourhood.</Text>
           <Text style={styles.bodyMuted}>
@@ -407,26 +408,6 @@ export default function FirstRun() {
         </View>
       </FadeIn>
     </OnboardingScreen>
-  );
-}
-
-function LogoGlyph() {
-  return (
-    <Svg width={58} height={58} viewBox="0 0 58 58" fill="none">
-      <Circle cx={29} cy={29} r={27} fill="rgba(255,255,255,0.8)" />
-      <Path
-        d="M18 32c5-10 17-10 22 0M22 24c0-4 3-7 7-7s7 3 7 7"
-        stroke={colors.warmTaupe}
-        strokeWidth={2.4}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M20 38h18"
-        stroke={colors.sage}
-        strokeWidth={2.4}
-        strokeLinecap="round"
-      />
-    </Svg>
   );
 }
 

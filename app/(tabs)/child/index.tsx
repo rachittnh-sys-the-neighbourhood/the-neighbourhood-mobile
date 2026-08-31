@@ -3,6 +3,8 @@ import { useScreenFocus } from "../../../lib/useScreenFocus";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
+  ActivityCollapsedRow,
+  ActivityDoneRow,
   ActivityExpandedCard,
   EndOfDay,
   FeaturedActivityCard,
@@ -351,17 +353,21 @@ export default function ChildHome() {
                           </Animated.View>
                         );
                       }
+                      if (isDone) {
+                        return (
+                          <ActivityDoneRow
+                            key={activity.domain}
+                            activity={activity}
+                            onPress={() => setExpandedDomain(activity.domain)}
+                          />
+                        );
+                      }
                       return (
-                        <Pressable
+                        <ActivityCollapsedRow
                           key={activity.domain}
+                          activity={activity}
                           onPress={() => setExpandedDomain(activity.domain)}
-                          style={({ pressed }) => [styles.todayRow, pressed && styles.pressed]}
-                        >
-                          <Text style={styles.todayRowTitle}>{activity.title}</Text>
-                          <Text style={styles.todayRowBody}>
-                            {isDone ? "Done" : activity.duration_label ?? ""}
-                          </Text>
-                        </Pressable>
+                        />
                       );
                     })}
                   </View>
@@ -411,17 +417,20 @@ export default function ChildHome() {
           </>
         )}
 
-        {/* DISCOVER — a simple icon+text row, not a card repeating the same
-            name as the section label above it. No count/status here: that
-            detail belongs on the Discoveries screen itself, once opened. */}
+        {/* DISCOVER — same blurb-card treatment as Notice/Eat above, not a
+            row that just repeats "Discoveries" under a "DISCOVER" label.
+            No count/status here: that detail belongs on the Discoveries
+            screen itself, once opened. */}
         <FeatureGroupLabel>DISCOVER</FeatureGroupLabel>
         <Pressable
+          style={({ pressed }) => [styles.todayCard, pressed && styles.pressed]}
           onPress={() => router.push(childHref("milestones"))}
-          style={({ pressed }) => [styles.simpleRow, pressed && styles.pressed]}
+          accessibilityRole="button"
         >
-          <FeatureIcon name="milestone" color={colors.warmTaupe} />
-          <Text style={styles.simpleRowText}>Discoveries</Text>
-          <Text style={styles.simpleRowChevron}>{"›"}</Text>
+          <Text style={styles.todayCardTitle}>See what's typical now</Text>
+          <Text style={styles.todayCardBody}>
+            What {child?.name ?? "your child"} might do next, and what they&rsquo;ve already tried.
+          </Text>
         </Pressable>
 
         {/* THIS STAGE — the top recommended read stands in for the section;
@@ -528,29 +537,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
   },
-  todayRow: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: 12,
-    backgroundColor: colors.white,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(96, 79, 60, 0.1)",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  todayRowTitle: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: typeScale.bodySmall,
-    color: colors.charcoal,
-    flexShrink: 1,
-    marginRight: spacing.sm,
-  },
-  todayRowBody: {
-    fontFamily: fonts.body,
-    fontSize: typeScale.caption,
-    color: colors.textMuted,
-  },
   todayCard: {
     padding: spacing.md,
     borderRadius: 14,
@@ -573,21 +559,5 @@ const styles = StyleSheet.create({
     lineHeight: typeScale.caption * 1.4,
     color: colors.textMuted,
     marginTop: 3,
-  },
-  simpleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  simpleRowText: {
-    flex: 1,
-    fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.bodySmall,
-    color: colors.charcoal,
-  },
-  simpleRowChevron: {
-    fontSize: 18,
-    color: colors.textMuted,
   },
 });
