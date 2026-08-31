@@ -52,6 +52,7 @@ export function FeatureCard({
   status,
   onPress,
   highlighted,
+  wide,
 }: {
   icon: React.ReactNode;
   title: string;
@@ -61,8 +62,45 @@ export function FeatureCard({
   status?: string;
   onPress: () => void;
   highlighted?: boolean;
+  /**
+   * Full-width horizontal row instead of a 48% grid tile — for a group
+   * whose card count doesn't divide evenly into two columns (an odd one
+   * out stretched to 100% at the same vertical shape looks like a mistake,
+   * not a design choice) or for a card that's genuinely a simple nav row
+   * rather than something worth a whole tile of real estate.
+   */
+  wide?: boolean;
 }) {
   const p = usePalette();
+  if (wide) {
+    return (
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        style={({ pressed }) => [
+          styles.wideCard,
+          { backgroundColor: p.surface, borderColor: p.border },
+          highlighted && { borderColor: p.primary },
+          pressed && styles.pressed,
+        ]}
+      >
+        <View style={[styles.wideIconCircle, { backgroundColor: p.surfaceAlt }]}>{icon}</View>
+        <View style={styles.wideText}>
+          <Text style={[styles.cardTitle, { color: p.text }]} numberOfLines={1}>
+            {title}
+          </Text>
+          <Text style={[styles.cardDescription, { color: p.textMuted }]} numberOfLines={2}>
+            {description}
+          </Text>
+        </View>
+        {status && (
+          <Text style={[styles.cardStatus, { color: p.primary }]} numberOfLines={1}>
+            {status}
+          </Text>
+        )}
+      </Pressable>
+    );
+  }
   return (
     <Pressable
       onPress={onPress}
@@ -286,6 +324,27 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  wideCard: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  wideIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  wideText: {
+    flex: 1,
   },
   iconCircle: {
     width: 32,

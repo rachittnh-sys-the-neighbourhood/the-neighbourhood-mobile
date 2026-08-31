@@ -553,8 +553,10 @@ export default function Milestones() {
           {child
             ? milestonesAvailable
               ? beyondRange
-                ? `${child.name} has grown past what we track here. The last stage was ${currentStage}.`
-                : `${child.name} is in the ${currentStage} stage.`
+                ? `${child.name} has grown past what we track here.`
+                : devAge
+                  ? `${child.name} · ${devAge.label}`
+                  : child.name
               : `${child.name}'s discoveries start at 3 months.`
             : "Your child's developmental journey."}
         </Text>
