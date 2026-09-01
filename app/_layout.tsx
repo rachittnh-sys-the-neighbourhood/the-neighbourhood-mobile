@@ -14,6 +14,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "../lib/AuthProvider";
 import { ModeProvider } from "../lib/ModeProvider";
 import { OnboardingProvider } from "../lib/OnboardingProvider";
+import { registerServiceWorker } from "../lib/registerServiceWorker";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -29,6 +30,10 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded]);
+
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
 
   if (!fontsLoaded) return null;
 
