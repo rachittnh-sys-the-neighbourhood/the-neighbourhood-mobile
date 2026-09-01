@@ -31,6 +31,27 @@ export type { Child, Profile };
 /** Which child a device last chose to view, so it survives a restart. */
 const ACTIVE_CHILD_KEY = "neighbourhood.activeChildId";
 
+/**
+ * Retries a failing async call a couple of times with a short, growing
+ * delay before giving up — absorbs a transient failure (e.g. the network
+ * stack not fully reconnected yet right after a device wakes up) instead
+ * of surfacing it as a hard error on the very first attempt.
+ */
+async function withRetries<T>(run: () => Promise<T>, attempts = 3, delayMs = 600): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      return await run();
+    } catch (err) {
+      lastError = err;
+      if (attempt < attempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs * (attempt + 1)));
+      }
+    }
+  }
+  throw lastError;
+}
+
 type AuthState = {
   session: Session | null;
   /** Still resolving the initial session. */
@@ -92,10 +113,17 @@ export function AuthProvider({ children: appChildren }: { children: React.ReactN
     setFamilyLoading(true);
     setConnectionError(null);
     try {
-      const [profileRow, allKids] = await Promise.all([
-        family.getProfile(userId),
-        family.listChildren(userId),
-      ]);
+      // A PWA/home-screen relaunch after the device has been asleep for a
+      // while is the common case that lands here: the page reloads and
+      // fires this fetch before the network stack has actually finished
+      // reconnecting, so the very first attempt fails even though the
+      // connection is fine a moment later. Retrying a couple of times
+      // before surfacing the hard error screen (see connection-error.tsx)
+      // absorbs exactly that race, rather than making the parent tap "Try
+      // again" themselves for something that would have resolved on its own.
+      const [profileRow, allKids] = await withRetries(() =>
+        Promise.all([family.getProfile(userId), family.listChildren(userId)])
+      );
       setParentName(profileRow?.parent_name ?? null);
       // No stale-carry-over guard needed here the way `child` needs one:
       // the profiles row is created by a DB trigger the moment a user
