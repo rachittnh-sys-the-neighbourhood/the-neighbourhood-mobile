@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx expo export --platform web && node scripts/inject-pwa.mjs",
+  "buildCommand": "npx expo export --platform web && node scripts/inject-pwa.mjs && node scripts/generate-sw.mjs",
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": null,
