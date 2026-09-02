@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { ActionSheetDialog } from "../../components/ActionSheetDialog";
+import { BuildingBanner } from "../../components/BuildingBanner";
 import { GuidedTourDialog } from "../../components/GuidedTourDialog";
 import { useAuth } from "../../lib/AuthProvider";
 import { computeAge, stageLabel } from "../../lib/childAge";
@@ -171,6 +172,8 @@ export default function Community() {
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View style={styles.headerArea}>
+            <BuildingBanner />
+
             {/* No "COMMUNITY" eyebrow here: the tab bar's own header already
                 says Community directly above this, and a third restatement of
                 the word pushed the first real post below the fold. */}
