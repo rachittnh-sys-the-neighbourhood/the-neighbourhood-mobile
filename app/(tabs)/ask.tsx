@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
+import { BuildingBanner } from "../../components/BuildingBanner";
 import { GuidedTourDialog } from "../../components/GuidedTourDialog";
 import { HamburgerIcon, SparkleMark } from "../../components/TabIcons";
 import { useAuth } from "../../lib/AuthProvider";
@@ -390,6 +391,10 @@ export default function Ask() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
     >
+      <View style={styles.buildingBannerWrap}>
+        <BuildingBanner />
+      </View>
+
       {topic && (
         <View style={styles.contextChip}>
           <Text style={styles.contextChipText}>
@@ -591,6 +596,10 @@ export default function Ask() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
+  buildingBannerWrap: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+  },
   thread: { flex: 1 },
   threadContent: {
     padding: spacing.lg,

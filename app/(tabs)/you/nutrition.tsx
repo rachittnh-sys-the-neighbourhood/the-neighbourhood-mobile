@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { BuildingBanner } from "../../../components/BuildingBanner";
 import {
   Card,
   CareNote,
@@ -68,6 +69,8 @@ export default function Nutrition() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
+      <BuildingBanner />
+
       <PageHeading
         eyebrow="Nutrition"
         title={

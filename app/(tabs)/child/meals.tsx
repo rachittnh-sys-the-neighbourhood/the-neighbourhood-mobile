@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { BuildingBanner } from "../../../components/BuildingBanner";
 import { Card, CareNote, Chip, PageHeading, SectionLabel } from "../../../components/parentUI";
 import { useAuth } from "../../../lib/AuthProvider";
 import { developmentalAgeMonths } from "../../../lib/childAge";
@@ -117,6 +118,8 @@ export default function MealPlanner() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
+      <BuildingBanner />
+
       <PageHeading
         eyebrow="Meal planner"
         title={STAGE_HEADLINE[stage]}
