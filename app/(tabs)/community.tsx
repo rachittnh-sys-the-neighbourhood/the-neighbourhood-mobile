@@ -18,7 +18,7 @@ import { useAuth } from "../../lib/AuthProvider";
 import { computeAge, stageLabel } from "../../lib/childAge";
 import * as communityDb from "../../lib/db/community";
 import { COMMUNITY_TOPICS, CommunityTopic, Discussion, TOPIC_LABEL } from "../../lib/db/communityTypes";
-import { markFirstRunComplete, markHomeCoachComplete } from "../../lib/firstRun";
+import { markFirstRunComplete, markHomeCoachComplete, rewindGuidedTourStep } from "../../lib/firstRun";
 import { colors, fonts, radius, spacing, typeScale } from "../../lib/theme";
 import { useGuidedTourStep } from "../../lib/useGuidedTourStep";
 import { useScreenFocus } from "../../lib/useScreenFocus";
@@ -365,6 +365,10 @@ export default function Community() {
           total={5}
           primaryTitle="Continue"
           onPrimary={() => router.replace(`/ask?guidedTour=1&step=2${tourNext}`)}
+          onBack={async () => {
+            await rewindGuidedTourStep(0);
+            router.replace(`/home?guidedTour=1&step=0${tourNext}`);
+          }}
           onSkip={skipGuidedTour}
         />
       )}

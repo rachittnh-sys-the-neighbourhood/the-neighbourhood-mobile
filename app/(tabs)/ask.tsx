@@ -22,7 +22,7 @@ import { useAuth } from "../../lib/AuthProvider";
 import { computeAge } from "../../lib/childAge";
 import { askCopilot, CopilotChatError, type AskMode } from "../../lib/copilotChat";
 import * as copilotDb from "../../lib/db/copilot";
-import { markFirstRunComplete, markHomeCoachComplete } from "../../lib/firstRun";
+import { markFirstRunComplete, markHomeCoachComplete, rewindGuidedTourStep } from "../../lib/firstRun";
 import { deriveProfile, STAGE_LABEL } from "../../lib/parentCare";
 import { colors, fonts, radius, spacing, typeScale } from "../../lib/theme";
 import { useGuidedTourStep } from "../../lib/useGuidedTourStep";
@@ -587,6 +587,10 @@ export default function Ask() {
           total={5}
           primaryTitle="Continue"
           onPrimary={continueGuidedTour}
+          onBack={async () => {
+            await rewindGuidedTourStep(1);
+            router.replace(`/community?guidedTour=1&step=1${tourNext}`);
+          }}
           onSkip={skipGuidedTour}
         />
       )}

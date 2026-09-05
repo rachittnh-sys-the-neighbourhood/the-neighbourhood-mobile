@@ -1,8 +1,12 @@
 import { useEffect, useRef } from "react";
-import { Animated, Easing, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Modal, PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PrimaryButton } from "./ui";
 import { colors, fonts, radius, spacing, typeScale } from "../lib/theme";
+
+/** A horizontal drag past this many px counts as a deliberate swipe rather
+ *  than an incidental touch. */
+const SWIPE_THRESHOLD = 48;
 
 export function GuidedTourDialog({
   eyebrow,
@@ -13,8 +17,9 @@ export function GuidedTourDialog({
   total,
   primaryTitle,
   onPrimary,
+  onBack,
   onSkip,
-  autoAdvanceMs = 4800,
+  autoAdvanceMs = 7500,
 }: {
   eyebrow: string;
   title: string;
@@ -24,22 +29,26 @@ export function GuidedTourDialog({
   total: number;
   primaryTitle: string;
   onPrimary: () => void;
+  /** Omit on the first step — there is nothing before it to swipe back to. */
+  onBack?: () => void;
   onSkip: () => void;
   autoAdvanceMs?: number;
 }) {
   const entrance = useRef(new Animated.Value(0)).current;
   const progress = useRef(new Animated.Value(0)).current;
   const primaryRef = useRef(onPrimary);
+  const backRef = useRef(onBack);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const settledRef = useRef(false);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
     primaryRef.current = onPrimary;
-  }, [onPrimary]);
+    backRef.current = onBack;
+  }, [onPrimary, onBack]);
 
-  const finish = (action: () => void) => {
-    if (settledRef.current) return;
+  const finish = (action?: () => void) => {
+    if (settledRef.current || !action) return;
     settledRef.current = true;
     if (timerRef.current) {
       clearTimeout(timerRef.current);
@@ -47,6 +56,24 @@ export function GuidedTourDialog({
     }
     action();
   };
+
+  // Swipe left to move on early (same as tapping the primary button),
+  // swipe right to go back a step — mirrors the dots/progress bar as a
+  // second, more discoverable way to move through the tour at your own
+  // pace instead of only ever waiting for or racing the auto-advance.
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt, gesture) =>
+        Math.abs(gesture.dx) > 12 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5,
+      onPanResponderRelease: (_evt, gesture) => {
+        if (gesture.dx <= -SWIPE_THRESHOLD) {
+          finish(primaryRef.current);
+        } else if (gesture.dx >= SWIPE_THRESHOLD) {
+          finish(backRef.current);
+        }
+      },
+    })
+  ).current;
 
   // The last step's primary button commits an action (it leaves the tour and
   // can open a whole flow), so it waits for a real tap. Only the intermediate
@@ -100,6 +127,7 @@ export function GuidedTourDialog({
       >
         <View style={styles.veil} />
         <Animated.View
+          {...panResponder.panHandlers}
           style={[
             styles.card,
             {
@@ -116,7 +144,14 @@ export function GuidedTourDialog({
           ]}
         >
           <View style={styles.topRow}>
-            <Text style={styles.eyebrow}>{eyebrow}</Text>
+            <View style={styles.topRowLeft}>
+              {onBack && (
+                <Pressable onPress={() => finish(onBack)} hitSlop={10}>
+                  <Text style={styles.back}>‹ Back</Text>
+                </Pressable>
+              )}
+              <Text style={styles.eyebrow}>{eyebrow}</Text>
+            </View>
             <Pressable onPress={() => finish(onSkip)} hitSlop={10}>
               <Text style={styles.skip}>Skip</Text>
             </Pressable>
@@ -179,11 +214,21 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: spacing.sm,
   },
+  topRowLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
   eyebrow: {
     fontFamily: fonts.bodySemiBold,
     fontSize: typeScale.caption,
     letterSpacing: 1.3,
     textTransform: "uppercase",
+    color: colors.warmTaupe,
+  },
+  back: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: typeScale.bodySmall,
     color: colors.warmTaupe,
   },
   skip: {

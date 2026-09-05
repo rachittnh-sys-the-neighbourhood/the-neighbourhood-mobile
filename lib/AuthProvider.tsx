@@ -5,7 +5,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from "r
 import * as family from "./db/family";
 import { isAccountLinked } from "./db/session";
 import type { Child, Profile } from "./db/types";
-import { supabase } from "./supabase";
+import { initialAuthCallbackError, supabase } from "./supabase";
 
 /**
  * The signed-in family.
@@ -57,6 +57,18 @@ type AuthState = {
   }) => Promise<Child>;
   connectionError: string | null;
   /**
+   * Set if this page load is itself a failed OAuth redirect return
+   * (Google/Apple sent back an error instead of a session — e.g. a
+   * misconfigured provider or an expired one-time code) — captured
+   * straight from the URL at module load (see lib/supabase.ts's
+   * initialAuthCallbackError), since supabase-js's own getSession() never
+   * surfaces this, silently leaving the session null instead. Without it
+   * that looks identical to "never signed in": the parent lands back on
+   * /welcome with zero explanation for what actually happened. Read once
+   * by app/welcome.tsx; screens don't need to clear it themselves.
+   */
+  authCallbackError: string | null;
+  /**
    * True once an email is confirmed on this account. Until then the family
    * exists only on this device — see isAccountLinked. Screens use this to
    * decide whether signing out is safe and whether to offer linking.
@@ -81,6 +93,9 @@ export function AuthProvider({ children: appChildren }: { children: React.ReactN
   const [child, setChild] = useState<Child | null>(null);
   const [kids, setKids] = useState<Child[]>([]);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  // Read once, synchronously, at module load — see lib/supabase.ts for why
+  // this can't come from anything supabase.auth.getSession() returns.
+  const [authCallbackError] = useState<string | null>(initialAuthCallbackError);
   // Which user id `child` currently reflects. Lets fetchFamily tell "a
   // slower fetch for the SAME user landed late" (keep the newer local
   // state) apart from "the signed-in identity actually changed" (an old
@@ -138,6 +153,11 @@ export function AuthProvider({ children: appChildren }: { children: React.ReactN
 
   useEffect(() => {
     (async () => {
+      // This one call also runs supabase-js's own one-time check of the
+      // current URL for an OAuth/magic-link callback (see lib/supabase.ts's
+      // detectSessionInUrl) — but it never surfaces what that check found,
+      // success or failure (see initialAuthCallbackError above), so there's
+      // nothing to read from its own return value here beyond the session.
       const { data } = await supabase.auth.getSession();
       setSession(data.session);
       if (data.session?.user?.id) {
@@ -222,6 +242,7 @@ export function AuthProvider({ children: appChildren }: { children: React.ReactN
         setActiveChild,
         addChild,
         connectionError,
+        authCallbackError,
         accountLinked: isAccountLinked(session?.user),
         accountEmail: isAccountLinked(session?.user) ? session?.user?.email ?? null : null,
         hydrateFamily,
