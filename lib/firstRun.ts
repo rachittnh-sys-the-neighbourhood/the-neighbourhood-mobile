@@ -48,6 +48,21 @@ export async function resetGuidedTourProgress(): Promise<void> {
 }
 
 /**
+ * Stepping backward through the tour (GuidedTourDialog's onBack) calls
+ * this before navigating, lowering the stored max just enough that
+ * `toStep` itself is "unshown" again — the exact same one-time gate
+ * above then naturally lets it redisplay, and naturally re-gates it once
+ * the parent moves forward past it a second time. Only ever lowers the
+ * max, never raises it, so this can't accidentally un-gate a step the
+ * parent hasn't actually navigated back to.
+ */
+export async function rewindGuidedTourStep(toStep: number): Promise<void> {
+  const current = await maxGuidedTourStepShown();
+  const target = toStep - 1;
+  if (target < current) await AsyncStorage.setItem(GUIDED_TOUR_MAX_STEP_KEY, String(target));
+}
+
+/**
  * Home's multi-child activity pager (see TodayActivitiesPager in
  * app/(tabs)/home.tsx) is swipeable but easy to miss with only a dot
  * indicator. A "Swipe for X's activities" hint shows until the parent has

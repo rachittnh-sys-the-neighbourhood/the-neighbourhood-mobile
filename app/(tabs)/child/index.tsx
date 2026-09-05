@@ -23,7 +23,7 @@ import { sectionsInGroup, childHref, type ChildSection } from "../../../lib/chil
 import { recommendedChildStageTopics } from "../../../lib/childStageTopics";
 import * as growth from "../../../lib/db/growth";
 import type { Domain, Milestone, VaccinationScheduleItem } from "../../../lib/db/types";
-import { markFirstRunComplete, markHomeCoachComplete } from "../../../lib/firstRun";
+import { markFirstRunComplete, markHomeCoachComplete, rewindGuidedTourStep } from "../../../lib/firstRun";
 import {
   mealsFor as kidMealsFor,
   slotsForStage,
@@ -432,6 +432,10 @@ export default function ChildHome() {
           total={5}
           primaryTitle="Continue"
           onPrimary={() => router.replace(`/you?guidedTour=1&step=4${tourNext}`)}
+          onBack={async () => {
+            await rewindGuidedTourStep(2);
+            router.replace(`/ask?guidedTour=1&step=2${tourNext}`);
+          }}
           onSkip={skipGuidedTour}
         />
       )}

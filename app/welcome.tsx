@@ -53,7 +53,7 @@ import { colors, fonts, radius, spacing, typeScale } from "../lib/theme";
 export default function Welcome() {
   const router = useRouter();
   const { resumeHref, hasProgress } = useOnboarding();
-  const { refreshFamily } = useAuth();
+  const { refreshFamily, authCallbackError } = useAuth();
   const [busyProvider, setBusyProvider] = useState<"apple" | "google" | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [appleAvailable, setAppleAvailable] = useState(false);
@@ -62,6 +62,14 @@ export default function Welcome() {
     if (Platform.OS !== "ios") return;
     AppleAuthentication.isAvailableAsync().then(setAppleAvailable);
   }, []);
+
+  // Landing back here can itself BE a failed Google/Apple redirect return
+  // (see AuthProvider's authCallbackError) — without this, that failure is
+  // invisible: the parent just sees the sign-up screen again with no idea
+  // anything went wrong.
+  useEffect(() => {
+    if (authCallbackError) setAuthError(authCallbackError);
+  }, [authCallbackError]);
 
   const continueWithApple = async () => {
     setAuthError(null);

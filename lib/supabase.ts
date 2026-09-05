@@ -15,6 +15,34 @@ if (!isSupabaseConfigured) {
   );
 }
 
+/**
+ * A failed OAuth/magic-link redirect return (Google/Apple sending back
+ * `#error=...&error_description=...` instead of a session) needs to be
+ * read out HERE, synchronously, at module load — not from anything
+ * `supabase.auth.getSession()` later returns. supabase-js's own
+ * `_initialize()` does detect this error internally (it's what
+ * `detectSessionInUrl` below triggers), but `getSession()` awaits that
+ * initialization and then unconditionally returns `{ error: null }` from
+ * storage regardless of what `_initialize()` found — the error never
+ * comes back out through the public API. Reading the raw URL ourselves,
+ * before the SDK's own async cleanup gets a chance to strip it, is the
+ * only way the app can know this happened at all. See lib/AuthProvider.tsx.
+ */
+export const initialAuthCallbackError: string | null = (() => {
+  if (Platform.OS !== "web" || typeof window === "undefined") return null;
+  const raw = window.location.hash.startsWith("#")
+    ? window.location.hash.slice(1)
+    : window.location.search.startsWith("?")
+      ? window.location.search.slice(1)
+      : "";
+  if (!raw) return null;
+  const params = new URLSearchParams(raw);
+  const description = params.get("error_description");
+  const error = params.get("error");
+  if (!description && !error) return null;
+  return (description || error || "Sign-in didn't go through.").replace(/\+/g, " ");
+})();
+
 // Same project the website's waitlist already uses (kvayhcablmsorycpqmkg) —
 // the app and the site share one backend, per the PRD's "one platform"
 // architecture. AsyncStorage persists the session across app restarts;

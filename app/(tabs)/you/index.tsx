@@ -14,7 +14,7 @@ import { Card } from "../../../components/parentUI";
 import { GuidedTourDialog } from "../../../components/GuidedTourDialog";
 import { useAuth } from "../../../lib/AuthProvider";
 import { computeAge, youngestChild } from "../../../lib/childAge";
-import { markFirstRunComplete, markHomeCoachComplete } from "../../../lib/firstRun";
+import { markFirstRunComplete, markHomeCoachComplete, rewindGuidedTourStep } from "../../../lib/firstRun";
 import { usePalette } from "../../../lib/ModeProvider";
 import {
   deliveryPhrase,
@@ -93,6 +93,7 @@ export default function YouHub() {
   const wantsGuidedTour = params.guidedTour === "1" && params.step === "4" && isFocused && isYouRoute;
   const guidedTour = useGuidedTourStep(4, wantsGuidedTour);
   const afterOnboardingTour = params.next === "milestones";
+  const tourNext = afterOnboardingTour ? "&next=milestones" : "";
 
   const finishGuidedTour = async () => {
     await markHomeCoachComplete().catch(() => {});
@@ -301,6 +302,10 @@ export default function YouHub() {
           total={5}
           primaryTitle="Start exploring"
           onPrimary={finishGuidedTour}
+          onBack={async () => {
+            await rewindGuidedTourStep(3);
+            router.replace(`/child?guidedTour=1&step=3${tourNext}`);
+          }}
           onSkip={finishGuidedTour}
         />
       )}

@@ -21,6 +21,14 @@ import {
  * by having already completed the tour once. Awaited in-line rather than
  * as a separate effect so it can never race the read it's meant to
  * precede.
+ *
+ * Stepping backward through the tour (see GuidedTourDialog's onBack)
+ * calls rewindGuidedTourStep before navigating rather than passing any
+ * flag here — that actually lowers the stored max back below the target
+ * step, so this same one-time gate naturally lets it show again, and
+ * naturally re-gates it once the parent moves forward past it a second
+ * time. No separate bypass path to keep in sync with the tab-restoration
+ * case this gate exists for in the first place.
  */
 export function useGuidedTourStep(step: number, wantsStep: boolean, resetFirst = false): boolean {
   const [show, setShow] = useState(false);
