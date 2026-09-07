@@ -1,7 +1,7 @@
 import "react-native-url-polyfill/auto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -62,3 +62,28 @@ export const supabase = createClient(supabaseUrl ?? "", supabaseAnonKey ?? "", {
     detectSessionInUrl: Platform.OS === "web",
   },
 });
+
+/**
+ * Native JS timers are throttled/paused while the app is backgrounded, so
+ * gotrue's own auto-refresh interval (see autoRefreshToken above) doesn't
+ * tick while the user is away. Left alone, coming back after the access
+ * token's ~1hr lifetime has passed leaves every request using an expired
+ * JWT until the next tick fires minutes later — every family/profile fetch
+ * 401s in that window, which lib/AuthProvider.tsx's fetchFamily can't tell
+ * apart from a real network failure, so the parent gets stuck on
+ * app/connection-error.tsx with no working "Try again" until they sign out
+ * and back in. startAutoRefresh() checks-and-refreshes immediately (it's
+ * not just resuming the timer), so calling it the moment the app returns to
+ * the foreground closes that window instead of waiting on the next tick.
+ * This is Supabase's own documented React Native integration point — see
+ * https://supabase.com/docs/guides/getting-started/tutorials/with-expo-react-native#session-management.
+ */
+if (Platform.OS !== "web") {
+  AppState.addEventListener("change", (state) => {
+    if (state === "active") {
+      supabase.auth.startAutoRefresh();
+    } else {
+      supabase.auth.stopAutoRefresh();
+    }
+  });
+}
