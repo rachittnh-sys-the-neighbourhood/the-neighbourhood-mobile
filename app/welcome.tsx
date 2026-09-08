@@ -1,5 +1,5 @@
 import * as AppleAuthentication from "expo-apple-authentication";
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -53,7 +53,7 @@ import { colors, fonts, radius, spacing, typeScale } from "../lib/theme";
 export default function Welcome() {
   const router = useRouter();
   const { resumeHref, hasProgress } = useOnboarding();
-  const { refreshFamily, authCallbackError } = useAuth();
+  const { session: authSession, refreshFamily, authCallbackError } = useAuth();
   const [busyProvider, setBusyProvider] = useState<"apple" | "google" | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [appleAvailable, setAppleAvailable] = useState(false);
@@ -148,6 +148,15 @@ export default function Welcome() {
   const handleGetStarted = () => {
     router.push(resumeHref);
   };
+
+  // app/index.tsx sends anyone without a child here, including a parent
+  // who just finished a real Google/Apple sign-in — there's no "child yet"
+  // for a brand-new account until onboarding creates one. Without this
+  // check, that parent lands right back on this same sign-in card even
+  // though they're already authenticated: it looks like the Google login
+  // never went through. A session here means it did — skip straight into
+  // onboarding instead of asking them to sign in again.
+  if (authSession) return <Redirect href={resumeHref} />;
 
   return (
     <SafeAreaView style={styles.screen} edges={["top", "bottom"]}>
