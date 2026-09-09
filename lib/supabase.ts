@@ -64,26 +64,34 @@ export const supabase = createClient(supabaseUrl ?? "", supabaseAnonKey ?? "", {
 });
 
 /**
- * Native JS timers are throttled/paused while the app is backgrounded, so
- * gotrue's own auto-refresh interval (see autoRefreshToken above) doesn't
- * tick while the user is away. Left alone, coming back after the access
- * token's ~1hr lifetime has passed leaves every request using an expired
- * JWT until the next tick fires minutes later — every family/profile fetch
- * 401s in that window, which lib/AuthProvider.tsx's fetchFamily can't tell
- * apart from a real network failure, so the parent gets stuck on
- * app/connection-error.tsx with no working "Try again" until they sign out
- * and back in. startAutoRefresh() checks-and-refreshes immediately (it's
- * not just resuming the timer), so calling it the moment the app returns to
- * the foreground closes that window instead of waiting on the next tick.
+ * JS timers are throttled/paused while the app is backgrounded, so gotrue's
+ * own auto-refresh interval (see autoRefreshToken above) doesn't tick while
+ * the user is away. Left alone, coming back after the access token's ~1hr
+ * lifetime has passed leaves every request using an expired JWT until the
+ * next tick fires minutes later — every family/profile fetch 401s in that
+ * window, which lib/AuthProvider.tsx's fetchFamily can't tell apart from a
+ * real network failure, so the parent gets stuck on app/connection-error.tsx
+ * with no working "Try again" until they sign out and back in.
+ * startAutoRefresh() checks-and-refreshes immediately (it's not just
+ * resuming the timer), so calling it the moment the app returns to the
+ * foreground closes that window instead of waiting on the next tick.
+ *
  * This is Supabase's own documented React Native integration point — see
- * https://supabase.com/docs/guides/getting-started/tutorials/with-expo-react-native#session-management.
+ * https://supabase.com/docs/guides/getting-started/tutorials/with-expo-react-native#session-management
+ * — but it is NOT native-only: this app's actual distribution is the Vercel
+ * web build (see vercel.json), opened from a phone's browser rather than an
+ * installed binary, and mobile Safari throttles/suspends a backgrounded
+ * tab's JS timers just as aggressively as iOS backgrounds a native app.
+ * react-native-web's AppState (see node_modules/react-native-web/src/exports/
+ * AppState) is a thin wrapper over the Page Visibility API for exactly this
+ * reason, so this must run on every platform, web included — an earlier
+ * version of this fix excluded web on the wrong assumption that only native
+ * needed it, which left this bug fully reproducible from the web build.
  */
-if (Platform.OS !== "web") {
-  AppState.addEventListener("change", (state) => {
-    if (state === "active") {
-      supabase.auth.startAutoRefresh();
-    } else {
-      supabase.auth.stopAutoRefresh();
-    }
-  });
-}
+AppState.addEventListener("change", (state) => {
+  if (state === "active") {
+    supabase.auth.startAutoRefresh();
+  } else {
+    supabase.auth.stopAutoRefresh();
+  }
+});
