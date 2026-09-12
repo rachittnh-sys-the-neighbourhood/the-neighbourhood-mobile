@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Session } from "@supabase/supabase-js";
+import { isAuthRetryableFetchError, Session } from "@supabase/supabase-js";
 import { useRouter } from "expo-router";
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import * as family from "./db/family";
@@ -78,6 +78,20 @@ type AuthState = {
   accountEmail: string | null;
   hydrateFamily: (input: { profile: Profile; child: Child }) => void;
   refreshFamily: () => Promise<void>;
+  /**
+   * What app/connection-error.tsx's "Try again" calls — deliberately not
+   * refreshFamily. That function reads whatever session getSession() already
+   * has cached, which is exactly what's broken when this screen is showing:
+   * a stale or dead access token that keeps 401ing the same way no matter
+   * how many times it's read. This forces a real refreshSession() call
+   * instead, and if THAT comes back with anything other than a retryable
+   * network error, the refresh token itself is dead (expired, reused,
+   * revoked) and no amount of tapping "Try again" will ever fix it — so this
+   * signs the parent out immediately rather than leave them pressing a
+   * button that can only ever fail, the way they previously had to discover
+   * "Sign out" themselves.
+   */
+  retryConnection: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -148,6 +162,17 @@ export function AuthProvider({ children: appChildren }: { children: React.ReactN
     const userId = data.session?.user?.id;
     // Keep session in step: onboarding may have created one since mount.
     setSession(data.session);
+    if (userId) await fetchFamily(userId);
+  };
+
+  const retryConnection = async () => {
+    const { data, error } = await supabase.auth.refreshSession();
+    if (error && !isAuthRetryableFetchError(error)) {
+      await signOut();
+      return;
+    }
+    setSession(data.session);
+    const userId = data.session?.user?.id;
     if (userId) await fetchFamily(userId);
   };
 
@@ -247,6 +272,7 @@ export function AuthProvider({ children: appChildren }: { children: React.ReactN
         accountEmail: isAccountLinked(session?.user) ? session?.user?.email ?? null : null,
         hydrateFamily,
         refreshFamily,
+        retryConnection,
         signOut,
       }}
     >
