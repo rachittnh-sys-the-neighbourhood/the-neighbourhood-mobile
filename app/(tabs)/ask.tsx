@@ -496,7 +496,7 @@ export default function Ask() {
           already discussed in it. Tapping an entry re-shows that topic's
           chip and scrolls to where it was last talked about, rather than
           losing it the way a bare tab tap into "family" mode otherwise
-          would. Presented as a Claude-style history drawer off the
+          would. Presented as a chat-style history drawer off the
           hamburger button, rather than an always-on strip eating into
           the thread's vertical space. */}
       <Modal
