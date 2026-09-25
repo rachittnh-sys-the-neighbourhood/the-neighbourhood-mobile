@@ -42,3 +42,7 @@ yarn-error.*
 /android
 .vercel
 .vercel
+
+# local AI-assistant config (kept on each machine, not committed)
+/.claude/
+/CLAUDE.md
