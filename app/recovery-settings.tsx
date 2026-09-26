@@ -2,7 +2,10 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { RecoveryProfileQuestions } from "../components/RecoveryProfileQuestions";
+import {
+  RecoveryProfileQuestions,
+  type HypertensionAnswer,
+} from "../components/RecoveryProfileQuestions";
 import { useAuth } from "../lib/AuthProvider";
 import * as family from "../lib/db/family";
 import {
@@ -31,6 +34,8 @@ export default function RecoverySettings() {
   const birthMethod = (profile?.birth_method as DeliveryType | null) ?? "";
   const feedingMethod = (profile?.feeding_method as FeedingMethod | null) ?? "";
   const diet = (profile?.diet as DietaryPreference | null) ?? "";
+  const hadHypertension: HypertensionAnswer | "" =
+    profile?.had_hypertension === true ? "yes" : profile?.had_hypertension === false ? "no" : "";
   // A local text buffer so a comma or a half-typed word isn't saved as an
   // allergen on every keystroke — this only writes on blur.
   const [allergiesText, setAllergiesText] = useState(() => (profile?.allergies ?? []).join(", "));
@@ -41,6 +46,7 @@ export default function RecoverySettings() {
     feeding_method?: string | null;
     diet?: string | null;
     allergies?: string[];
+    had_hypertension?: boolean | null;
   }) => {
     const userId = session?.user?.id;
     if (!userId) return;
@@ -70,6 +76,10 @@ export default function RecoverySettings() {
 
   const handleDiet = (value: DietaryPreference) => {
     void save({ diet: value });
+  };
+
+  const handleHypertension = (value: HypertensionAnswer) => {
+    void save({ had_hypertension: value === "yes" });
   };
 
   const handleAllergiesBlur = () => {
@@ -105,12 +115,14 @@ export default function RecoverySettings() {
           birthMethod={birthMethod}
           diet={diet}
           allergiesText={allergiesText}
+          hadHypertension={hadHypertension}
           onRoleChange={handleRole}
           onFeedingChange={handleFeeding}
           onBirthChange={handleBirth}
           onDietChange={handleDiet}
           onAllergiesTextChange={setAllergiesText}
           onAllergiesBlur={handleAllergiesBlur}
+          onHypertensionChange={handleHypertension}
         />
 
         <Text style={styles.reassurance}>

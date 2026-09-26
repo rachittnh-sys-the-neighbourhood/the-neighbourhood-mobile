@@ -18,7 +18,16 @@ export type TodaysMotherPlanState = {
   swap: (category: MotherActivityCategory) => Promise<void>;
 };
 
-export function useTodaysMotherPlan(profileId: string | null): TodaysMotherPlanState {
+/**
+ * `refreshKey` changes whenever something that shapes the plan changes on
+ * the server (the baby's NICU status, the blood pressure answer). The
+ * database clears today's plan when that happens, so the hook refetches
+ * rather than showing the old one until tomorrow.
+ */
+export function useTodaysMotherPlan(
+  profileId: string | null,
+  refreshKey: string = ""
+): TodaysMotherPlanState {
   const [plan, setPlan] = useState<MotherDailyPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +60,7 @@ export function useTodaysMotherPlan(profileId: string | null): TodaysMotherPlanS
     } finally {
       if (alive.current) setLoading(false);
     }
-  }, [profileId]);
+  }, [profileId, refreshKey]);
 
   useEffect(() => {
     void load();

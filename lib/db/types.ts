@@ -219,6 +219,12 @@ export type Profile = {
   diet: string | null;
   /** Lowercased allergen names. */
   allergies: string[];
+  /**
+   * Had pre-eclampsia or high blood pressure this pregnancy. Null = not
+   * answered (or "rather not say"). Only used to show the blood pressure
+   * follow-up card in the preterm module — see lib/preterm.ts.
+   */
+  had_hypertension: boolean | null;
   phone: string | null;
   /** IANA zone. Every "today" in the product derives from this. */
   timezone: string;
@@ -238,6 +244,13 @@ export type Child = {
    * chronological age, which is what they're actually written against.
    */
   gestational_weeks: number | null;
+  /**
+   * The baby is still in the NICU. Set by the parent, cleared at discharge.
+   * Only meaningful for a preterm child (gestational_weeks < 37): it
+   * switches the parent's recovery/support plan between the NICU content
+   * and the going-home content — see lib/preterm.ts.
+   */
+  in_nicu: boolean;
   /** The child's own allergens, lowercased. NOT the parent's — that's
    *  Profile.allergies, a separate fact used for the parent's meals. */
   allergies: string[];
