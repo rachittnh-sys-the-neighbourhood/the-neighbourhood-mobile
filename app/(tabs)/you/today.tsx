@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { NicuStatusCard } from "../../../components/NicuStatusCard";
 import { Card, Chevron, PageHeading, SectionLabel } from "../../../components/parentUI";
 import { useAuth } from "../../../lib/AuthProvider";
 import { computeAge, youngestChild } from "../../../lib/childAge";
@@ -12,6 +13,7 @@ import {
   type MotherActivity,
 } from "../../../lib/db/types";
 import { usePalette } from "../../../lib/ModeProvider";
+import { nicuStatusChild, planRefreshKey } from "../../../lib/preterm";
 import {
   STAGE_LABEL,
   deliveryPhrase,
@@ -88,6 +90,17 @@ export default function ParentToday() {
   const showsRecovery = recoveryFramingApplies && profile.role !== "father";
   const showsFatherSupport = recoveryFramingApplies && profile.role === "father";
 
+  // A preterm baby's NICU status reshapes both parents' plans (the preterm
+  // module — see lib/preterm.ts). The database clears today's plan when it
+  // changes, and the plan hooks refetch when this key does.
+  const nicuChild = recoveryFramingApplies ? nicuStatusChild(recoveryChild, ageMonths) : null;
+  const planKey = planRefreshKey(recoveryChild, authProfile);
+  const handleNicuChange = async (inNicu: boolean) => {
+    if (!nicuChild) return;
+    await family.updateChild(nicuChild.id, { in_nicu: inNicu }).catch(() => {});
+    await refreshFamily();
+  };
+
   // Never answered at all — distinct from an explicit "prefer_not_to_say",
   // which is a real answer and shouldn't be asked again every visit. Fathers
   // are never asked their partner's birth method during onboarding (see
@@ -112,7 +125,7 @@ export default function ParentToday() {
 
   const motherPlanProfileId = showsRecovery && !needsBirthConfirmation ? session?.user?.id ?? null : null;
   const { plan: motherPlan, loading: motherPlanLoading, swapping, swap: swapMotherActivity } =
-    useTodaysMotherPlan(motherPlanProfileId);
+    useTodaysMotherPlan(motherPlanProfileId, planKey);
 
   const fatherPlanProfileId =
     showsFatherSupport && !needsBirthConfirmation ? session?.user?.id ?? null : null;
@@ -121,7 +134,7 @@ export default function ParentToday() {
     loading: fatherPlanLoading,
     swapping: fatherSwapping,
     swap: swapFatherActivity,
-  } = useTodaysFatherPlan(fatherPlanProfileId);
+  } = useTodaysFatherPlan(fatherPlanProfileId, planKey);
 
   const firstName = parentName?.trim().split(" ")[0];
 
@@ -165,6 +178,14 @@ export default function ParentToday() {
         title={`${greeting(new Date().getHours())}${firstName ? `, ${firstName}` : ""}.`}
         body="How can we make today a little easier for you?"
       />
+
+      {nicuChild && (showsRecovery || showsFatherSupport) && (
+        <NicuStatusCard
+          childName={nicuChild.name}
+          inNicu={nicuChild.in_nicu}
+          onChange={handleNicuChange}
+        />
+      )}
 
       <Card style={styles.intelligentNudge}>
         <Text style={[styles.nudgeEyebrow, { color: p.primary }]}>TODAY'S REMINDER</Text>

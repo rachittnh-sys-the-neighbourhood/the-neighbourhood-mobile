@@ -27,6 +27,7 @@ export async function updateProfile(
       | "feeding_method"
       | "diet"
       | "allergies"
+      | "had_hypertension"
       | "phone"
       | "timezone"
     >
@@ -102,7 +103,10 @@ export async function createChild(input: {
 export async function updateChild(
   childId: string,
   patch: Partial<
-    Pick<Child, "name" | "date_of_birth" | "gender" | "gestational_weeks" | "allergies">
+    Pick<
+      Child,
+      "name" | "date_of_birth" | "gender" | "gestational_weeks" | "allergies" | "in_nicu"
+    >
   >
 ): Promise<Child> {
   return unwrap<Child>(

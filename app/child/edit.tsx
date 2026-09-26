@@ -6,7 +6,7 @@ import { DateWheel, MONTHS, isComplete, type DateParts } from "../../components/
 import { DisplayField, FadeIn, Hint, OnboardingScreen, Prompt } from "../../components/onboarding";
 import { PrimaryButton } from "../../components/ui";
 import { useAuth } from "../../lib/AuthProvider";
-import { CORRECTION_UNTIL_MONTHS, computeAge } from "../../lib/childAge";
+import { CORRECTION_UNTIL_MONTHS, computeAge, isPreterm } from "../../lib/childAge";
 import { parseAllergies } from "../../lib/childAllergies";
 import * as family from "../../lib/db/family";
 import { colors, fonts, radius, spacing, typeScale } from "../../lib/theme";
@@ -43,6 +43,7 @@ export default function EditChild() {
   const [gestationalWeeks, setGestationalWeeks] = useState<number | null>(
     child?.gestational_weeks ?? null
   );
+  const [inNicu, setInNicu] = useState(child?.in_nicu ?? false);
   // A text buffer rather than a live array, for the same reason
   // recovery-settings.tsx uses one: splitting on every keystroke would
   // save half-typed words as allergens.
@@ -57,6 +58,9 @@ export default function EditChild() {
   const ready = !!child && name.trim().length > 0 && dateComplete && !inFuture && !saving;
 
   const asksBornEarly = !!age && age.totalMonths < CORRECTION_UNTIL_MONTHS;
+  // Only a preterm baby can be "in the NICU" as far as the preterm module
+  // goes (see lib/preterm.ts), so the question only appears for one.
+  const asksInNicu = asksBornEarly && isPreterm(gestationalWeeks);
 
   const handleSave = async () => {
     if (!ready || !iso || !child) return;
@@ -69,6 +73,7 @@ export default function EditChild() {
         gender,
         gestational_weeks: asksBornEarly ? gestationalWeeks : null,
         allergies: parseAllergies(allergiesText),
+        in_nicu: asksInNicu ? inNicu : false,
       });
       await refreshFamily();
       router.back();
@@ -116,6 +121,32 @@ export default function EditChild() {
             onChange={setGestationalWeeks}
             childName={name}
           />
+        )}
+
+        {asksInNicu && (
+          <>
+            <View style={styles.spacer} />
+            <Text style={styles.genderLabel}>Is {name.trim() || "your baby"} still in the NICU?</Text>
+            <View style={styles.genderRow}>
+              {[
+                { value: true, label: "Still in the NICU" },
+                { value: false, label: "Home now" },
+              ].map((option) => {
+                const selected = inNicu === option.value;
+                return (
+                  <Pressable
+                    key={String(option.value)}
+                    onPress={() => setInNicu(option.value)}
+                    style={[styles.genderPill, selected && styles.genderPillOn]}
+                  >
+                    <Text style={[styles.genderPillText, selected && styles.genderPillTextOn]}>
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
         )}
 
         <View style={styles.spacer} />

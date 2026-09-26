@@ -52,6 +52,13 @@ const BIRTH_OPTIONS: Option<DeliveryType>[] = [
   { value: "prefer_not_to_say", label: "Rather not say", gloss: "We'll keep it general." },
 ];
 
+export type HypertensionAnswer = "yes" | "no";
+
+const HYPERTENSION_OPTIONS: Option<HypertensionAnswer>[] = [
+  { value: "yes", label: "Yes", gloss: "Pre-eclampsia, gestational hypertension or high blood pressure." },
+  { value: "no", label: "No", gloss: "Nothing like that." },
+];
+
 const DIET_OPTIONS: Option<DietaryPreference>[] = [
   { value: "omnivore", label: "No restrictions", gloss: "Meat, fish, everything." },
   { value: "vegetarian", label: "Vegetarian", gloss: "No meat or fish." },
@@ -108,12 +115,14 @@ export function RecoveryProfileQuestions({
   birthMethod,
   diet,
   allergiesText,
+  hadHypertension,
   onRoleChange,
   onFeedingChange,
   onBirthChange,
   onDietChange,
   onAllergiesTextChange,
   onAllergiesBlur,
+  onHypertensionChange,
 }: {
   role: ParentRole | "";
   feedingMethod: FeedingMethod | "";
@@ -123,12 +132,16 @@ export function RecoveryProfileQuestions({
   diet: DietaryPreference | "";
   /** Comma-separated, exactly as typed — split into a list on save. */
   allergiesText: string;
+  /** Pre-eclampsia or high blood pressure this pregnancy. "" = not answered.
+   *  Optional: the question only shows when a handler is given. */
+  hadHypertension?: HypertensionAnswer | "";
   onRoleChange: (value: ParentRole) => void;
   onFeedingChange: (value: FeedingMethod) => void;
   onBirthChange: (value: DeliveryType) => void;
   onDietChange: (value: DietaryPreference) => void;
   onAllergiesTextChange: (value: string) => void;
   onAllergiesBlur: () => void;
+  onHypertensionChange?: (value: HypertensionAnswer) => void;
 }) {
   const p = usePalette();
   // Birth/feeding are about the birthing parent's own body. Once someone
@@ -153,6 +166,19 @@ export function RecoveryProfileQuestions({
 
           <Text style={[styles.question, { color: p.text }]}>How did your baby arrive?</Text>
           <OptionList options={BIRTH_OPTIONS} selected={birthMethod} onSelect={onBirthChange} />
+
+          {onHypertensionChange && (
+            <>
+              <Text style={[styles.question, { color: p.text }]}>
+                Did you have pre-eclampsia or high blood pressure in this pregnancy?
+              </Text>
+              <OptionList
+                options={HYPERTENSION_OPTIONS}
+                selected={hadHypertension ?? ""}
+                onSelect={onHypertensionChange}
+              />
+            </>
+          )}
         </>
       )}
 
