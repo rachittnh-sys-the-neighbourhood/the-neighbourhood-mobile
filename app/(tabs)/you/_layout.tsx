@@ -8,9 +8,8 @@ import { fonts } from "../../../lib/theme";
  * (index) rather than a menu of headings, and every section pushes over
  * it with a real back button. "Today" — the parent's own daily companion
  * (check-in, nourishment, recovery line) — used to BE this landing
- * screen; it's now its own pushed screen like Care and Nutrition, reached
- * from a card on the hub, so the hub itself stays as clean and scannable
- * as Child's.
+ * screen; it's now folded into the hub itself, reached directly from
+ * index rather than a card pushing to its own screen.
  *
  * Palette: You's screens read the "parent" palette (a cooler eucalyptus
  * tone, see lib/theme.ts) purely as a wayfinding cue — the room changes
@@ -35,12 +34,15 @@ export default function YouLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: "You", headerRight: () => <AvatarButton /> }} />
-      <Stack.Screen name="today" options={{ title: "Today" }} />
       <Stack.Screen name="nutrition" options={{ title: "Nutrition" }} />
-      {/* Titled "You" rather than "Care" — every WELL BEING tile on the hub
-          pushes here, and the header should still read as "you're still in
-          your own space", not name a screen concept the parent never
-          chose to open. */}
+      {/* A father's full monthly activity inventory — deliberately not on
+          the landing page (see you/index.tsx's FOR TODAY section), one
+          tap away via "See more for today →". */}
+      <Stack.Screen name="for-today" options={{ title: "For Today" }} />
+      {/* Titled "You" rather than "Care" — every WELL BEING/EXPLORE tile on
+          the hub pushes here, and the header should still read as "you're
+          still in your own space", not name a screen concept the parent
+          never chose to open. */}
       <Stack.Screen name="care" options={{ title: "You" }} />
     </Stack>
   );

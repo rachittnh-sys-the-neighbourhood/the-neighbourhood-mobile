@@ -27,7 +27,10 @@ const HELP_OPTIONS: { value: ParentCheckinHelp; label: string }[] = [
  * in the first six weeks — see lib/db/checkins.ts isCheckinDue.
  *
  * Once answered for this cadence window, shows a quiet "already checked
- * in" note instead of asking again — never nagging, never scored.
+ * in" note instead of asking again — never nagging, never scored. The
+ * moment that answer is from today specifically, this collapses further
+ * still, to a small "✓ Checked in today" row — barely any footprint on
+ * the page once it's done, for either role.
  */
 export function CheckInCard({
   profileId,
@@ -76,6 +79,17 @@ export function CheckInCard({
   };
 
   if (!due) {
+    // The moment it's actually today's answer, this collapses to a tiny
+    // acknowledgement rather than the fuller "Checked in for now" card —
+    // that fuller card is for a later day that still isn't due yet, where
+    // there's more worth saying than a checkmark.
+    if (checkins.isCheckedInToday(latest)) {
+      return (
+        <View style={styles.collapsedRow}>
+          <Text style={[styles.collapsedText, { color: p.textMuted }]}>✓ Checked in today</Text>
+        </View>
+      );
+    }
     return (
       <Card style={styles.card}>
         <Text style={[styles.title, { color: p.text }]}>Checked in for now.</Text>
@@ -175,6 +189,14 @@ export function CheckInCard({
 }
 
 const styles = StyleSheet.create({
+  collapsedRow: {
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  collapsedText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: typeScale.bodySmall,
+  },
   card: {
     padding: spacing.lg,
     marginBottom: spacing.lg,

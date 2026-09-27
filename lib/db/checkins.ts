@@ -53,3 +53,19 @@ export function isCheckinDue(latest: ParentCheckin | null, weeksPostpartum: numb
   const cadenceDays = weeksPostpartum <= 6 ? 3 : 7;
   return daysSince >= cadenceDays;
 }
+
+/**
+ * True the moment a check-in has been answered today specifically — a
+ * tighter condition than `!isCheckinDue`, which stays true for the whole
+ * cadence window (up to a week) after any answer. Used to collapse the
+ * card to a small "✓ Checked in today" state right after answering,
+ * distinct from the fuller "Checked in for now" card shown on a later
+ * day that still isn't due yet.
+ */
+export function isCheckedInToday(latest: ParentCheckin | null): boolean {
+  if (!latest) return false;
+  const daysSince = Math.floor(
+    (Date.now() - new Date(`${latest.checkin_date}T00:00:00`).getTime()) / 86_400_000
+  );
+  return daysSince === 0;
+}

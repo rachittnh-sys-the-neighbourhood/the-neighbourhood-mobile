@@ -4,6 +4,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Card, CareNote, Chevron, PageHeading, SectionLabel } from "../../../components/parentUI";
 import { useAuth } from "../../../lib/AuthProvider";
 import { computeAge, youngestChild } from "../../../lib/childAge";
+import {
+  FATHER_ROLE_HUB_BLURB,
+  FATHER_ROLE_HUB_LABEL,
+  topicsForFatherRole,
+  type FatherRole,
+} from "../../../lib/fatherRoles";
 import { usePalette } from "../../../lib/ModeProvider";
 import {
   CARE_AREAS,
@@ -97,8 +103,14 @@ export default function Recovery() {
    * the parent tapped "Sleep", not "everything". Omitted (opened from the
    * Today card's "Learn more", or any other general entry) shows all of
    * it, same as before the hub redesign.
+   *
+   * `hub` is the father-only alternative: one of his three Explore hubs
+   * (Fatherhood/Partnership/Your wellbeing — see lib/fatherRoles.ts). It
+   * takes over the whole area-filtering logic below rather than mapping
+   * onto a single CareArea, because the underlying content doesn't split
+   * cleanly along CareArea lines (see topicsForFatherRole).
    */
-  const { area: areaFilter } = useLocalSearchParams<{ area?: CareArea }>();
+  const { area: areaFilter, hub } = useLocalSearchParams<{ area?: CareArea; hub?: FatherRole }>();
 
   // The parent's own postpartum stage follows the youngest child, not
   // whichever child is active in the Kids tab switcher — see today.tsx.
@@ -121,6 +133,16 @@ export default function Recovery() {
   // zero topics after both filters (e.g. "physical" for a father) is
   // dropped rather than shown empty.
   const areaTopics = useMemo(() => {
+    if (hub) {
+      return [
+        {
+          key: hub,
+          label: FATHER_ROLE_HUB_LABEL[hub],
+          blurb: FATHER_ROLE_HUB_BLURB[hub],
+          topics: topicsForFatherRole(profile.delivery, hub),
+        },
+      ];
+    }
     return CARE_AREAS.filter((area) => isCareAreaVisible(area.key, profile.role, ageMonths))
       .filter((area) => !areaFilter || area.key === areaFilter)
       .map((area) => ({
@@ -128,7 +150,7 @@ export default function Recovery() {
         topics: topicsForProfile(profile.delivery, area.key),
       }))
       .filter((a) => a.topics.length > 0);
-  }, [profile.delivery, profile.role, ageMonths, areaFilter]);
+  }, [profile.delivery, profile.role, ageMonths, areaFilter, hub]);
 
   return (
     <ScrollView
@@ -137,20 +159,24 @@ export default function Recovery() {
       showsVerticalScrollIndicator={false}
     >
       <PageHeading
-        eyebrow={eyebrow}
+        eyebrow={hub ? "Explore" : eyebrow}
         title={
-          areaFilter
-            ? (areaTopics[0]?.label ?? "Your recovery, explained.")
-            : isFather
-              ? "Your part in this."
-              : "Your recovery, explained."
+          hub
+            ? FATHER_ROLE_HUB_LABEL[hub]
+            : areaFilter
+              ? (areaTopics[0]?.label ?? "Your recovery, explained.")
+              : isFather
+                ? "Your part in this."
+                : "Your recovery, explained."
         }
         body={
-          areaFilter
-            ? (areaTopics[0]?.blurb ?? "")
-            : isFather
-              ? "What she\u2019s going through, and what actually helps from you."
-              : "What you\u2019re feeling has a name, and an ending. Here\u2019s both."
+          hub
+            ? FATHER_ROLE_HUB_BLURB[hub]
+            : areaFilter
+              ? (areaTopics[0]?.blurb ?? "")
+              : isFather
+                ? "What she\u2019s going through, and what actually helps from you."
+                : "What you\u2019re feeling has a name, and an ending. Here\u2019s both."
         }
       />
 
@@ -172,9 +198,24 @@ export default function Recovery() {
         </Card>
       )}
 
+      {/* Family Meals lives inside the Partnership hub rather than on the
+          father's main You landing page — still one tap away, just under
+          the partner-facing content it actually belongs beside. */}
+      {hub === "partner" && (
+        <Card style={styles.topicCard} onPress={() => router.push("/you/nutrition")}>
+          <View style={styles.rowBetween}>
+            <Text style={[styles.topicTitle, { color: p.text }]}>Family Meals</Text>
+            <Chevron />
+          </View>
+          <Text style={[styles.topicBlurb, { color: p.textMuted }]}>
+            The meal plan for the whole family, and her recovery-specific additions.
+          </Text>
+        </Card>
+      )}
+
       {areaTopics.map(({ key, label, blurb, topics }) => (
         <View key={key} style={styles.block}>
-          {!areaFilter && (
+          {!areaFilter && !hub && (
             <>
               <SectionLabel>{label}</SectionLabel>
               <Text style={[styles.areaBlurb, { color: p.textMuted }]}>{blurb}</Text>
@@ -199,7 +240,7 @@ export default function Recovery() {
         </View>
       ))}
 
-      {areaFilter && areaTopics[0] && (
+      {(areaFilter || hub) && areaTopics[0] && (
         <Pressable
           onPress={() =>
             router.push({

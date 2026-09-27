@@ -985,7 +985,7 @@ export const CARE_TOPICS: CareTopic[] = [
   {
     slug: "what-she-needs-right-now",
     area: "fathering",
-    title: "What she needs from you right now",
+    title: "Showing up as a partner",
     blurb: "Practical support does more than it gets credit for.",
     minutes: 4,
     sections: [
