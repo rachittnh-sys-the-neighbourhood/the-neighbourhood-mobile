@@ -7,6 +7,7 @@ import { useAuth } from "../../../lib/AuthProvider";
 import { computeAge, youngestChild } from "../../../lib/childAge";
 import * as familyMeals from "../../../lib/db/familyMeals";
 import type { FamilyMeal } from "../../../lib/db/types";
+import { formatIngredients, splitGuidanceClauses } from "../../../lib/mealIngredientLabels";
 import { usePalette } from "../../../lib/ModeProvider";
 import { deriveProfile, elapsedPhrase, type DietaryPreference } from "../../../lib/parentCare";
 import { isRecoveryRelevant } from "../../../lib/recoveryRelevance";
@@ -178,7 +179,7 @@ export default function FamilyMealsScreen() {
               <MealCard
                 meal={meal!}
                 diet={profile.diet}
-                showMotherBoost={!isFather}
+                isFather={isFather}
                 expanded={expandedMealId === meal!.id}
                 onToggle={() => setExpandedMealId(expandedMealId === meal!.id ? null : meal!.id)}
               />
@@ -199,7 +200,7 @@ export default function FamilyMealsScreen() {
                   <MealCard
                     meal={alternative}
                     diet={profile.diet}
-                    showMotherBoost={!isFather}
+                    isFather={isFather}
                     expanded
                     onToggle={() => setExpandedMealId(null)}
                   />
@@ -261,18 +262,34 @@ export default function FamilyMealsScreen() {
 function MealCard({
   meal,
   diet,
-  showMotherBoost,
+  isFather,
   expanded,
   onToggle,
 }: {
   meal: FamilyMeal;
   diet: DietaryPreference;
-  showMotherBoost: boolean;
+  isFather: boolean;
   expanded: boolean;
   onToggle: () => void;
 }) {
   const p = usePalette();
-  const boost = showMotherBoost ? familyMeals.motherBoostFor(meal, diet) : null;
+  // Family meals are cooked and eaten together -- a father isn't a
+  // bystander being briefed on someone else's needs, he's just as able
+  // to be the one adding the curd. So he still gets the line, reframed
+  // to say what it's for rather than addressed to the wrong person (see
+  // reframeBoostForPartner) -- never hidden outright.
+  const boost = isFather
+    ? familyMeals.partnerBoostFor(meal, diet)
+    : familyMeals.motherBoostFor(meal, diet);
+  const ingredientsText = useMemo(() => formatIngredients(meal.ingredients), [meal.ingredients]);
+  const safetyLines = useMemo(
+    () => splitGuidanceClauses(meal.choking_modifications),
+    [meal.choking_modifications]
+  );
+  const ageLines = useMemo(
+    () => splitGuidanceClauses(meal.adaptation_guidance),
+    [meal.adaptation_guidance]
+  );
 
   return (
     <Card onPress={onToggle}>
@@ -292,36 +309,57 @@ function MealCard({
         )}
       </View>
 
+      {/* Embedded on the card itself, not tucked behind "tap to expand" —
+          this is an actionable line (add this, boost that) for whoever's
+          cooking, mother or father, so it shouldn't need a second tap to
+          surface. Only when this meal actually has one. */}
+      {boost && <Text style={[styles.motherBoost, { color: p.primary }]}>{boost}</Text>}
+
       {expanded && (
         <View style={styles.recipe}>
-          {meal.ingredients && (
+          {ingredientsText && (
             <>
               <Text style={[styles.recipeHeading, { color: p.text }]}>What you need</Text>
-              <Text style={[styles.recipeItem, { color: p.textMuted }]}>{meal.ingredients}</Text>
+              <Text style={[styles.recipeItem, { color: p.textMuted }]}>{ingredientsText}</Text>
             </>
           )}
-          {meal.choking_modifications && (
+          {safetyLines.length > 0 && (
             <>
               <Text style={[styles.recipeHeading, { color: p.text, marginTop: spacing.md }]}>
                 Keeping it safe
               </Text>
-              <Text style={[styles.recipeItem, { color: p.textMuted }]}>
-                {meal.choking_modifications}
-              </Text>
+              {safetyLines.map((line, index) => (
+                <Text
+                  key={index}
+                  style={[
+                    styles.recipeItem,
+                    { color: p.textMuted },
+                    index > 0 && styles.recipeItemStacked,
+                  ]}
+                >
+                  {line}
+                </Text>
+              ))}
             </>
           )}
-          {meal.adaptation_guidance && (
+          {ageLines.length > 0 && (
             <>
               <Text style={[styles.recipeHeading, { color: p.text, marginTop: spacing.md }]}>
                 By age
               </Text>
-              <Text style={[styles.recipeItem, { color: p.textMuted }]}>
-                {meal.adaptation_guidance}
-              </Text>
+              {ageLines.map((line, index) => (
+                <Text
+                  key={index}
+                  style={[
+                    styles.recipeItem,
+                    { color: p.textMuted },
+                    index > 0 && styles.recipeItemStacked,
+                  ]}
+                >
+                  {line}
+                </Text>
+              ))}
             </>
-          )}
-          {boost && (
-            <Text style={[styles.motherBoost, { color: p.primary }]}>{boost}</Text>
           )}
         </View>
       )}
@@ -442,6 +480,13 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: typeScale.bodySmall,
     lineHeight: typeScale.bodySmall * 1.7,
+  },
+  // "Keeping it safe" / "By age" render one clause per line (see
+  // splitGuidanceClauses) rather than one semicolon-joined paragraph --
+  // this is the gap between those lines, applied to every line after the
+  // first.
+  recipeItemStacked: {
+    marginTop: spacing.xs,
   },
   motherBoost: {
     fontFamily: fonts.bodySemiBold,

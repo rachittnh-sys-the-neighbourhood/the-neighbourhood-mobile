@@ -119,6 +119,39 @@ export function motherBoostFor(meal: FamilyMeal, diet: DietaryPreference): strin
   return byDiet || meal.mother_boost_good_for || null;
 }
 
+/**
+ * motherBoostFor() is authored entirely in the mother's own voice ("For
+ * you: add curd + a squeeze of lemon.", or the plain "Good for protein +
+ * iron" fallback) -- correct read by her, wrong read by anyone else.
+ *
+ * A father reading the same line isn't a bystander being briefed on what
+ * someone else needs -- family meals are cooked and eaten together, and
+ * he's just as able to be the one adding the curd as she is. So this
+ * keeps the original action ("Add a bowl of curd.") intact and verb-
+ * first -- something either parent can actually go do -- and only swaps
+ * the label in front of it from "for you" (wrong person) to what it's
+ * FOR ("good for her recovery"), never "for your partner" or anything
+ * that reads like handing her a plate.
+ */
+export function reframeBoostForPartner(boost: string): string {
+  const forYou = boost.match(/^for you:\s*/i);
+  if (forYou) {
+    return `Good for her recovery: ${boost.slice(forYou[0].length).trim()}`;
+  }
+  const goodFor = boost.match(/^good for\s*/i);
+  if (goodFor) {
+    return `Good for her recovery — ${boost.slice(goodFor[0].length)}`;
+  }
+  return `Good for her recovery: ${boost}`;
+}
+
+/** motherBoostFor(), reframed for a father viewing the same meal -- see
+ *  reframeBoostForPartner. */
+export function partnerBoostFor(meal: FamilyMeal, diet: DietaryPreference): string | null {
+  const boost = motherBoostFor(meal, diet);
+  return boost ? reframeBoostForPartner(boost) : null;
+}
+
 const NUTRIENT_KEYWORDS: { key: string; label: string; terms: string[] }[] = [
   { key: "protein", label: "Protein-source", terms: ["protein"] },
   { key: "iron", label: "Iron-source", terms: ["iron"] },
