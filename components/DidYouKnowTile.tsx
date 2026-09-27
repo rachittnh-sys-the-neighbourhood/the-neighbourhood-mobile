@@ -13,15 +13,21 @@ const SHARE_URL = "https://theneighbourhood.in";
 /**
  * Home's "Did you know" tile — first thing on the screen.
  *
- * The heading is ONLY the card's own dynamic lane ("THROUGH THEIR EYES",
- * "THAT IS SO US", …) — no literal "Did you know" boilerplate stacked in
- * front of it on every card — and it sits directly on the tile's own
- * lightly-tinted sage background. The actual fact content (text, source
- * controls) lives on a white sub-card nested inside, the same shape the
- * activities tile uses for its own rows. The one exception to "only the
- * fact text" is a research-based card (Species = Fact or Research
- * insight): that gets a small "Source" control the parent can tap to
- * reveal the citation. Everything else shows no source control at all.
+ * The heading is the card's own `header` field from the source workbook
+ * (DidYouKnow_PRODUCTION_READY.xlsx's "Header" column — "Sound
+ * familiar?", "Through their eyes", "Been there?", …) — NOT `lane`
+ * (Food is fascinating / Children are fascinating / …), which is a
+ * broader categorical tag, not a per-card heading; using it as the
+ * heading was my own earlier judgment call, not something specified,
+ * and read wrong once pointed out. No literal "Did you know" boilerplate
+ * stacked in front of it on every card, either way — and it sits
+ * directly on the tile's own lightly-tinted sage background. The actual
+ * fact content (text, source controls) lives on a white sub-card nested
+ * inside, the same shape the activities tile uses for its own rows. The
+ * one exception to "only the fact text" is a research-based card
+ * (Species = Fact or Research insight): that gets a small "Source"
+ * control the parent can tap to reveal the citation. Everything else
+ * shows no source control at all.
  *
  * "Share" opens the OS's own share sheet (WhatsApp, Messages, etc. all
  * appear there automatically if installed) with the fact text plus a
@@ -77,7 +83,7 @@ export function DidYouKnowTile({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.eyebrow}>{fact.lane ? fact.lane.toUpperCase() : "DID YOU KNOW"}</Text>
+      <Text style={styles.eyebrow}>{fact.header ? fact.header.toUpperCase() : "DID YOU KNOW"}</Text>
 
       <View style={styles.innerCard}>
         <Text style={styles.text}>{fact.card_text}</Text>
