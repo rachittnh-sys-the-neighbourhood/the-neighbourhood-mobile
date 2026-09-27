@@ -17,6 +17,16 @@ export const colors = {
   // unmistakably actionable, the way Nurche/Nestology use a solid dark
   // green for their main buttons and badges.
   sageDark: "#71846D",
+  // A lighter tint of `sage` — for a whole-tile background (Home's Did
+  // You Know tile) where full-strength sage reads too heavy as a large
+  // area rather than an accent. The actual fact content then sits on a
+  // white sub-card nested inside, same "tinted outer / white inner"
+  // pattern the activities tile below uses for its own rows.
+  sageLight: "#C2CBBF",
+  // A lighter tint of `softSand`, same reasoning — the activities tile's
+  // outer background, less heavy than full-strength softSand over that
+  // much area.
+  softSandLight: "#D9C0B0",
   white: "#FFFDFC", // cards and clean space
 
   // Derived, not in the PRD table, but needed for real UI: muted text,

@@ -1138,15 +1138,15 @@ const styles = StyleSheet.create({
   // The primary block: today's activities live inside a solid card, so it
   // reads as one elevated "today" surface rather than text sitting loose
   // on the page background — the loudest thing on screen, by container as
-  // well as by type size. A darker, warmer sand rather than sage green —
-  // the same creamish/brownish family the Child tab already lives in
-  // (colors.cream), just a shade deeper, so this doesn't read as an
-  // unrelated color dropped into an otherwise warm-toned screen.
+  // well as by type size. A warmer sand rather than sage green — the same
+  // creamish/brownish family the Child tab already lives in (colors.cream)
+  // — lightened a tad from the previous round so it doesn't read as heavy
+  // over this much area.
   childSection: {
     marginTop: spacing.sm,
     padding: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: colors.softSand,
+    backgroundColor: colors.softSandLight,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(96, 79, 60, 0.08)",
   },
