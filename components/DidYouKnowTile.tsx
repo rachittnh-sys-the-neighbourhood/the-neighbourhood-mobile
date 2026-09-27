@@ -70,9 +70,10 @@ export function DidYouKnowTile({
   const sourceLine = dyk.sourceLineFor(fact);
 
   const share = async () => {
+    const heading = fact.header || "Did you know?";
     try {
       await Share.share({
-        message: `Did you know? ${fact.card_text}\n\nPowered by The Neighbourhood — ${SHARE_URL}`,
+        message: `${heading}\n${fact.card_text}\n\nPowered by The Neighbourhood — ${SHARE_URL}`,
       });
     } catch {
       // The share sheet itself failing (rather than just being dismissed,
