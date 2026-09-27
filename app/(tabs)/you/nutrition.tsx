@@ -179,7 +179,7 @@ export default function FamilyMealsScreen() {
               <MealCard
                 meal={meal!}
                 diet={profile.diet}
-                showMotherBoost={!isFather}
+                isFather={isFather}
                 expanded={expandedMealId === meal!.id}
                 onToggle={() => setExpandedMealId(expandedMealId === meal!.id ? null : meal!.id)}
               />
@@ -200,7 +200,7 @@ export default function FamilyMealsScreen() {
                   <MealCard
                     meal={alternative}
                     diet={profile.diet}
-                    showMotherBoost={!isFather}
+                    isFather={isFather}
                     expanded
                     onToggle={() => setExpandedMealId(null)}
                   />
@@ -262,18 +262,25 @@ export default function FamilyMealsScreen() {
 function MealCard({
   meal,
   diet,
-  showMotherBoost,
+  isFather,
   expanded,
   onToggle,
 }: {
   meal: FamilyMeal;
   diet: DietaryPreference;
-  showMotherBoost: boolean;
+  isFather: boolean;
   expanded: boolean;
   onToggle: () => void;
 }) {
   const p = usePalette();
-  const boost = showMotherBoost ? familyMeals.motherBoostFor(meal, diet) : null;
+  // Family meals are cooked and eaten together -- a father isn't a
+  // bystander being briefed on someone else's needs, he's just as able
+  // to be the one adding the curd. So he still gets the line, reframed
+  // to say what it's for rather than addressed to the wrong person (see
+  // reframeBoostForPartner) -- never hidden outright.
+  const boost = isFather
+    ? familyMeals.partnerBoostFor(meal, diet)
+    : familyMeals.motherBoostFor(meal, diet);
   const ingredientsText = useMemo(() => formatIngredients(meal.ingredients), [meal.ingredients]);
   const safetyLines = useMemo(
     () => splitGuidanceClauses(meal.choking_modifications),
@@ -303,10 +310,9 @@ function MealCard({
       </View>
 
       {/* Embedded on the card itself, not tucked behind "tap to expand" —
-          this is the one line that's actually actionable for her right
-          now (add this, boost that), so it shouldn't need a second tap
-          to surface. Still only for a mother (showMotherBoost), and only
-          when this meal actually has one. */}
+          this is an actionable line (add this, boost that) for whoever's
+          cooking, mother or father, so it shouldn't need a second tap to
+          surface. Only when this meal actually has one. */}
       {boost && <Text style={[styles.motherBoost, { color: p.primary }]}>{boost}</Text>}
 
       {expanded && (
