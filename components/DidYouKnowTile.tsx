@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, Share, StyleSheet, Text, View } from "react-native";
 import * as dyk from "../lib/db/dyk";
 import type { DidYouKnowFact } from "../lib/db/types";
 import { colors, radius, spacing, type } from "../lib/theme";
+
+/** The one link every share carries — the app is a PWA hosted here (see
+ *  app/welcome.tsx, which already links Terms/Privacy off this same
+ *  domain), so this is the correct destination for someone who doesn't
+ *  have the app yet, not an app-store link that doesn't exist. */
+const SHARE_URL = "https://theneighbourhood.in";
 
 /**
  * Home's "Did you know" tile — first thing on the screen.
@@ -16,6 +22,11 @@ import { colors, radius, spacing, type } from "../lib/theme";
  * fact text" is a research-based card (Species = Fact or Research
  * insight): that gets a small "Source" control the parent can tap to
  * reveal the citation. Everything else shows no source control at all.
+ *
+ * "Share" opens the OS's own share sheet (WhatsApp, Messages, etc. all
+ * appear there automatically if installed) with the fact text plus a
+ * "Powered by The Neighbourhood" line and the website link — turning a
+ * fact a parent liked into a small, free acquisition channel.
  */
 export function DidYouKnowTile({
   ageMonths,
@@ -52,6 +63,18 @@ export function DidYouKnowTile({
 
   const sourceLine = dyk.sourceLineFor(fact);
 
+  const share = async () => {
+    try {
+      await Share.share({
+        message: `Did you know? ${fact.card_text}\n\nPowered by The Neighbourhood — ${SHARE_URL}`,
+      });
+    } catch {
+      // The share sheet itself failing (rather than just being dismissed,
+      // which resolves normally) isn't worth surfacing as an error — the
+      // fact is still right there on screen either way.
+    }
+  };
+
   return (
     <View style={styles.card}>
       <Text style={styles.eyebrow}>{fact.lane ? fact.lane.toUpperCase() : "DID YOU KNOW"}</Text>
@@ -68,6 +91,10 @@ export function DidYouKnowTile({
             hitSlop={8}
           >
             <Text style={styles.link}>Another one ›</Text>
+          </Pressable>
+
+          <Pressable onPress={share} hitSlop={8}>
+            <Text style={styles.link}>Share ›</Text>
           </Pressable>
 
           {sourceLine && (
@@ -123,7 +150,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.lg,
+    flexWrap: "wrap",
+    gap: spacing.md,
     marginTop: spacing.md,
   },
   link: {

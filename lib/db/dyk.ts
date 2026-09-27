@@ -54,11 +54,29 @@ export function factsForAge(
 
 /** Same deterministic day-index rotation every other rotating card in the
  *  app uses (see home.tsx). "Another one" advances the SAME session's
- *  local index by one instead of waiting for tomorrow. */
+ *  local index by one instead of waiting for tomorrow.
+ *
+ *  Hashed rather than used directly as `(dayIndex + offset) % poolLength`:
+ *  the table is naturally grouped by lane/theme (rows for one lane sit
+ *  together), so walking the pool sequentially meant many consecutive
+ *  days — or consecutive "Another one" taps — landing in the same lane
+ *  before moving to the next. That read as repetitive rather than
+ *  varied. Hashing the seed spreads picks across the whole pool while
+ *  staying fully deterministic: same day, same offset, same card. */
 export function pickFactIndex(poolLength: number, offset: number): number {
   if (poolLength === 0) return 0;
   const dayIndex = Math.floor(Date.now() / 86_400_000);
-  return (dayIndex + offset) % poolLength;
+  return hashToIndex(dayIndex + offset, poolLength);
+}
+
+/** A small integer hash (a variant of Murmur3's finalizer) turning a
+ *  plain incrementing seed into a well-spread pseudo-random index. */
+function hashToIndex(seed: number, mod: number): number {
+  let h = seed ^ 0x9e3779b9;
+  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+  h = h ^ (h >>> 16);
+  return Math.abs(h) % mod;
 }
 
 /** The line to show under the eyebrow when a research-based card's
