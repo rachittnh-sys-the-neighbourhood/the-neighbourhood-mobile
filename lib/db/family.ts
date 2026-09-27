@@ -22,6 +22,7 @@ export async function updateProfile(
     Pick<
       Profile,
       | "parent_name"
+      | "partner_name"
       | "relationship"
       | "birth_method"
       | "feeding_method"

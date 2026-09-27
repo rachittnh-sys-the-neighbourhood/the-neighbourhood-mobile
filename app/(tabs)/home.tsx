@@ -15,11 +15,13 @@ import {
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { ActivityCollapsedRow, ActivityDoneRow, ActivityExpandedCard, EndOfDay, FeaturedActivityCard } from "../../components/ActivityCard";
+import { DidYouKnowTile } from "../../components/DidYouKnowTile";
+import { FamilyMealTile } from "../../components/FamilyMealTile";
 import { GuidedTourDialog } from "../../components/GuidedTourDialog";
 import { LogoMark } from "../../components/Logo";
 import { PrimaryButton } from "../../components/ui";
 import { useAuth, type Child, type Profile } from "../../lib/AuthProvider";
-import { computeAge, developmentalAgeMonths, stageLabel } from "../../lib/childAge";
+import { computeAge, developmentalAgeMonths, stageLabel, youngestChild } from "../../lib/childAge";
 import * as growth from "../../lib/db/growth";
 import { DOMAIN_LABEL, type Domain, type Milestone, type VaccinationScheduleItem } from "../../lib/db/types";
 import {
@@ -292,12 +294,29 @@ export default function Home() {
   // within it shows rotates by day so it isn't the same line forever.
   // This is always available (bridgesFor is a guaranteed fallback), so it
   // is always the first of the two curated recommendations.
-  const careProfile = deriveProfile(ageMonths, authProfile);
-  const careAreas = visibleCareAreas(careProfile.role, ageMonths, careProfile.delivery);
+  //
+  // The parent's own postpartum stage follows the YOUNGEST child, not
+  // whichever child happens to be active in the pager above — same rule
+  // You's own hub and Today already apply (see lib/childAge.ts
+  // youngestChild). Using the active child here would show a stale
+  // "recovering" framing for an older sibling once a new baby arrives.
+  const recoveryChild = youngestChild(kids.length > 0 ? kids : [child]);
+  const recoveryAgeMonths = recoveryChild
+    ? computeAge(recoveryChild.date_of_birth)?.totalMonths ?? 0
+    : ageMonths;
+  const careProfile = deriveProfile(recoveryAgeMonths, authProfile);
+  const careAreas = visibleCareAreas(careProfile.role, recoveryAgeMonths, careProfile.delivery);
   const topCareArea = careAreas[0] ?? null;
   const careTopics = topCareArea ? topicsForProfile(careProfile.delivery, topCareArea.key) : [];
   const dayIndex = Math.floor(Date.now() / 86_400_000);
   const careTopic = careTopics.length > 0 ? careTopics[dayIndex % careTopics.length] : null;
+
+  // Family meals are staged to the youngest child's feeding stage too —
+  // the most nutritionally vulnerable member of the family — and clear of
+  // every allergen either the parent or that child is known to have.
+  const familyAllergies = Array.from(
+    new Set([...careProfile.allergies, ...(recoveryChild?.allergies ?? [])])
+  );
 
   const milestoneRecommendation = nextMilestone
     ? {
@@ -337,10 +356,27 @@ export default function Home() {
             )}
           </View>
 
-          <SectionLabel first accent={colors.warmTaupe}>
+          {/* Did you know — the first thing on the screen. Carries its own
+              eyebrow (the fact's lane, e.g. "DID YOU KNOW · CHILD'S EYES"),
+              so no outer SectionLabel is needed here — same pattern as Ask
+              below. */}
+          <View style={styles.dykWrap}>
+            <DidYouKnowTile ageMonths={recoveryAgeMonths} role={careProfile.role} />
+          </View>
+
+          <SectionLabel accent={colors.warmTaupe}>
             TODAY
           </SectionLabel>
           <TodayActivitiesPager kids={kids.length > 0 ? kids : [child]} activeChildId={child.id} guidedTour={guidedTour} />
+
+          <View style={styles.familyMealWrap}>
+            <FamilyMealTile
+              ageMonths={recoveryAgeMonths}
+              diet={careProfile.diet}
+              allergies={familyAllergies}
+              onPress={() => router.push("/you/nutrition")}
+            />
+          </View>
 
           <CopilotHomeCard onPress={(prompt) => router.push(prompt ? `/ask?prompt=${encodeURIComponent(prompt)}` : "/ask")} />
 
@@ -353,21 +389,13 @@ export default function Home() {
             topic={careTopic}
           />
 
-          {milestoneRecommendation && (
+          {/* What's next — one thing, not two: a vaccination genuinely due
+              soon always wins the slot (it's time-sensitive in a way a
+              milestone isn't); otherwise this is something to watch for,
+              not act on. */}
+          {reminder ? (
             <>
-              <SectionLabel accent={colors.softSand}>WORTH NOTICING</SectionLabel>
-              <DiscoveryRow
-                eyebrow={milestoneRecommendation.eyebrow}
-                title={milestoneRecommendation.title}
-                body={milestoneRecommendation.body}
-                onPress={milestoneRecommendation.onPress}
-              />
-            </>
-          )}
-
-          {reminder && (
-            <>
-              <SectionLabel accent={colors.softSand}>COMING UP</SectionLabel>
+              <SectionLabel accent={colors.softSand}>WHAT'S NEXT</SectionLabel>
               <DiscoveryRow
                 eyebrow="VACCINATION"
                 title={reminder.title}
@@ -375,6 +403,18 @@ export default function Home() {
                 onPress={reminder.onPress}
               />
             </>
+          ) : (
+            milestoneRecommendation && (
+              <>
+                <SectionLabel accent={colors.softSand}>WHAT'S NEXT</SectionLabel>
+                <DiscoveryRow
+                  eyebrow={milestoneRecommendation.eyebrow}
+                  title={milestoneRecommendation.title}
+                  body={milestoneRecommendation.body}
+                  onPress={milestoneRecommendation.onPress}
+                />
+              </>
+            )
           )}
         </Animated.View>
       </ScrollView>
@@ -911,7 +951,7 @@ function ForYouCard({
   const bridge = bridgesFor(deriveProfile(ageMonths, authProfile))[0];
   return (
     <Pressable
-      onPress={() => router.push("/you/today")}
+      onPress={() => router.push("/you")}
       accessibilityRole="button"
       style={({ pressed }) => [styles.forYouCard, pressed && { opacity: 0.75 }]}
     >
@@ -1038,6 +1078,13 @@ const styles = StyleSheet.create({
     color: colors.warmTaupe,
   },
 
+  dykWrap: {
+    marginTop: spacing.xl,
+  },
+  familyMealWrap: {
+    marginTop: spacing.xxl,
+  },
+
   // A quiet colored dot in front of each eyebrow, so the shift between
   // "for your child" / "for you" / "together" reads at a glance while
   // scrolling, not just on close reading.
@@ -1061,15 +1108,15 @@ const styles = StyleSheet.create({
     color: colors.warmTaupe,
   },
 
-  // The primary block: today's activities live inside a gently tinted
-  // card, so it reads as one elevated "today" surface rather than text
-  // sitting loose on the page background — the loudest thing on screen,
-  // by container as well as by type size.
+  // The primary block: today's activities live inside a solid sage card,
+  // so it reads as one elevated "today" surface rather than text sitting
+  // loose on the page background — the loudest thing on screen, by
+  // container as well as by type size.
   childSection: {
     marginTop: spacing.sm,
     padding: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: "rgba(137, 116, 91, 0.05)",
+    backgroundColor: colors.sage,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(96, 79, 60, 0.08)",
   },
@@ -1081,7 +1128,7 @@ const styles = StyleSheet.create({
   },
   subline: {
     ...type.lead,
-    color: colors.textMuted,
+    color: colors.charcoal,
     marginTop: 6,
   },
 
@@ -1117,7 +1164,9 @@ const styles = StyleSheet.create({
 
   safetyNote: {
     ...type.meta,
-    color: colors.textMuted,
+    // Sits directly on the green childSection background (not a white
+    // sub-card), so this needs more contrast than textMuted gives.
+    color: colors.charcoal,
     marginTop: spacing.md,
   },
   emptyPlanCard: {

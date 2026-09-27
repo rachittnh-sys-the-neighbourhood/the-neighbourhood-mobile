@@ -1,6 +1,6 @@
 import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   FeatureCard,
   FeatureGrid,
@@ -10,10 +10,18 @@ import {
   MicroLearningCard,
   type FeatureIconName,
 } from "../../../components/FeatureHub";
+import { CheckInCard } from "../../../components/CheckInCard";
 import { Card } from "../../../components/parentUI";
 import { GuidedTourDialog } from "../../../components/GuidedTourDialog";
 import { useAuth } from "../../../lib/AuthProvider";
 import { computeAge, youngestChild } from "../../../lib/childAge";
+import * as family from "../../../lib/db/family";
+import {
+  FATHER_ACTIVITY_CATEGORY_LABEL,
+  MOTHER_ACTIVITY_CATEGORY_LABEL,
+  type FatherActivity,
+  type MotherActivity,
+} from "../../../lib/db/types";
 import { markFirstRunComplete, markHomeCoachComplete, rewindGuidedTourStep } from "../../../lib/firstRun";
 import { usePalette } from "../../../lib/ModeProvider";
 import {
@@ -23,51 +31,39 @@ import {
   recommendedTopicsForProfile,
   visibleCareAreas,
   type CareArea,
+  type DeliveryType,
 } from "../../../lib/parentCare";
 import { isRecoveryRelevant } from "../../../lib/recoveryRelevance";
-import { fonts, spacing, typeScale } from "../../../lib/theme";
+import { fonts, radius, spacing, typeScale } from "../../../lib/theme";
 import { useGuidedTourStep } from "../../../lib/useGuidedTourStep";
 import { useScreenFocus } from "../../../lib/useScreenFocus";
+import { useTodaysFatherPlan } from "../../../lib/useTodaysFatherPlan";
+import { useTodaysMotherPlan } from "../../../lib/useTodaysMotherPlan";
 
 /**
  * You's landing hub — the mirror of Child's: a feature grid, not a page of
- * content. "Today" (the parent's own daily companion — check-in,
- * nourishment, recovery line) used to live at this exact URL; it's now
- * one tap away via its own card, at app/(tabs)/you/today.tsx, so the
- * landing spot can be a clean hub like Child's rather than a long scroll.
+ * content.
  *
- * Care's areas (Physical recovery, Mental health, Sleep, Relationships,
- * Feeding, For dads) each get their own card rather than being folded
- * into one "Care" card — visibleCareAreas() is the exact same
- * role/age/delivery filter the Care screen itself uses, reused rather
- * than re-derived, so a card never appears here for an area the Care
- * screen would show empty (or vice versa). A father never sees "Physical
- * recovery"; "For dads" only appears for a father; nothing shows once a
- * postpartum framing has stopped fitting the child's age.
+ * Everything below is strictly role-relevant: a father sees only father
+ * content (his own support activities, never postpartum recovery
+ * presented as his own), a mother sees only mother content (her recovery
+ * activities, never "For dads"). "Your Stage" and "Well Being" already
+ * filter by role via visibleCareAreas — reused here, not re-derived.
  *
- * The mood check-in ("How are you feeling today?") used to live one tap
- * in, on the Today sub-screen — easy to miss on a day a parent doesn't
- * have the room for an extra tap. It's the hub's own first thing now,
- * ahead of the feature grid.
+ * This used to split "Today" (check-in, nourishment, recovery activities,
+ * a rest tip) off into its own screen at you/today.tsx, reached via a
+ * "What's for today" card sitting right next to a near-identical
+ * "Nutrition" card — three headers in a row (Check-in, For You Today,
+ * What's For Today) that all said roughly the same thing. That whole
+ * screen is folded in here now: one hub, no redundant middle screen, and
+ * the recovery/father-support activity pools render directly below,
+ * exactly as role-gated as they always were.
+ *
+ * The check-in itself is the meal planner workbook's two-question
+ * Recovery Check-in (energy, and whether help is available today) —
+ * replacing the old five-emoji mood picker, which was never actually
+ * saved anywhere. See components/CheckInCard.tsx.
  */
-const FEELINGS = [
-  { key: "bright", icon: "😊", label: "Bright" },
-  { key: "steady", icon: "🙂", label: "Steady" },
-  { key: "flat", icon: "😐", label: "Flat" },
-  { key: "tired", icon: "😴", label: "Tired" },
-  { key: "low", icon: "😔", label: "Low" },
-] as const;
-
-type FeelingKey = (typeof FEELINGS)[number]["key"];
-
-const LIGHTER_DAY: Record<FeelingKey, string> = {
-  bright: "You seem to have a little more room today, so the suggestions stay practical but not demanding.",
-  steady: "A steady day is enough. Today's ideas are small, useful, and easy to leave unfinished.",
-  flat: "Flat days do not need fixing. The plan below keeps decisions low and asks very little of you.",
-  tired: "You chose tired, so today stays lighter: food you can assemble, five minutes of movement, and permission to lower the bar.",
-  low: "Low counts as information, not failure. Today's support is gentle, and reaching out to someone kind is a good next step.",
-};
-
 const CARE_ICONS: Record<CareArea, FeatureIconName> = {
   physical: "recovery",
   fathering: "dads",
@@ -78,13 +74,32 @@ const CARE_ICONS: Record<CareArea, FeatureIconName> = {
   relationships: "relationships",
 };
 
+const BIRTH_OPTIONS: { value: DeliveryType; label: string }[] = [
+  { value: "vaginal", label: "Vaginal birth" },
+  { value: "caesarean", label: "Caesarean" },
+  { value: "prefer_not_to_say", label: "Rather not say" },
+];
+
+const TIME_OF_DAY_LABEL: Record<MotherActivity["time_of_day"], string> = {
+  anytime: "Anytime",
+  morning: "Morning",
+  evening: "Evening",
+  during_nap: "During a nap",
+};
+
+const FATHER_TIME_OF_DAY_LABEL: Record<FatherActivity["time_of_day"], string> = {
+  anytime: "Anytime",
+  morning: "Morning",
+  evening: "Evening",
+  night: "Night",
+};
+
 export default function YouHub() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useLocalSearchParams<{ guidedTour?: string; next?: string; step?: string }>();
   const p = usePalette();
-  const { parentName, profile: authProfile, children } = useAuth();
-  const [feeling, setFeeling] = useState<FeelingKey>("bright");
+  const { session, parentName, profile: authProfile, children, refreshFamily } = useAuth();
 
   // The tour's final stop — see child/guide.tsx: only the focused screen
   // on matching route with the right step may show a tour dialog.
@@ -106,15 +121,11 @@ export default function YouHub() {
   };
 
   // The parent's own postpartum stage follows the youngest child, not
-  // whichever child is active in the Kids tab switcher — see today.tsx.
+  // whichever child is active in the Kids tab switcher — see today.tsx's
+  // former version of this same comment.
   const recoveryChild = youngestChild(children);
   const ageMonths = recoveryChild ? computeAge(recoveryChild.date_of_birth)?.totalMonths ?? 0 : 0;
 
-  // Role/birth type/feeding method were asked once, during main
-  // onboarding — see lib/AuthProvider.tsx's `profile` and
-  // app/onboarding/role.tsx / birth-type.tsx / feeding.tsx. This hub used
-  // to ask them itself on first visit; it now just reads what's already
-  // known, the same way Home and Copilot do.
   const profile = useMemo(
     () => deriveProfile(ageMonths, authProfile),
     [ageMonths, authProfile],
@@ -125,14 +136,13 @@ export default function YouHub() {
   );
 
   const firstName = parentName?.trim().split(" ")[0];
+  const partnerFirstName = authProfile?.partner_name?.trim().split(" ")[0];
 
-  /**
-   * Short and factual, matching Child's "{age} old" — the paragraph-length
-   * reassurance now lives on the Today card's own screen, not the header.
-   * Falls back to a plain line once a postpartum framing has stopped
-   * fitting, rather than showing a stale "week 109 postpartum".
-   */
-  const subtitle = isRecoveryRelevant(ageMonths)
+  const recoveryFramingApplies = isRecoveryRelevant(ageMonths);
+  const showsRecovery = recoveryFramingApplies && profile.role !== "father";
+  const showsFatherSupport = recoveryFramingApplies && profile.role === "father";
+
+  const subtitle = recoveryFramingApplies
     ? profile.role === "father"
       ? `${elapsedPhrase(profile.weeksPostpartum)} in.`
       : `${elapsedPhrase(profile.weeksPostpartum)} postpartum.`
@@ -140,26 +150,53 @@ export default function YouHub() {
       ? `Everything here is for you, ${firstName}.`
       : "Everything here is for you.";
 
-  const recoveryFramingApplies = isRecoveryRelevant(ageMonths);
+  // Never answered at all — distinct from an explicit "prefer_not_to_say".
+  // A father is never asked his partner's birth method during onboarding,
+  // so this is the first time he sees this question.
+  const needsBirthConfirmation =
+    (showsRecovery || showsFatherSupport) && authProfile?.birth_method == null;
+
+  const [savingBirth, setSavingBirth] = useState(false);
+  const handleConfirmBirth = async (value: DeliveryType) => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    setSavingBirth(true);
+    try {
+      await family.updateProfile(userId, { birth_method: value });
+      await refreshFamily();
+    } finally {
+      setSavingBirth(false);
+    }
+  };
+
+  const motherPlanProfileId = showsRecovery && !needsBirthConfirmation ? session?.user?.id ?? null : null;
+  const { plan: motherPlan, loading: motherPlanLoading, swapping, swap: swapMotherActivity } =
+    useTodaysMotherPlan(motherPlanProfileId);
+
+  const fatherPlanProfileId =
+    showsFatherSupport && !needsBirthConfirmation ? session?.user?.id ?? null : null;
+  const {
+    plan: fatherPlan,
+    loading: fatherPlanLoading,
+    swapping: fatherSwapping,
+    swap: swapFatherActivity,
+  } = useTodaysFatherPlan(fatherPlanProfileId);
 
   /**
-   * Only reaches for a real fact already on hand (name, elapsed time,
-   * delivery type) — the same restraint as Child's descriptionFor. A
-   * parent past the postpartum window, or one we don't have a name for
-   * yet, just gets the plain static line back.
+   * A father's nutrition/recovery card used to say "Food to support
+   * {his own name}'s recovery" — wrong, since it's really about HER
+   * recovery. Naming her by her actual name (asked once in onboarding)
+   * fixes that; falling back to "her" when he hasn't given a name rather
+   * than defaulting back to his own.
    */
-  const todayDescription = recoveryFramingApplies
-    ? firstName
-      ? `${firstName}, ${elapsedPhrase(profile.weeksPostpartum)} ${
-          profile.role === "father" ? "in" : "postpartum"
-        }.`
-      : "A quiet check-in, food that helps, and one small thing to do."
-    : "A quiet check-in, food that helps, and one small thing to do.";
-
-  const nutritionDescription =
-    recoveryFramingApplies && firstName
-      ? `Food to support ${firstName}'s recovery.`
-      : "What your body is asking for right now.";
+  const familyMealsDescription =
+    profile.role === "father"
+      ? partnerFirstName
+        ? `Meals to support ${partnerFirstName}'s recovery, and the family.`
+        : "Meals to support her recovery, and the family."
+      : recoveryFramingApplies
+        ? "Meals built around your recovery, for the whole family."
+        : "What the family's eating today.";
 
   const careAreaDescription = (area: (typeof careAreas)[number]): string => {
     if (area.key === "physical") {
@@ -184,6 +221,13 @@ export default function YouHub() {
   const stageTopicArea = (topic: (typeof stageTopics)[number]) =>
     careAreas.find((a) => a.key === topic.area) ?? null;
 
+  const recoveryLine =
+    profile.stage === "fourth_trimester"
+      ? "Feeling more tired than you expected can be completely normal. Your body is still doing deep repair."
+      : profile.stage === "recovering"
+        ? "Energy can dip again around this stage. Healing is not linear, especially after interrupted sleep."
+        : "Even when the baby is older, your nervous system may still be catching up from months of broken rest.";
+
   return (
     <ScrollView
       style={{ backgroundColor: p.bg }}
@@ -192,33 +236,11 @@ export default function YouHub() {
     >
       <HubHeader title="You" subtitle={subtitle} />
 
-      <Card style={styles.checkIn}>
-        <Text style={[styles.checkTitle, { color: p.text }]}>How are you feeling today?</Text>
-        <View style={styles.feelings}>
-          {FEELINGS.map((item) => {
-            const selected = feeling === item.key;
-            return (
-              <Pressable
-                key={item.key}
-                onPress={() => setFeeling(item.key)}
-                accessibilityRole="button"
-                accessibilityLabel={item.label}
-                style={({ pressed }) => [
-                  styles.feelingButton,
-                  {
-                    backgroundColor: selected ? p.primary : p.surfaceAlt,
-                    borderColor: selected ? p.primary : p.border,
-                  },
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Text style={styles.feelingIcon}>{item.icon}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        <Text style={[styles.checkCopy, { color: p.textMuted }]}>{LIGHTER_DAY[feeling]}</Text>
-      </Card>
+      <CheckInCard
+        profileId={session?.user?.id ?? null}
+        role={profile.role}
+        weeksPostpartum={profile.weeksPostpartum}
+      />
 
       {/* "Help me navigate being a parent," one recommendation at a time —
           not a library to scan. Picked the same way Home's "For You" is,
@@ -236,30 +258,21 @@ export default function YouHub() {
         </>
       )}
 
-      {/* Zone 1, above the fold: the one obvious first action. Today and
-          Nutrition are both daily, changing things — the parent should
-          never have to scan the whole library just to check in. */}
-      <FeatureGroupLabel>WHAT'S FOR TODAY</FeatureGroupLabel>
+      {/* Family Meals — the one door into the meal planner now; the old
+          "Nutrition" card and the redundant "Today" card it sat beside are
+          both gone. The full day's timeline, the expert-review banner and
+          the mother's own diet-specific boost live on the screen this
+          opens. */}
+      <FeatureGroupLabel>FAMILY MEALS</FeatureGroupLabel>
       <FeatureGrid>
         <FeatureCard
-          icon={<FeatureIcon name="today" color={p.primary} />}
-          title="Today"
-          description={todayDescription}
-          onPress={() => router.push("/you/today")}
-        />
-
-        <FeatureCard
           icon={<FeatureIcon name="meal" color={p.primary} />}
-          title="Nutrition"
-          description={nutritionDescription}
+          title="Family Meals"
+          description={familyMealsDescription}
           onPress={() => router.push("/you/nutrition")}
         />
       </FeatureGrid>
 
-      {/* "What may help you right now" — a curated pair, not the library.
-          No link into the full Care area list here any more: WELL BEING
-          below already covers that ground, so a second door into the same
-          content just duplicated it. */}
       {stageTopics.length > 0 && (
         <>
           <FeatureGroupLabel>YOUR STAGE</FeatureGroupLabel>
@@ -276,8 +289,105 @@ export default function YouHub() {
         </>
       )}
 
-      {/* Zone: the reference library, organised by area — for browsing over
-          time rather than today's one recommendation. */}
+      {/* A mother's own Recovery activities — never shown to a father,
+          whose relevant support lives in the block right below instead. */}
+      {showsRecovery && (
+        <View style={styles.block}>
+          <FeatureGroupLabel>RECOVERY</FeatureGroupLabel>
+          <Card onPress={() => router.push("/you/care?area=physical")} style={styles.recoveryCard}>
+            <Text style={[styles.recoveryStage, { color: p.primary }]}>
+              Week {profile.weeksPostpartum} postpartum
+            </Text>
+            <Text style={[styles.recoveryTitle, { color: p.text }]}>{recoveryLine}</Text>
+            <Text style={[styles.learnLink, { color: p.primary }]}>Read the full guide →</Text>
+          </Card>
+
+          {needsBirthConfirmation ? (
+            <BirthConfirmationCard
+              title="What type of birth did you have?"
+              body="So today's recovery activities actually fit your body."
+              saving={savingBirth}
+              onChoose={handleConfirmBirth}
+            />
+          ) : motherPlanLoading ? (
+            <ActivityIndicator style={{ marginTop: spacing.lg }} />
+          ) : (
+            motherPlan?.activities.map((activity) => (
+              <Card key={activity.id} style={styles.activityCard}>
+                <Text style={[styles.activityCategory, { color: p.primary }]}>
+                  {MOTHER_ACTIVITY_CATEGORY_LABEL[activity.category].toUpperCase()}
+                </Text>
+                <Text style={[styles.sectionTitle, { color: p.text }]}>{activity.title}</Text>
+                <Text style={[styles.sectionBody, { color: p.textMuted }]}>{activity.description}</Text>
+                <Text style={[styles.activityMeta, { color: p.textMuted }]}>
+                  {activity.duration_minutes > 0 ? `${activity.duration_minutes} min · ` : ""}
+                  {TIME_OF_DAY_LABEL[activity.time_of_day]}
+                  {activity.with_baby === "yes" ? " · With baby" : ""}
+                </Text>
+                <Pressable
+                  disabled={swapping === activity.category}
+                  onPress={() => swapMotherActivity(activity.category)}
+                  style={styles.swapButton}
+                >
+                  <Text style={[styles.swapLabel, { color: p.primary }]}>
+                    {swapping === activity.category ? "Swapping…" : "Try something else"}
+                  </Text>
+                </Pressable>
+              </Card>
+            ))
+          )}
+        </View>
+      )}
+
+      {/* A father's own support set — parallel to the mother's Recovery
+          block above, but scoped to what he actually does: supporting
+          her, bonding with the baby, the relationship, his own wellbeing,
+          becoming a father, and the practical load. Never shown to a
+          mother. */}
+      {showsFatherSupport && (
+        <View style={styles.block}>
+          <FeatureGroupLabel>FOR YOU, THIS MONTH</FeatureGroupLabel>
+
+          {needsBirthConfirmation ? (
+            <BirthConfirmationCard
+              title="How did your partner give birth?"
+              body="So today's suggestions actually fit where you both are."
+              saving={savingBirth}
+              onChoose={handleConfirmBirth}
+            />
+          ) : fatherPlanLoading ? (
+            <ActivityIndicator style={{ marginTop: spacing.lg }} />
+          ) : (
+            fatherPlan?.activities.map((activity) => (
+              <Card key={activity.id} style={styles.activityCard}>
+                <Text style={[styles.activityCategory, { color: p.primary }]}>
+                  {FATHER_ACTIVITY_CATEGORY_LABEL[activity.category].toUpperCase()}
+                </Text>
+                <Text style={[styles.sectionTitle, { color: p.text }]}>{activity.title}</Text>
+                <Text style={[styles.sectionBody, { color: p.textMuted }]}>{activity.description}</Text>
+                <Text style={[styles.activityMeta, { color: p.textMuted }]}>
+                  {activity.duration_label} · {FATHER_TIME_OF_DAY_LABEL[activity.time_of_day]}
+                  {activity.with_baby === "yes" ? " · With baby" : ""}
+                </Text>
+                <Pressable
+                  disabled={fatherSwapping === activity.category}
+                  onPress={() => swapFatherActivity(activity.category)}
+                  style={styles.swapButton}
+                >
+                  <Text style={[styles.swapLabel, { color: p.primary }]}>
+                    {fatherSwapping === activity.category ? "Swapping…" : "Try something else"}
+                  </Text>
+                </Pressable>
+              </Card>
+            ))
+          )}
+        </View>
+      )}
+
+      {/* Zone: the reference library, organised by area — for browsing
+          over time rather than today's one recommendation. Already
+          role-filtered by visibleCareAreas: a father never sees "Physical
+          recovery", "For dads" only ever appears for a father. */}
       <FeatureGroupLabel>WELL BEING</FeatureGroupLabel>
       <FeatureGrid>
         {careAreas.map((area) => (
@@ -313,44 +423,116 @@ export default function YouHub() {
   );
 }
 
+function BirthConfirmationCard({
+  title,
+  body,
+  saving,
+  onChoose,
+}: {
+  title: string;
+  body: string;
+  saving: boolean;
+  onChoose: (value: DeliveryType) => void;
+}) {
+  const p = usePalette();
+  return (
+    <Card style={styles.activityCard}>
+      <Text style={[styles.sectionTitle, { color: p.text }]}>{title}</Text>
+      <Text style={[styles.sectionBody, { color: p.textMuted }]}>{body}</Text>
+      <View style={styles.birthOptionRow}>
+        {BIRTH_OPTIONS.map((option) => (
+          <Pressable
+            key={option.value}
+            disabled={saving}
+            onPress={() => onChoose(option.value)}
+            style={[styles.birthOption, { borderColor: p.border }]}
+          >
+            <Text style={[styles.birthOptionLabel, { color: p.text }]}>{option.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+      {saving && <ActivityIndicator style={{ marginTop: spacing.sm }} />}
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.xxl,
   },
-  checkIn: {
+  block: {
+    marginTop: spacing.xl,
+  },
+  recoveryCard: {
     padding: spacing.lg,
-    marginBottom: spacing.lg,
+    borderRadius: radius.lg,
   },
-  checkTitle: {
+  recoveryStage: {
+    fontFamily: fonts.serifItalic,
+    fontSize: typeScale.body,
+    marginBottom: spacing.sm,
+  },
+  recoveryTitle: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.body,
+    lineHeight: typeScale.body * 1.6,
+  },
+  learnLink: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.h3,
-  },
-  feelings: {
-    flexDirection: "row",
-    gap: spacing.sm,
+    fontSize: typeScale.bodySmall,
     marginTop: spacing.md,
   },
-  feelingButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: "center",
-    justifyContent: "center",
+  activityCard: {
+    padding: spacing.lg,
+    marginTop: spacing.md,
   },
-  feelingIcon: {
-    fontSize: 22,
-    lineHeight: 26,
+  sectionTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.h3,
+    lineHeight: typeScale.h3 * 1.3,
   },
-  checkCopy: {
+  sectionBody: {
     fontFamily: fonts.body,
     fontSize: typeScale.bodySmall,
     lineHeight: typeScale.bodySmall * 1.55,
+    marginTop: spacing.xs,
+  },
+  activityCategory: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.caption,
+    letterSpacing: 1.2,
+    marginBottom: spacing.xs,
+  },
+  activityMeta: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.caption,
+    lineHeight: typeScale.caption * 1.45,
+    marginTop: spacing.sm,
+  },
+  swapButton: {
+    marginTop: spacing.md,
+    alignSelf: "flex-start",
+  },
+  swapLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.bodySmall,
+  },
+  birthOptionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
     marginTop: spacing.md,
   },
-  pressed: {
-    opacity: 0.72,
+  birthOption: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  birthOptionLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: typeScale.bodySmall,
   },
 });

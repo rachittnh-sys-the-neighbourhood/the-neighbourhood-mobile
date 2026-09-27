@@ -225,6 +225,12 @@ export type Profile = {
    * follow-up card in the preterm module — see lib/preterm.ts.
    */
   had_hypertension: boolean | null;
+  /** Partner's first name, asked once right after Role (mother/father
+   *  only) -- see app/onboarding/partner-name.tsx. Null = never asked or
+   *  left blank. Used to personalise copy that's really about the OTHER
+   *  parent, e.g. a father's nutrition card naming his wife rather than
+   *  misattributing "her recovery" to his own name. */
+  partner_name: string | null;
   phone: string | null;
   /** IANA zone. Every "today" in the product derives from this. */
   timezone: string;
@@ -489,5 +495,87 @@ export type CopilotMessage = {
   conversation_id: string;
   role: "parent" | "copilot";
   content: string;
+  created_at: string;
+};
+
+/**
+ * Home's "Did you know" tile content -- see supabase/migrations/
+ * 20260910091000_did_you_know_facts.sql and lib/db/dyk.ts.
+ *
+ * Only `is_research_based` cards carry a real citation to show behind a
+ * "Source" tap; the rest (most of them -- plain human-observation facts)
+ * show no source control at all, per product decision.
+ */
+export type DidYouKnowFact = {
+  id: string;
+  header: string;
+  card_text: string;
+  india_variant_text: string | null;
+  species: "Human observation" | "Fact" | "Research insight";
+  lane: string;
+  theme: string;
+  age_relevance: string;
+  age_range_raw: string;
+  age_min_months: number;
+  age_max_months: number;
+  geography: string;
+  region: string;
+  feeling: string;
+  audience: string;
+  evidence_level: "A" | "B" | "C" | null;
+  source_citation: string | null;
+  source_url: string | null;
+  is_research_based: boolean;
+};
+
+/**
+ * A whole-family meal from the v11 Meal Planner workbook -- see
+ * supabase/migrations/20260910090000_family_meal_planner.sql and
+ * lib/db/familyMeals.ts. Still pending RD/paediatrician sign-off; every
+ * screen that shows one shows the ExpertReviewBanner alongside it.
+ */
+export type FamilyMeal = {
+  id: string;
+  name: string;
+  family_id: string | null;
+  /** e.g. "6-8m", "8-12m", "12-24m", "2-4y", "4-7y" */
+  age_stages: string[];
+  slots: ("breakfast" | "morning_snack" | "lunch" | "afternoon_snack" | "dinner")[];
+  vegetarian: boolean;
+  vegan: boolean;
+  has_egg: boolean;
+  non_veg: boolean;
+  ingredients: string | null;
+  food_groups: string | null;
+  choking_modifications: string | null;
+  age_guidance: string | null;
+  adaptation_guidance: string | null;
+  active_minutes: number | null;
+  passive_minutes: number | null;
+  total_minutes: number | null;
+  family_meal_compatible: boolean;
+  audience: string | null;
+  allergen_flags: string[];
+  mother_plate_role: string | null;
+  mother_cooking_step: string | null;
+  mother_boost_good_for: string | null;
+  mother_boost_vegetarian: string | null;
+  mother_boost_eggetarian: string | null;
+  mother_boost_nonveg: string | null;
+  mother_boost_vegan: string | null;
+  prep_ahead_note: string | null;
+  source: string;
+};
+
+export type ParentCheckinEnergy = "good" | "okay" | "running_on_empty";
+export type ParentCheckinHelp = "yes" | "maybe" | "not_really";
+
+/** The weekly recovery check-in -- see lib/db/checkins.ts. */
+export type ParentCheckin = {
+  id: string;
+  profile_id: string;
+  checkin_date: string;
+  energy: ParentCheckinEnergy;
+  help_available: ParentCheckinHelp;
   created_at: string;
 };

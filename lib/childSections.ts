@@ -25,14 +25,16 @@
  * This list is age-invariant: a 2-week-old and a 7-year-old see the same
  * cards in the same zones. Age changes what's INSIDE a section —
  * vaccination entries thin out, milestone density drops, kit
- * recommendations advance, meal stage moves on, This Stage's recommended
- * reads change — never which sections exist.
+ * recommendations advance, This Stage's recommended reads change — never
+ * which sections exist. Feeding guidance isn't a section here at all any
+ * more: it's part of the whole-family meal plan on Home and You (see
+ * app/(tabs)/you/nutrition.tsx), not something scoped to the child alone.
  */
 export type ChildSectionGroup = "discover" | "stage" | "care" | "journey" | "need";
 
 export type ChildSection = {
   /** Route segment under app/(tabs)/child/ */
-  slug: "milestones" | "guide" | "kit" | "vaccinations" | "meals" | "reports" | "stories";
+  slug: "milestones" | "guide" | "kit" | "vaccinations" | "reports" | "stories";
   title: string;
   /** One short line, shown on the card. */
   description: string;
@@ -51,12 +53,6 @@ export const CHILD_SECTIONS: ChildSection[] = [
     title: "This Stage",
     description: "What matters for your child right now.",
     group: "stage",
-  },
-  {
-    slug: "meals",
-    title: "Meal Planner",
-    description: "Feeding guidance staged to where they actually are.",
-    group: "care",
   },
   {
     slug: "vaccinations",

@@ -24,11 +24,6 @@ import { recommendedChildStageTopics } from "../../../lib/childStageTopics";
 import * as growth from "../../../lib/db/growth";
 import type { Domain, Milestone, VaccinationScheduleItem } from "../../../lib/db/types";
 import { markFirstRunComplete, markHomeCoachComplete, rewindGuidedTourStep } from "../../../lib/firstRun";
-import {
-  mealsFor as kidMealsFor,
-  slotsForStage,
-  stageForAgeMonths,
-} from "../../../lib/kidMealPlanner";
 import { colors, fonts, spacing, typeScale } from "../../../lib/theme";
 import { useGuidedTourStep } from "../../../lib/useGuidedTourStep";
 import { useTodaysPlan } from "../../../lib/useTodaysPlan";
@@ -42,10 +37,10 @@ import { useTodaysPlan } from "../../../lib/useTodaysPlan";
  * Tapping a row opens it inline into the same ActivityExpandedCard Home
  * uses (see components/ActivityCard.tsx).
  *
- * Below that, two tile groups: EXPLORE (Notice / Discover / This Stage /
- * Eat — each a short, personalized teaser for something to look at today)
- * and CARE (the day-to-day and longer-range sections — meals, vaccines,
- * stories, progress, the kit — merged from childSections.ts's `care`,
+ * Below that, two tile groups: EXPLORE (Notice / Discover / This Stage —
+ * each a short, personalized teaser for something to look at today) and
+ * CARE (the day-to-day and longer-range sections — vaccines, stories,
+ * progress, the kit — merged from childSections.ts's `care`,
  * `journey` and `need` groups into one visual group, since splitting them
  * into three same-styled labels added zones without adding meaning). Both
  * groups render as the same white icon-tile grid (see renderTiles below),
@@ -54,7 +49,6 @@ import { useTodaysPlan } from "../../../lib/useTodaysPlan";
  * `wide` prop).
  */
 const ICONS: Record<ChildSection["slug"], FeatureIconName> = {
-  meals: "meal",
   milestones: "milestone",
   vaccinations: "vaccine",
   kit: "kit",
@@ -169,16 +163,6 @@ export default function ChildHome() {
     router.replace("/home");
   };
 
-  // The same meal-of-the-day pick Home makes for this exact child — see
-  // home.tsx's mealStage/mealSlot/mealIdea. Duplicated rather than shared
-  // as a hook because it's three short lines and the two screens have
-  // slightly different fallback needs; if it grows, it should move to a
-  // shared selector.
-  const mealStage = stageForAgeMonths(ageMonths);
-  const mealSlots = slotsForStage(mealStage);
-  const mealSlot = mealSlots[0] ?? null;
-  const mealIdea = mealSlot ? kidMealsFor(mealStage, mealSlot.key)[0] ?? null : null;
-
   const recommendedStageTopics = recommendedChildStageTopics(ageMonths, 1);
   const topStageTopic = recommendedStageTopics[0] ?? null;
 
@@ -202,8 +186,6 @@ export default function ChildHome() {
   const descriptionFor = (section: ChildSection): string => {
     if (!child || !age) return section.description;
     switch (section.slug) {
-      case "meals":
-        return `Feeding guidance for ${child.name}, at ${age.label}.`;
       case "vaccinations":
         // The due date already lives in the status line below (see
         // statusFor) — repeating it here just duplicated the same phrase
@@ -256,9 +238,11 @@ export default function ChildHome() {
   };
 
   // EXPLORE — Notice (the next specific thing to watch for), Discover (the
-  // general "what's typical" browse entry), This Stage (the top
-  // recommended read) and Eat (today's meal idea) — four short, already
-  // personalized teasers, each one tap from its full screen.
+  // general "what's typical" browse entry) and This Stage (the top
+  // recommended read) — short, already personalized teasers, each one tap
+  // from its full screen. Meals used to have an "Eat" teaser here too;
+  // there is no separate child meal section any more — feeding is part of
+  // the whole-family meal plan on Home and You (see you/nutrition.tsx).
   const exploreTiles: ChildTile[] = [];
   if (nextMilestone) {
     exploreTiles.push({
@@ -290,19 +274,8 @@ export default function ChildHome() {
       onPress: () => router.push(childHref("guide")),
     });
   }
-  if (mealSlot && mealIdea) {
-    exploreTiles.push({
-      key: "eat",
-      icon: "meal",
-      title: "Eat",
-      description: mealIdea.title,
-      status: mealSlot.window,
-      onPress: () => router.push(childHref("meals")),
-    });
-  }
-
   // CARE — childSections.ts's `care`, `journey` and `need` groups, merged
-  // into one visual group (meals, vaccinations, stories, progress, the
+  // into one visual group (vaccinations, stories, progress, the
   // kit): day-to-day and longer-range, but all "things this app tracks for
   // you", which reads as one group rather than three same-styled labels.
   const careTiles: ChildTile[] = [
@@ -427,7 +400,7 @@ export default function ChildHome() {
           eyebrow="Child"
           focus="Everything about your child"
           title="Growth becomes a story."
-          body="Activities, discoveries, vaccinations, meals. Everything you want to keep track of as they grow."
+          body="Activities, discoveries, vaccinations, stories. Everything you want to keep track of as they grow."
           step={3}
           total={5}
           primaryTitle="Continue"

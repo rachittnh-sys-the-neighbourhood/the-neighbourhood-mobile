@@ -61,7 +61,8 @@ const HYPERTENSION_OPTIONS: Option<HypertensionAnswer>[] = [
 
 const DIET_OPTIONS: Option<DietaryPreference>[] = [
   { value: "omnivore", label: "No restrictions", gloss: "Meat, fish, everything." },
-  { value: "vegetarian", label: "Vegetarian", gloss: "No meat or fish." },
+  { value: "vegetarian", label: "Vegetarian", gloss: "No meat or fish, no eggs." },
+  { value: "eggetarian", label: "Eggetarian", gloss: "No meat or fish, eggs are fine." },
   { value: "vegan", label: "Vegan", gloss: "No animal products." },
 ];
 

@@ -1,67 +1,101 @@
-import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { BuildingBanner } from "../../../components/BuildingBanner";
-import {
-  Card,
-  CareNote,
-  Chip,
-  NutrientTrack,
-  PageHeading,
-  SectionLabel,
-} from "../../../components/parentUI";
+import { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ExpertReviewBanner } from "../../../components/ExpertReviewBanner";
+import { Card, CareNote, Chip, PageHeading, SectionLabel } from "../../../components/parentUI";
 import { useAuth } from "../../../lib/AuthProvider";
 import { computeAge, youngestChild } from "../../../lib/childAge";
+import * as familyMeals from "../../../lib/db/familyMeals";
+import type { FamilyMeal } from "../../../lib/db/types";
 import { usePalette } from "../../../lib/ModeProvider";
-import {
-  MEAL_SLOTS,
-  type Meal,
-  deriveProfile,
-  elapsedPhrase,
-  groceriesFor,
-  mealsFor,
-  nutrientsFor,
-} from "../../../lib/parentCare";
+import { deriveProfile, elapsedPhrase, type DietaryPreference } from "../../../lib/parentCare";
 import { isRecoveryRelevant } from "../../../lib/recoveryRelevance";
 import { fonts, radius, spacing, typeScale } from "../../../lib/theme";
 
 /**
- * The Nutrition Planner.
+ * Family Meals — replaces the old, separate role-based "Nutrition"
+ * screen (a hardcoded mother/father meal timeline) and the Child tab's
+ * own "Meal Planner" (a hardcoded feeding-stage timeline): one whole-
+ * family meal plan, sourced from the v11 Meal Planner workbook, for
+ * everyone at the table.
  *
- * The brief for this screen was mostly a list of things NOT to be: not
- * MyFitnessPal, not a calorie ledger, not analytical. So the organising idea
- * is a day rather than a database — a timeline you read top to bottom, with
- * the nutrient view folded away underneath it for the parent who wants it.
+ * STILL PENDING RD/PAEDIATRICIAN SIGN-OFF — see ExpertReviewBanner and
+ * supabase/migrations/20260910090000_family_meal_planner.sql.
  *
- * Two rules hold the tone:
- *   1. Nutrients show a soft track and a REASON, never a number chased to
- *      100%. "A little more iron" beats "38% of RDA".
- *   2. Nothing is logged automatically and nothing turns red when it isn't.
+ * A mother sees her own diet-specific addition on each meal ("For you:
+ * add curd and a squeeze of lemon") and a day-balancing summary — a
+ * HEURISTIC count of how many times a nutrient source shows up today,
+ * never a number met or a target reached, per the workbook's own rule. A
+ * father sees the same family meals without the mother-specific layer.
  */
-export default function Nutrition() {
+const DIET_LABEL: Record<DietaryPreference, string> = {
+  omnivore: "Non-vegetarian",
+  vegetarian: "Vegetarian",
+  eggetarian: "Eggetarian",
+  vegan: "Vegan",
+};
+
+export default function FamilyMealsScreen() {
   const p = usePalette();
   const { children, profile: authProfile } = useAuth();
-  const [openNutrients, setOpenNutrients] = useState(false);
-  const [openGroceries, setOpenGroceries] = useState(false);
-  const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
+  const [allMeals, setAllMeals] = useState<FamilyMeal[] | null>(null);
+  const [openDayBalancing, setOpenDayBalancing] = useState(false);
+  const [expandedMealId, setExpandedMealId] = useState<string | null>(null);
 
-  // The parent's own postpartum stage follows the youngest child, not
-  // whichever child is active in the Kids tab switcher — see today.tsx.
+  useEffect(() => {
+    let alive = true;
+    familyMeals
+      .fetchAllFamilyMeals()
+      .then((rows) => {
+        if (alive) setAllMeals(rows);
+      })
+      .catch(() => {
+        if (alive) setAllMeals([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // The parent's own postpartum stage, and the family's meal filtering,
+  // both follow the youngest child — same rule every other You screen
+  // applies (see lib/childAge.ts youngestChild).
   const recoveryChild = youngestChild(children);
   const ageMonths = recoveryChild ? computeAge(recoveryChild.date_of_birth)?.totalMonths ?? 0 : 0;
   const profile = useMemo(() => deriveProfile(ageMonths, authProfile), [ageMonths, authProfile]);
-  const nutrients = useMemo(() => nutrientsFor(profile), [profile]);
-  const groceries = useMemo(() => groceriesFor(profile), [profile]);
-  // Postpartum framing (title, "N weeks postpartum", the caesarean chip)
-  // only fits roughly the first year — see lib/recoveryRelevance.ts. Past
-  // that it's just "your everyday nutrition," same as you/today.tsx.
   const recoveryFramingApplies = isRecoveryRelevant(ageMonths);
-  // A father's Nutrition is about supporting her and the family, and his
-  // own basic wellbeing — never postpartum recovery or breastfeeding
-  // presented as if it were his own.
   const isFather = profile.role === "father";
 
-  const dietLabel =
-    profile.diet === "vegan" ? "Vegan" : profile.diet === "vegetarian" ? "Vegetarian" : "No restrictions";
+  const ageStage = familyMeals.familyMealAgeStage(ageMonths);
+  const allergies = useMemo(
+    () => Array.from(new Set([...profile.allergies, ...(recoveryChild?.allergies ?? [])])),
+    [profile.allergies, recoveryChild?.allergies]
+  );
+
+  const dayIndex = Math.floor(Date.now() / 86_400_000);
+
+  const slotPicks = useMemo(() => {
+    if (!allMeals) return [];
+    return familyMeals.FAMILY_MEAL_SLOTS.map((slot) => {
+      const pool = familyMeals.mealsForSlot(allMeals, slot.key, ageStage, profile.diet, allergies);
+      const meal = familyMeals.pickForDay(pool, dayIndex);
+      const alternative = pool.length > 1 ? pool[(dayIndex + 1) % pool.length] : null;
+      return { slot, meal, alternative: alternative?.id === meal?.id ? null : alternative };
+    }).filter((entry) => entry.meal);
+  }, [allMeals, ageStage, profile.diet, allergies, dayIndex]);
+
+  const todaysMeals = slotPicks.map((entry) => entry.meal!).filter(Boolean);
+  const opportunities = useMemo(
+    () => familyMeals.dayBalancingOpportunities(todaysMeals, profile.diet),
+    [todaysMeals, profile.diet]
+  );
+
+  if (allMeals === null) {
+    return (
+      <View style={[styles.loadingScreen, { backgroundColor: p.bg }]}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -69,233 +103,193 @@ export default function Nutrition() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <BuildingBanner />
+      <ExpertReviewBanner />
 
       <PageHeading
-        eyebrow="Nutrition"
-        title={
-          isFather
-            ? "Supporting her, and yourself."
-            : recoveryFramingApplies
-              ? "Eating for the body that's healing."
-              : "Eating well, day to day."
-        }
+        eyebrow="Family Meals"
+        title={ageStage ? "Today, for the family" : "Milk is the whole diet, for now"}
         body={
-          isFather
-            ? "A few ways to help with meals, her nutrition, and your own energy today."
-            : recoveryFramingApplies
-              ? `Built around ${
-                  profile.feeding === "formula" ? "recovery" : "breastfeeding"
-                } at ${elapsedPhrase(
-                  profile.weeksPostpartum
-                )}, and around the fact that you may be eating one-handed.`
-              : "Simple, steady meals built around your day."
+          !ageStage
+            ? `${recoveryChild?.name ?? "Your baby"} is still fully milk-fed — the family meal timeline starts once solids do, around six months.`
+            : isFather
+              ? "The same meals the whole family is eating today."
+              : recoveryFramingApplies
+                ? `Built around your recovery at ${elapsedPhrase(profile.weeksPostpartum)}, for everyone at the table.`
+                : "Simple, familiar meals, for everyone at the table."
         }
       />
 
-      {/* What this plan is adapted to — stated plainly, because a plan that
-          silently assumes things about your body is not trustworthy. */}
-      <View style={styles.chips}>
-        {!isFather && recoveryFramingApplies && profile.feeding !== "formula" && (
-          <Chip
-            label={profile.feeding === "mixed" ? "Mixed feeding" : "Breastfeeding"}
-            tone="accent"
-          />
-        )}
-        <Chip label={dietLabel} />
-        {!isFather && recoveryFramingApplies && profile.delivery === "caesarean" && (
-          <Chip label="Post-caesarean" />
-        )}
-        {profile.allergies.map((allergen) => (
-          <Chip key={allergen} label={`No ${allergen}`} />
-        ))}
-      </View>
-
-      {/* The day, as a timeline. */}
-      <View style={styles.block}>
-        <SectionLabel>Today</SectionLabel>
-        {MEAL_SLOTS.map((slot) => {
-          const options = mealsFor(profile, slot.key);
-          if (options.length === 0) return null;
-          const meal = options[0];
-          const alternative = options[1];
-          return (
-            <View key={slot.key} style={styles.slot}>
-              <View style={styles.slotRail}>
-                <View
-                  style={[
-                    styles.slotDot,
-                    {
-                      backgroundColor: meal.logged ? p.positive : p.surface,
-                      borderColor: meal.logged ? p.positive : p.border,
-                    },
-                  ]}
-                />
-                <View style={[styles.slotLine, { backgroundColor: p.border }]} />
-              </View>
-
-              <View style={styles.slotBody}>
-                <Text style={[styles.slotWindow, { color: p.textMuted }]}>
-                  {slot.window.toUpperCase()}
-                </Text>
-                <MealCard
-                  meal={meal}
-                  expanded={expandedMeal === meal.id}
-                  onToggle={() =>
-                    setExpandedMeal(expandedMeal === meal.id ? null : meal.id)
-                  }
-                />
-                {alternative && (
-                  <Pressable
-                    onPress={() =>
-                      setExpandedMeal(expandedMeal === alternative.id ? null : alternative.id)
-                    }
-                    style={({ pressed }) => pressed && { opacity: 0.6 }}
-                  >
-                    <Text style={[styles.swap, { color: p.primary }]}>
-                      or {alternative.title.toLowerCase()}
-                    </Text>
-                  </Pressable>
-                )}
-                {expandedMeal === alternative?.id && alternative && (
-                  <View style={styles.altDetail}>
-                    <MealCard meal={alternative} expanded onToggle={() => setExpandedMeal(null)} />
-                  </View>
-                )}
-              </View>
-            </View>
-          );
-        })}
-      </View>
-
-      {/* Nutrients, folded away. Present for those who want them, invisible
-          for those for whom they'd be one more thing to fail at. */}
-      <View style={styles.block}>
-        <Card
-          onPress={() => setOpenNutrients((v) => !v)}
-          style={openNutrients ? styles.discOpen : undefined}
-        >
-          <View style={styles.rowBetween}>
-            <Text style={[styles.discTitle, { color: p.text }]}>
-              {isFather ? "Your own basic nutrition" : "What your body is asking for"}
-            </Text>
-            <Text style={[styles.discToggle, { color: p.primary }]}>
-              {openNutrients ? "Hide" : "Show"}
-            </Text>
+      {ageStage && (
+        <>
+          <View style={styles.chips}>
+            <Chip label={DIET_LABEL[profile.diet]} />
+            {allergies.map((allergen) => (
+              <Chip key={allergen} label={`No ${allergen}`} />
+            ))}
           </View>
-          {!openNutrients && (
-            <Text style={[styles.discHint, { color: p.textMuted }]}>
-              {isFather
-                ? "Seven nutrients worth keeping an eye on for yourself."
-                : recoveryFramingApplies
-                  ? "Seven nutrients that matter more while feeding."
-                  : "Seven nutrients worth keeping an eye on."}
-            </Text>
-          )}
-        </Card>
 
-        {openNutrients && (
-          <Card style={styles.nutrientCard}>
-            {nutrients.map((n, index) => (
-              <View
-                key={n.key}
-                style={[
-                  styles.nutrient,
-                  index > 0 && {
-                    borderTopWidth: StyleSheet.hairlineWidth,
-                    borderTopColor: p.border,
-                  },
-                ]}
-              >
-                <View style={styles.rowBetween}>
-                  <Text style={[styles.nutrientLabel, { color: p.text }]}>{n.label}</Text>
-                  <Text style={[styles.nutrientAmount, { color: p.textMuted }]}>
-                    {n.current} of {n.target} {n.unit}
+          <View style={styles.block}>
+            <SectionLabel>Today</SectionLabel>
+            {slotPicks.map(({ slot, meal, alternative }) => (
+              <View key={slot.key} style={styles.slot}>
+                <View style={styles.slotRail}>
+                  <View style={[styles.slotDot, { borderColor: p.border }]} />
+                  <View style={[styles.slotLine, { backgroundColor: p.border }]} />
+                </View>
+                <View style={styles.slotBody}>
+                  <Text style={[styles.slotWindow, { color: p.textMuted }]}>
+                    {slot.window.toUpperCase()}
                   </Text>
+                  <MealCard
+                    meal={meal!}
+                    diet={profile.diet}
+                    showMotherBoost={!isFather}
+                    expanded={expandedMealId === meal!.id}
+                    onToggle={() => setExpandedMealId(expandedMealId === meal!.id ? null : meal!.id)}
+                  />
+                  {alternative && (
+                    <Pressable
+                      onPress={() =>
+                        setExpandedMealId(expandedMealId === alternative.id ? null : alternative.id)
+                      }
+                      style={({ pressed }) => pressed && { opacity: 0.6 }}
+                    >
+                      <Text style={[styles.swap, { color: p.primary }]}>
+                        or {alternative.name.toLowerCase()}
+                      </Text>
+                    </Pressable>
+                  )}
+                  {expandedMealId === alternative?.id && alternative && (
+                    <View style={styles.altDetail}>
+                      <MealCard
+                        meal={alternative}
+                        diet={profile.diet}
+                        showMotherBoost={!isFather}
+                        expanded
+                        onToggle={() => setExpandedMealId(null)}
+                      />
+                    </View>
+                  )}
                 </View>
-                <View style={styles.nutrientTrack}>
-                  <NutrientTrack fraction={n.current / n.target} />
-                </View>
-                <Text style={[styles.nutrientWhy, { color: p.textMuted }]}>{n.why}</Text>
               </View>
             ))}
-            <CareNote>
-              This is here to inform, not to replace. If something feels off, your
-              instinct is worth following. Reach out to your doctor.
-            </CareNote>
-          </Card>
-        )}
-      </View>
-
-      {/* Groceries. */}
-      <View style={styles.block}>
-        <Card onPress={() => setOpenGroceries((v) => !v)}>
-          <View style={styles.rowBetween}>
-            <Text style={[styles.discTitle, { color: p.text }]}>What to have in</Text>
-            <Text style={[styles.discToggle, { color: p.primary }]}>
-              {openGroceries ? "Hide" : `${groceries.length} things`}
-            </Text>
           </View>
-          {openGroceries && (
-            <View style={styles.groceryList}>
-              {groceries.map((item) => (
-                <View key={item} style={styles.groceryRow}>
-                  <View style={[styles.groceryDot, { backgroundColor: p.secondary }]} />
-                  <Text style={[styles.groceryText, { color: p.textMuted }]}>{item}</Text>
+
+          {!isFather && opportunities.length > 0 && (
+            <View style={styles.block}>
+              <Card onPress={() => setOpenDayBalancing((v) => !v)}>
+                <View style={styles.rowBetween}>
+                  <Text style={[styles.discTitle, { color: p.text }]}>How today's meals add up</Text>
+                  <Text style={[styles.discToggle, { color: p.primary }]}>
+                    {openDayBalancing ? "Hide" : "Show"}
+                  </Text>
                 </View>
-              ))}
+                {!openDayBalancing && (
+                  <Text style={[styles.discHint, { color: p.textMuted }]}>
+                    A rough sense of variety across today's meals — not a nutrient count.
+                  </Text>
+                )}
+              </Card>
+              {openDayBalancing && (
+                <Card style={styles.opportunityCard}>
+                  {opportunities.map((entry, index) => (
+                    <View
+                      key={entry.label}
+                      style={[
+                        styles.opportunityRow,
+                        index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: p.border },
+                      ]}
+                    >
+                      <Text style={[styles.opportunityLabel, { color: p.text }]}>{entry.label}</Text>
+                      <Text style={[styles.opportunityCount, { color: p.textMuted }]}>
+                        appears {entry.count} {entry.count === 1 ? "time" : "times"} today
+                      </Text>
+                    </View>
+                  ))}
+                  <CareNote>
+                    This counts how often a food source shows up today — it does not calculate
+                    nutrient amounts, and it is never a target to hit.
+                  </CareNote>
+                </Card>
+              )}
             </View>
           )}
-        </Card>
-      </View>
+        </>
+      )}
+
+      <Text style={[styles.footer, { color: p.textMuted }]}>
+        This is here to inform, not to replace. If something feels off, your instinct is worth
+        following. Reach out to your doctor.
+      </Text>
     </ScrollView>
   );
 }
 
 function MealCard({
   meal,
+  diet,
+  showMotherBoost,
   expanded,
   onToggle,
 }: {
-  meal: Meal;
+  meal: FamilyMeal;
+  diet: DietaryPreference;
+  showMotherBoost: boolean;
   expanded: boolean;
   onToggle: () => void;
 }) {
   const p = usePalette();
+  const boost = showMotherBoost ? familyMeals.motherBoostFor(meal, diet) : null;
+
   return (
     <Card onPress={onToggle}>
-      <View style={styles.rowBetween}>
-        <Text style={[styles.mealTitle, { color: p.text }]}>{meal.title}</Text>
-        {meal.logged && (
-          <View style={[styles.loggedDot, { backgroundColor: p.positive }]} />
-        )}
-      </View>
-      <Text style={[styles.mealBlurb, { color: p.textMuted }]}>{meal.blurb}</Text>
+      <Text style={[styles.mealTitle, { color: p.text }]}>{meal.name}</Text>
+      {meal.age_guidance && (
+        <Text style={[styles.mealBlurb, { color: p.textMuted }]}>{meal.age_guidance}</Text>
+      )}
 
       <View style={styles.mealMeta}>
-        <Text style={[styles.mealMinutes, { color: p.primary }]}>{meal.minutes} min</Text>
-        {meal.oneHanded && (
-          <Text style={[styles.mealFlag, { color: p.textMuted }]}>· one-handed</Text>
+        {meal.total_minutes != null && (
+          <Text style={[styles.mealMinutes, { color: p.primary }]}>{meal.total_minutes} min</Text>
+        )}
+        {meal.allergen_flags.length > 0 && (
+          <Text style={[styles.mealFlag, { color: p.textMuted }]}>
+            · contains {meal.allergen_flags.join(", ").toLowerCase()}
+          </Text>
         )}
       </View>
 
       {expanded && (
         <View style={styles.recipe}>
-          <Text style={[styles.recipeHeading, { color: p.text }]}>What you need</Text>
-          {meal.ingredients.map((i) => (
-            <Text key={i} style={[styles.recipeItem, { color: p.textMuted }]}>
-              {i}
-            </Text>
-          ))}
-          <Text style={[styles.recipeHeading, { color: p.text, marginTop: spacing.md }]}>
-            How
-          </Text>
-          {meal.steps.map((step, index) => (
-            <View key={step} style={styles.stepRow}>
-              <Text style={[styles.stepNumber, { color: p.secondary }]}>{index + 1}</Text>
-              <Text style={[styles.stepText, { color: p.textMuted }]}>{step}</Text>
-            </View>
-          ))}
+          {meal.ingredients && (
+            <>
+              <Text style={[styles.recipeHeading, { color: p.text }]}>What you need</Text>
+              <Text style={[styles.recipeItem, { color: p.textMuted }]}>{meal.ingredients}</Text>
+            </>
+          )}
+          {meal.choking_modifications && (
+            <>
+              <Text style={[styles.recipeHeading, { color: p.text, marginTop: spacing.md }]}>
+                Keeping it safe
+              </Text>
+              <Text style={[styles.recipeItem, { color: p.textMuted }]}>
+                {meal.choking_modifications}
+              </Text>
+            </>
+          )}
+          {meal.adaptation_guidance && (
+            <>
+              <Text style={[styles.recipeHeading, { color: p.text, marginTop: spacing.md }]}>
+                By age
+              </Text>
+              <Text style={[styles.recipeItem, { color: p.textMuted }]}>
+                {meal.adaptation_guidance}
+              </Text>
+            </>
+          )}
+          {boost && (
+            <Text style={[styles.motherBoost, { color: p.primary }]}>{boost}</Text>
+          )}
         </View>
       )}
     </Card>
@@ -303,6 +297,11 @@ function MealCard({
 }
 
 const styles = StyleSheet.create({
+  loadingScreen: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
@@ -356,16 +355,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   mealTitle: {
-    flex: 1,
     fontFamily: fonts.bodySemiBold,
     fontSize: typeScale.h3,
     lineHeight: typeScale.h3 * 1.3,
-  },
-  loggedDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginTop: 6,
   },
   mealBlurb: {
     fontFamily: fonts.body,
@@ -403,30 +395,17 @@ const styles = StyleSheet.create({
     fontSize: typeScale.bodySmall,
     lineHeight: typeScale.bodySmall * 1.7,
   },
-  stepRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  stepNumber: {
+  motherBoost: {
     fontFamily: fonts.bodySemiBold,
     fontSize: typeScale.bodySmall,
-    width: 14,
-  },
-  stepText: {
-    flex: 1,
-    fontFamily: fonts.body,
-    fontSize: typeScale.bodySmall,
-    lineHeight: typeScale.bodySmall * 1.55,
+    lineHeight: typeScale.bodySmall * 1.6,
+    marginTop: spacing.md,
   },
   rowBetween: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
     gap: spacing.sm,
-  },
-  discOpen: {
-    marginBottom: spacing.sm,
   },
   discTitle: {
     flex: 1,
@@ -443,45 +422,28 @@ const styles = StyleSheet.create({
     lineHeight: typeScale.bodySmall * 1.55,
     marginTop: spacing.xs,
   },
-  nutrientCard: {
+  opportunityCard: {
+    marginTop: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  nutrient: {
-    paddingVertical: spacing.md,
+  opportunityRow: {
+    paddingVertical: spacing.sm,
   },
-  nutrientLabel: {
+  opportunityLabel: {
     fontFamily: fonts.bodySemiBold,
     fontSize: typeScale.bodySmall,
   },
-  nutrientAmount: {
+  opportunityCount: {
     fontFamily: fonts.body,
     fontSize: typeScale.caption,
+    marginTop: 2,
   },
-  nutrientTrack: {
-    marginTop: spacing.sm,
-  },
-  nutrientWhy: {
+  footer: {
     fontFamily: fonts.body,
     fontSize: typeScale.caption,
     lineHeight: typeScale.caption * 1.6,
-    marginTop: spacing.sm,
-  },
-  groceryList: {
-    marginTop: spacing.md,
-    gap: spacing.sm,
-  },
-  groceryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  groceryDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-  },
-  groceryText: {
-    fontFamily: fonts.body,
-    fontSize: typeScale.bodySmall,
+    marginTop: spacing.xl,
+    textAlign: "center",
+    paddingHorizontal: spacing.md,
   },
 });

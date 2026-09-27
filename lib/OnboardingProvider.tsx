@@ -6,11 +6,12 @@ import { isRecoveryRelevant } from "./recoveryRelevance";
 
 /**
  * The onboarding draft — collected BEFORE the parent ever creates an account.
- * The flow is mobile+email → (auth) → parent name → your role → child name
- * → birthday → birth type (mother only) → feeding (first year only) →
- * gender: one question per screen, short enough to finish in under a
- * minute. The draft is mirrored to AsyncStorage so a parent who closes the
- * app mid-flow resumes exactly where they left off.
+ * The flow is mobile+email → (auth) → parent name → your role → partner's
+ * name (mother/father only) → child name → birthday → birth type (mother
+ * only) → feeding (first year only) → gender: one question per screen,
+ * short enough to finish in under a minute. The draft is mirrored to
+ * AsyncStorage so a parent who closes the app mid-flow resumes exactly
+ * where they left off.
  *
  * Both the child's facts AND the parent's own (role, birth type, feeding
  * method) are collected here, in the same coherent setup — not as a
@@ -29,6 +30,15 @@ export type OnboardingDraft = {
   email: string;
   parentName: string;
   role: "" | "mother" | "father" | "prefer_not_to_say";
+  /**
+   * Partner's first name — asked once, right after Role, only for a
+   * mother or father (never for "Rather not say", which has no partner
+   * role to name). null = not yet asked; "" = asked and deliberately left
+   * blank — same not-yet-vs-answered-blank distinction as
+   * gestationalWeeks below. Lets a father's "for you" copy name his wife
+   * rather than misattributing her recovery to his own name.
+   */
+  partnerName: string | null;
   childName: string;
   dateOfBirth: string; // YYYY-MM-DD
   /**
@@ -49,6 +59,7 @@ const EMPTY: OnboardingDraft = {
   email: "",
   parentName: "",
   role: "",
+  partnerName: null,
   childName: "",
   dateOfBirth: "",
   gestationalWeeks: null,
@@ -79,6 +90,13 @@ function asksBirthingQuestions(role: OnboardingDraft["role"]): boolean {
   return role !== "father";
 }
 
+/** A partner to name only exists once the parent has said which role
+ *  they are — "Rather not say" has no partner role implied, so it's
+ *  never asked there either. */
+function asksPartnerName(role: OnboardingDraft["role"]): boolean {
+  return role === "mother" || role === "father";
+}
+
 function childStillInFirstYear(dateOfBirth: string): boolean {
   if (!dateOfBirth) return false;
   const ageMonths = computeAge(dateOfBirth)?.totalMonths ?? 0;
@@ -91,6 +109,7 @@ export const ONBOARDING_STEPS = [
   ...(EMAIL_AUTH_ENABLED ? (["/onboarding/contact"] as const) : []),
   "/onboarding/parent-name",
   "/onboarding/role",
+  "/onboarding/partner-name",
   "/onboarding/child-name",
   "/onboarding/birthday",
   "/onboarding/birth-type",
@@ -121,6 +140,7 @@ export function resumeFromDraft(d: OnboardingDraft): (typeof ONBOARDING_STEPS)[n
   if (EMAIL_AUTH_ENABLED && (!d.mobile || !d.email)) return "/onboarding/contact";
   if (!d.parentName) return "/onboarding/parent-name";
   if (!d.role) return "/onboarding/role";
+  if (asksPartnerName(d.role) && d.partnerName === null) return "/onboarding/partner-name";
   if (!d.childName) return "/onboarding/child-name";
   if (!d.dateOfBirth) return "/onboarding/birthday";
   if (asksBirthingQuestions(d.role) && !d.birthMethod) return "/onboarding/birth-type";

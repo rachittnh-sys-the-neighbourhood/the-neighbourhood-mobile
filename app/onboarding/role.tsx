@@ -60,7 +60,14 @@ export default function Role() {
         ? { role, birthMethod: "", feedingMethod: "" }
         : { role }
     );
-    router.push("/onboarding/child-name");
+    // Only a mother or father has a partner role to name — "Rather not
+    // say" skips straight to the child's name. See asksPartnerName in
+    // lib/OnboardingProvider.tsx.
+    router.push(
+      role === "mother" || role === "father"
+        ? "/onboarding/partner-name"
+        : "/onboarding/child-name"
+    );
   };
 
   return (
