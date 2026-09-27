@@ -9,11 +9,13 @@ import { colors, radius, spacing, type } from "../lib/theme";
  *
  * The heading is ONLY the card's own dynamic lane ("THROUGH THEIR EYES",
  * "THAT IS SO US", …) — no literal "Did you know" boilerplate stacked in
- * front of it on every card. The visible card body shows only the fact
- * text itself — no theme, no age range clutter. The one exception is a
- * research-based card (Species = Fact or Research insight): that gets a
- * small "Source" control the parent can tap to reveal the citation.
- * Everything else shows no source control at all.
+ * front of it on every card — and it sits directly on the tile's own
+ * lightly-tinted sage background. The actual fact content (text, source
+ * controls) lives on a white sub-card nested inside, the same shape the
+ * activities tile uses for its own rows. The one exception to "only the
+ * fact text" is a research-based card (Species = Fact or Research
+ * insight): that gets a small "Source" control the parent can tap to
+ * reveal the citation. Everything else shows no source control at all.
  */
 export function DidYouKnowTile({
   ageMonths,
@@ -53,60 +55,70 @@ export function DidYouKnowTile({
   return (
     <View style={styles.card}>
       <Text style={styles.eyebrow}>{fact.lane ? fact.lane.toUpperCase() : "DID YOU KNOW"}</Text>
-      <Text style={styles.text}>{fact.card_text}</Text>
 
-      <View style={styles.row}>
-        <Pressable
-          onPress={() => {
-            setShowSource(false);
-            setOffset((o) => o + 1);
-          }}
-          hitSlop={8}
-        >
-          <Text style={styles.link}>Another one ›</Text>
-        </Pressable>
+      <View style={styles.innerCard}>
+        <Text style={styles.text}>{fact.card_text}</Text>
 
-        {sourceLine && (
-          <Pressable onPress={() => setShowSource((v) => !v)} hitSlop={8}>
-            <Text style={styles.link}>{showSource ? "Hide source" : "Source"}</Text>
+        <View style={styles.row}>
+          <Pressable
+            onPress={() => {
+              setShowSource(false);
+              setOffset((o) => o + 1);
+            }}
+            hitSlop={8}
+          >
+            <Text style={styles.link}>Another one ›</Text>
+          </Pressable>
+
+          {sourceLine && (
+            <Pressable onPress={() => setShowSource((v) => !v)} hitSlop={8}>
+              <Text style={styles.link}>{showSource ? "Hide source" : "Source"}</Text>
+            </Pressable>
+          )}
+        </View>
+
+        {showSource && sourceLine && (
+          <Pressable
+            disabled={!fact.source_url}
+            onPress={() => fact.source_url && Linking.openURL(fact.source_url)}
+          >
+            <Text style={[styles.sourceText, fact.source_url && styles.sourceLinkText]}>
+              {sourceLine}
+            </Text>
           </Pressable>
         )}
       </View>
-
-      {showSource && sourceLine && (
-        <Pressable
-          disabled={!fact.source_url}
-          onPress={() => fact.source_url && Linking.openURL(fact.source_url)}
-        >
-          <Text style={[styles.sourceText, fact.source_url && styles.sourceLinkText]}>
-            {sourceLine}
-          </Text>
-        </Pressable>
-      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // Solid sage — the green from the original mockup, now here rather than
-  // on the activities tile (see childSection in home.tsx, which took a
-  // darker warm sand instead). Link/source colors below are charcoal-
-  // based rather than sageDark, which would nearly vanish on this bg.
+  // A tad-lighter tint of sage as the OUTER tile — the eyebrow sits
+  // directly on it — with the actual fact content on a white sub-card
+  // nested inside. Same "tinted outer / white inner" shape the
+  // activities tile below uses for its own rows (see childSection +
+  // ActivityCollapsedRow in home.tsx), so the two tiles read as siblings.
   card: {
-    padding: spacing.lg,
+    padding: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: colors.sage,
+    backgroundColor: colors.sageLight,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(96, 79, 60, 0.08)",
   },
   eyebrow: {
     ...type.eyebrow,
     color: colors.charcoal,
+    paddingHorizontal: spacing.xs,
+  },
+  innerCard: {
+    marginTop: spacing.sm,
+    padding: spacing.lg,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
   },
   text: {
     ...type.title,
     color: colors.charcoal,
-    marginTop: spacing.sm,
   },
   row: {
     flexDirection: "row",
@@ -116,11 +128,11 @@ const styles = StyleSheet.create({
   },
   link: {
     ...type.label,
-    color: colors.warmTaupe,
+    color: colors.sageDark,
   },
   sourceText: {
     ...type.meta,
-    color: colors.charcoal,
+    color: colors.textMuted,
     marginTop: spacing.sm,
   },
   sourceLinkText: {

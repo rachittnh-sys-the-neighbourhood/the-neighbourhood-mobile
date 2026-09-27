@@ -64,13 +64,16 @@ import { useTodaysMotherPlan } from "../../../lib/useTodaysMotherPlan";
  *
  * FATHER: reorganised around three roles instead — "Your child. Your
  * partnership. You." (see lib/fatherRoles.ts, and FatherYouBody below).
- * FOR TODAY (exactly three DO cards: As a dad / As a partner / For you,
+ * FOR TODAY (exactly three cards: As a dad / As a partner / For you,
  * never the full monthly inventory) → YOUR STAGE (three short, tap-to-
  * expand context tiles, not another picked-topic list) → EXPLORE
  * (exactly three hubs — Fatherhood / Partnership / Your wellbeing —
  * replacing the generic per-area Well Being grid). Family Meals is
  * deliberately not on his landing page; it lives inside the Partnership
- * hub now.
+ * hub now. Each FOR TODAY card itself starts collapsed to just its role
+ * label and title ("Tap to view") — the description, duration, and swap
+ * only show once tapped, so the three read as a clean, equal-weight set
+ * rather than a wall of text on first glance.
  *
  * The check-in itself is the meal planner workbook's two-question
  * Recovery Check-in (energy, and whether help is available today) —
@@ -441,7 +444,8 @@ const STAGE_TILE_LABEL: Record<FatherRole, string> = {
  * layout above. See lib/fatherRoles.ts for the category/area mapping this
  * all draws from.
  *
- * FOR TODAY: exactly three DO cards (never the full monthly inventory —
+ * FOR TODAY: exactly three cards, collapsed to just a role label and
+ * title until tapped (never the full monthly inventory either way —
  * that's "See more for today →", see you/for-today.tsx). YOUR STAGE:
  * three short, tap-to-expand context tiles, not another picked-topic
  * list — each one's expanded state offers a way into the fuller Explore
@@ -483,6 +487,11 @@ function FatherYouBody({
 }) {
   const p = usePalette();
   const [expandedStage, setExpandedStage] = useState<FatherRole | null>(null);
+  // Each FOR TODAY card starts collapsed to just its heading — tapping
+  // one expands it in place to show the description, meta, and swap;
+  // tapping again (or another card) collapses it. Same single-open
+  // pattern as the Your Stage tiles below.
+  const [expandedToday, setExpandedToday] = useState<FatherRole | null>(null);
   const dayIndex = Math.floor(Date.now() / 86_400_000);
 
   // Same profile.stage buckets the mother's "Your Stage" recoveryLine
@@ -531,28 +540,39 @@ function FatherYouBody({
           roles.map((role) => {
             const activity = todaysActivityForRole(fatherPlanActivities ?? [], role, dayIndex);
             if (!activity) return null;
+            const isExpanded = expandedToday === role;
             return (
-              <Card key={role} style={styles.activityCard}>
+              <Card
+                key={role}
+                style={styles.activityCard}
+                onPress={() => setExpandedToday(isExpanded ? null : role)}
+              >
                 <Text style={[styles.activityCategory, { color: p.primary }]}>
-                  {FATHER_ROLE_LABEL[role].toUpperCase()} · DO
+                  {FATHER_ROLE_LABEL[role].toUpperCase()}
                 </Text>
                 <Text style={[styles.sectionTitle, { color: p.text }]}>{activity.title}</Text>
-                <Text style={[styles.sectionBody, { color: p.textMuted }]}>
-                  {activity.description}
-                </Text>
-                <Text style={[styles.activityMeta, { color: p.textMuted }]}>
-                  {activity.duration_label}
-                  {activity.with_baby === "yes" ? " · With baby" : ""}
-                </Text>
-                <Pressable
-                  disabled={fatherSwapping === activity.category}
-                  onPress={() => onSwapFatherActivity(activity.category)}
-                  style={styles.swapButton}
-                >
-                  <Text style={[styles.swapLabel, { color: p.primary }]}>
-                    {fatherSwapping === activity.category ? "Swapping…" : "Try something else"}
-                  </Text>
-                </Pressable>
+                {isExpanded ? (
+                  <>
+                    <Text style={[styles.sectionBody, { color: p.textMuted }]}>
+                      {activity.description}
+                    </Text>
+                    <Text style={[styles.activityMeta, { color: p.textMuted }]}>
+                      {activity.duration_label}
+                      {activity.with_baby === "yes" ? " · With baby" : ""}
+                    </Text>
+                    <Pressable
+                      disabled={fatherSwapping === activity.category}
+                      onPress={() => onSwapFatherActivity(activity.category)}
+                      style={styles.swapButton}
+                    >
+                      <Text style={[styles.swapLabel, { color: p.primary }]}>
+                        {fatherSwapping === activity.category ? "Swapping…" : "Try something else"}
+                      </Text>
+                    </Pressable>
+                  </>
+                ) : (
+                  <Text style={[styles.tapHint, { color: p.primary }]}>Tap to view</Text>
+                )}
               </Card>
             );
           })
@@ -683,6 +703,11 @@ const styles = StyleSheet.create({
     fontSize: typeScale.caption,
     letterSpacing: 1.2,
     marginBottom: spacing.xs,
+  },
+  tapHint: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: typeScale.bodySmall,
+    marginTop: spacing.xs,
   },
   activityMeta: {
     fontFamily: fonts.body,
