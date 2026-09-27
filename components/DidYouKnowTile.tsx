@@ -1,14 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import * as Sharing from "expo-sharing";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Linking, Pressable, Share, StyleSheet, Text, View } from "react-native";
+import ViewShot from "react-native-view-shot";
 import * as dyk from "../lib/db/dyk";
 import type { DidYouKnowFact } from "../lib/db/types";
 import { colors, radius, spacing, type } from "../lib/theme";
+import { LogoMark } from "./Logo";
 
 /** The one link every share carries — the app is a PWA hosted here (see
  *  app/welcome.tsx, which already links Terms/Privacy off this same
  *  domain), so this is the correct destination for someone who doesn't
  *  have the app yet, not an app-store link that doesn't exist. */
 const SHARE_URL = "https://theneighbourhood.in";
+const SHARE_URL_LABEL = "theneighbourhood.in";
 
 /**
  * Home's "Did you know" tile — first thing on the screen.
@@ -17,22 +21,27 @@ const SHARE_URL = "https://theneighbourhood.in";
  * (DidYouKnow_PRODUCTION_READY.xlsx's "Header" column — "Sound
  * familiar?", "Through their eyes", "Been there?", …) — NOT `lane`
  * (Food is fascinating / Children are fascinating / …), which is a
- * broader categorical tag, not a per-card heading; using it as the
- * heading was my own earlier judgment call, not something specified,
- * and read wrong once pointed out. No literal "Did you know" boilerplate
- * stacked in front of it on every card, either way — and it sits
- * directly on the tile's own lightly-tinted sage background. The actual
- * fact content (text, source controls) lives on a white sub-card nested
- * inside, the same shape the activities tile uses for its own rows. The
- * one exception to "only the fact text" is a research-based card
- * (Species = Fact or Research insight): that gets a small "Source"
- * control the parent can tap to reveal the citation. Everything else
- * shows no source control at all.
+ * broader categorical tag, not a per-card heading. No literal "Did you
+ * know" boilerplate stacked in front of it on every card, either way —
+ * and it sits directly on the tile's own lightly-tinted sage background.
+ * The actual fact content (text, source controls) lives on a white
+ * sub-card nested inside, the same shape the activities tile uses for
+ * its own rows. The one exception to "only the fact text" is a
+ * research-based card (Species = Fact or Research insight): that gets a
+ * small "Source" control the parent can tap to reveal the citation.
+ * Everything else shows no source control at all.
  *
- * "Share" opens the OS's own share sheet (WhatsApp, Messages, etc. all
- * appear there automatically if installed) with the fact text plus a
- * "Powered by The Neighbourhood" line and the website link — turning a
- * fact a parent liked into a small, free acquisition channel.
+ * "Share" shares the card as an actual IMAGE — heading, fact text, and
+ * The Neighbourhood's own logo + website link baked into the picture —
+ * rather than plain text, so it reads as branded content wherever it
+ * lands (WhatsApp, Instagram, anywhere). It does this by rendering a
+ * second, purpose-built copy of the card off-screen (see
+ * ShareCardTemplate below — sized and laid out for sharing, not a literal
+ * screenshot of the on-screen tile), capturing it with react-native-
+ * view-shot, and handing the resulting PNG to expo-sharing's native
+ * share sheet. If capture or image-sharing fails for any reason (or
+ * isn't available on the platform, e.g. web), this falls back to a
+ * plain-text share via React Native's own Share API, same as before.
  */
 export function DidYouKnowTile({
   ageMonths,
@@ -44,6 +53,8 @@ export function DidYouKnowTile({
   const [pool, setPool] = useState<DidYouKnowFact[] | null>(null);
   const [offset, setOffset] = useState(0);
   const [showSource, setShowSource] = useState(false);
+  const [preparingShare, setPreparingShare] = useState(false);
+  const shotRef = useRef<ViewShot>(null);
 
   useEffect(() => {
     let alive = true;
@@ -68,22 +79,46 @@ export function DidYouKnowTile({
   if (!fact) return null;
 
   const sourceLine = dyk.sourceLineFor(fact);
+  const heading = fact.header || "Did you know?";
+  const textMessage = `${heading}\n${fact.card_text}\n\nPowered by The Neighbourhood — ${SHARE_URL}`;
 
   const share = async () => {
+    // Mount the hidden template, give it one frame to actually lay out
+    // and render, then capture it. A failure anywhere in this half —
+    // capture, or the image share itself — falls through to the plain-
+    // text share below rather than leaving the parent with nothing.
+    let uri: string | undefined;
     try {
-      await Share.share({
-        message: `Did you know? ${fact.card_text}\n\nPowered by The Neighbourhood — ${SHARE_URL}`,
-      });
+      setPreparingShare(true);
+      await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 50)));
+      uri = await shotRef.current?.capture?.();
     } catch {
-      // The share sheet itself failing (rather than just being dismissed,
-      // which resolves normally) isn't worth surfacing as an error — the
-      // fact is still right there on screen either way.
+      uri = undefined;
+    } finally {
+      setPreparingShare(false);
+    }
+
+    try {
+      if (uri && (await Sharing.isAvailableAsync())) {
+        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: "Share" });
+        return;
+      }
+    } catch {
+      // Fall through to the text share below.
+    }
+
+    try {
+      await Share.share({ message: textMessage });
+    } catch {
+      // The share sheet itself failing (rather than just being
+      // dismissed, which resolves normally) isn't worth surfacing as an
+      // error — the fact is still right there on screen either way.
     }
   };
 
   return (
     <View style={styles.card}>
-      <Text style={styles.eyebrow}>{fact.header ? fact.header.toUpperCase() : "DID YOU KNOW"}</Text>
+      <Text style={styles.eyebrow}>{heading.toUpperCase()}</Text>
 
       <View style={styles.innerCard}>
         <Text style={styles.text}>{fact.card_text}</Text>
@@ -120,6 +155,41 @@ export function DidYouKnowTile({
             </Text>
           </Pressable>
         )}
+      </View>
+
+      {/* Off-screen — never visible to the parent, only ever captured.
+          Positioned far outside the viewport rather than opacity/size-0,
+          since some capture implementations need real, laid-out
+          dimensions to photograph. Only mounted while actually sharing,
+          so it costs nothing the rest of the time. */}
+      {preparingShare && (
+        <View style={styles.captureWrap} pointerEvents="none">
+          <ViewShot ref={shotRef} options={{ format: "png", quality: 1 }}>
+            <ShareCardTemplate heading={heading} factText={fact.card_text} />
+          </ViewShot>
+        </View>
+      )}
+    </View>
+  );
+}
+
+/**
+ * The image a share actually produces — deliberately its own layout, not
+ * a screenshot of the on-screen tile: no "Another one"/"Share"/"Source"
+ * controls (meaningless in a static image), and The Neighbourhood's own
+ * logo + website link permanently baked into the bottom, since that's
+ * the whole point of sharing an image over plain text.
+ */
+function ShareCardTemplate({ heading, factText }: { heading: string; factText: string }) {
+  return (
+    <View style={styles.shareCard}>
+      <Text style={styles.shareEyebrow}>{heading.toUpperCase()}</Text>
+      <View style={styles.shareInnerCard}>
+        <Text style={styles.shareText}>{factText}</Text>
+      </View>
+      <View style={styles.shareFooter}>
+        <LogoMark size={22} color={colors.warmTaupe} />
+        <Text style={styles.shareFooterText}>The Neighbourhood · {SHARE_URL_LABEL}</Text>
       </View>
     </View>
   );
@@ -171,5 +241,40 @@ const styles = StyleSheet.create({
   },
   sourceLinkText: {
     textDecorationLine: "underline",
+  },
+  captureWrap: {
+    position: "absolute",
+    top: -10000,
+    left: -10000,
+  },
+  shareCard: {
+    width: 340,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    backgroundColor: colors.sageLight,
+  },
+  shareEyebrow: {
+    ...type.eyebrow,
+    color: colors.charcoal,
+  },
+  shareInnerCard: {
+    marginTop: spacing.sm,
+    padding: spacing.lg,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+  },
+  shareText: {
+    ...type.title,
+    color: colors.charcoal,
+  },
+  shareFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  shareFooterText: {
+    ...type.label,
+    color: colors.warmTaupe,
   },
 });
