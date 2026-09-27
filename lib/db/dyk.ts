@@ -79,11 +79,23 @@ function hashToIndex(seed: number, mod: number): number {
   return Math.abs(h) % mod;
 }
 
+/** The source workbook's own cross-reference to its separate "Sources
+ *  Referenced" sheet failed for 64 of the 850 rows (all "Fact"/"Research
+ *  insight", none with a source_url either) -- rather than a real
+ *  citation, `source_citation` for those is literally the workbook's own
+ *  broken-join placeholder text. Treated as "no citation on file", not a
+ *  citation to show a parent. */
+const BROKEN_CITATION = "source id not found";
+
 /** The line to show under the eyebrow when a research-based card's
  *  source is expanded -- citation first, falling back to a plain
  *  "peer-reviewed source" note when only a URL (no citation text) is on
- *  file, and never showing raw evidence-level letters to a parent. */
+ *  file, and never showing raw evidence-level letters to a parent. Null
+ *  means "no Source control at all" (see DidYouKnowTile) -- we only ever
+ *  offer to show a source when one is actually on file. */
 export function sourceLineFor(fact: DidYouKnowFact): string | null {
   if (!fact.is_research_based) return null;
-  return fact.source_citation || (fact.source_url ? "See source" : null);
+  const citation = fact.source_citation?.trim();
+  if (citation && citation.toLowerCase() !== BROKEN_CITATION) return citation;
+  return fact.source_url ? "See source" : null;
 }
