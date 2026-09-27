@@ -82,3 +82,20 @@ export async function hasSwipedActivityPager(): Promise<boolean> {
 export async function markSwipedActivityPager(): Promise<void> {
   await AsyncStorage.setItem(SWIPE_HINT_SEEN_KEY, "true");
 }
+
+/**
+ * The one-time Home prompt for a partner's name (see
+ * components/PartnerNamePrompt.tsx) — covers accounts that onboarded
+ * before that question existed, and anyone who skipped it. Shown at most
+ * once per device regardless of whether a name was actually entered, so
+ * declining it once doesn't mean seeing it forever.
+ */
+const PARTNER_NAME_PROMPT_SEEN_KEY = "tn.partnerNamePrompt.seen.v1";
+
+export async function hasSeenPartnerNamePrompt(): Promise<boolean> {
+  return (await AsyncStorage.getItem(PARTNER_NAME_PROMPT_SEEN_KEY)) === "true";
+}
+
+export async function markPartnerNamePromptSeen(): Promise<void> {
+  await AsyncStorage.setItem(PARTNER_NAME_PROMPT_SEEN_KEY, "true");
+}

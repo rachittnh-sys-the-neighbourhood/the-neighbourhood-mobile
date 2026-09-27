@@ -47,17 +47,20 @@ import { useTodaysMotherPlan } from "../../../lib/useTodaysMotherPlan";
  * Everything below is strictly role-relevant: a father sees only father
  * content (his own support activities, never postpartum recovery
  * presented as his own), a mother sees only mother content (her recovery
- * activities, never "For dads"). "Your Stage" and "Well Being" already
- * filter by role via visibleCareAreas — reused here, not re-derived.
+ * activities, never "For dads"). "Well Being" already filters by role via
+ * visibleCareAreas — reused here, not re-derived.
  *
- * This used to split "Today" (check-in, nourishment, recovery activities,
- * a rest tip) off into its own screen at you/today.tsx, reached via a
- * "What's for today" card sitting right next to a near-identical
- * "Nutrition" card — three headers in a row (Check-in, For You Today,
- * What's For Today) that all said roughly the same thing. That whole
- * screen is folded in here now: one hub, no redundant middle screen, and
- * the recovery/father-support activity pools render directly below,
- * exactly as role-gated as they always were.
+ * Fixed hierarchy, one job per section, deliberately in this order: Check-
+ * in (how are you) → Family Meals (what's the family eating) → For You
+ * Today (one quick read) → Well Being (the browsable library, for when
+ * one read isn't enough) → Your Stage (where things actually are right
+ * now, in one line — NOT another picked-topic list; that used to sit here
+ * and just duplicated "For You Today" a second time) → For You This Month
+ * (the actual activities to do, role-gated). This used to also carry a
+ * "Your Stage" pair of recommended topics and a separate "Today" screen
+ * (you/today.tsx, since folded in here) that between them read as the
+ * same content three or four times over with no real hierarchy — this is
+ * the trimmed version.
  *
  * The check-in itself is the meal planner workbook's two-question
  * Recovery Check-in (energy, and whether help is available today) —
@@ -209,17 +212,16 @@ export default function YouHub() {
   };
 
   // The single most relevant read right now — same selection logic as
-  // Home's "For You" (see home.tsx), offset so the two don't necessarily
-  // show the exact same pick on the same day.
-  const forYouToday = recommendedTopicsForProfile(profile, ageMonths, 1, 3)[0] ?? null;
+  // Home's "For You" (see home.tsx). This used to run a second time for
+  // "Your Stage" too (a curated pair of more topics from the same pool) —
+  // that's gone now: between this one pick, the full Well Being library
+  // below it, and the actual activities in "For you this month", a second
+  // algorithmic topic-list was reading as more of the same, not more
+  // value. "Your Stage" below is the where-you-are framing instead.
+  const forYouToday = recommendedTopicsForProfile(profile, ageMonths, 1)[0] ?? null;
   const forYouTodayArea = forYouToday
     ? careAreas.find((a) => a.key === forYouToday.area) ?? null
     : null;
-
-  // "Your Stage" — a small, curated pair rather than the whole library.
-  const stageTopics = recommendedTopicsForProfile(profile, ageMonths, 2, 0);
-  const stageTopicArea = (topic: (typeof stageTopics)[number]) =>
-    careAreas.find((a) => a.key === topic.area) ?? null;
 
   const recoveryLine =
     profile.stage === "fourth_trimester"
@@ -242,9 +244,24 @@ export default function YouHub() {
         weeksPostpartum={profile.weeksPostpartum}
       />
 
+      {/* Family Meals — the one door into the meal planner now; the old
+          "Nutrition" card and the redundant "Today" card it sat beside are
+          both gone. The full day's timeline, the expert-review banner and
+          the mother's own diet-specific boost live on the screen this
+          opens. Right after the check-in — food is as much a daily,
+          practical concern as how you're doing. */}
+      <FeatureGroupLabel>FAMILY MEALS</FeatureGroupLabel>
+      <FeatureGrid>
+        <FeatureCard
+          icon={<FeatureIcon name="meal" color={p.primary} />}
+          title="Family Meals"
+          description={familyMealsDescription}
+          onPress={() => router.push("/you/nutrition")}
+        />
+      </FeatureGrid>
+
       {/* "Help me navigate being a parent," one recommendation at a time —
-          not a library to scan. Picked the same way Home's "For You" is,
-          just offset so the two don't repeat each other on the same day. */}
+          not a library to scan. */}
       {forYouToday && (
         <>
           <FeatureGroupLabel>FOR YOU TODAY</FeatureGroupLabel>
@@ -258,49 +275,50 @@ export default function YouHub() {
         </>
       )}
 
-      {/* Family Meals — the one door into the meal planner now; the old
-          "Nutrition" card and the redundant "Today" card it sat beside are
-          both gone. The full day's timeline, the expert-review banner and
-          the mother's own diet-specific boost live on the screen this
-          opens. */}
-      <FeatureGroupLabel>FAMILY MEALS</FeatureGroupLabel>
+      {/* Zone: the reference library, organised by area — for browsing
+          over time rather than today's one recommendation. Already
+          role-filtered by visibleCareAreas: a father never sees "Physical
+          recovery", "For dads" only ever appears for a father. Moved up
+          here, right after today's one pick, since it's the natural next
+          stop from "read one thing" to "browse more like it". */}
+      <FeatureGroupLabel>WELL BEING</FeatureGroupLabel>
       <FeatureGrid>
-        <FeatureCard
-          icon={<FeatureIcon name="meal" color={p.primary} />}
-          title="Family Meals"
-          description={familyMealsDescription}
-          onPress={() => router.push("/you/nutrition")}
-        />
+        {careAreas.map((area) => (
+          <FeatureCard
+            key={area.key}
+            icon={<FeatureIcon name={CARE_ICONS[area.key]} color={p.primary} />}
+            title={area.label}
+            description={careAreaDescription(area)}
+            status={`${area.topicCount} ${area.topicCount === 1 ? "topic" : "topics"}`}
+            onPress={() => router.push(`/you/care?area=${area.key}`)}
+          />
+        ))}
       </FeatureGrid>
 
-      {stageTopics.length > 0 && (
-        <>
+      {/* "Your Stage" — where things actually are right now, in one line,
+          not another picked-topic list (that was the same recommendation
+          engine as "For you today" above, reading as a repeat of it).
+          Shown to both roles: a father's own subtitle already counts
+          elapsed time the same way, so this isn't mother-only context. */}
+      {recoveryFramingApplies && (
+        <View style={styles.block}>
           <FeatureGroupLabel>YOUR STAGE</FeatureGroupLabel>
-          {stageTopics.map((topic) => (
-            <MicroLearningCard
-              key={topic.slug}
-              eyebrow={stageTopicArea(topic)?.label ?? "Your stage"}
-              title={topic.title}
-              reason={topic.blurb}
-              minutes={topic.minutes}
-              onPress={() => router.push(`/care/${topic.slug}`)}
-            />
-          ))}
-        </>
+          <Card style={styles.recoveryCard}>
+            <Text style={[styles.recoveryStage, { color: p.primary }]}>
+              {profile.role === "father"
+                ? `${elapsedPhrase(profile.weeksPostpartum)} in`
+                : `Week ${profile.weeksPostpartum} postpartum`}
+            </Text>
+            <Text style={[styles.recoveryTitle, { color: p.text }]}>{recoveryLine}</Text>
+          </Card>
+        </View>
       )}
 
       {/* A mother's own Recovery activities — never shown to a father,
           whose relevant support lives in the block right below instead. */}
       {showsRecovery && (
         <View style={styles.block}>
-          <FeatureGroupLabel>RECOVERY</FeatureGroupLabel>
-          <Card onPress={() => router.push("/you/care?area=physical")} style={styles.recoveryCard}>
-            <Text style={[styles.recoveryStage, { color: p.primary }]}>
-              Week {profile.weeksPostpartum} postpartum
-            </Text>
-            <Text style={[styles.recoveryTitle, { color: p.text }]}>{recoveryLine}</Text>
-            <Text style={[styles.learnLink, { color: p.primary }]}>Read the full guide →</Text>
-          </Card>
+          <FeatureGroupLabel>FOR YOU THIS MONTH</FeatureGroupLabel>
 
           {needsBirthConfirmation ? (
             <BirthConfirmationCard
@@ -346,7 +364,7 @@ export default function YouHub() {
           mother. */}
       {showsFatherSupport && (
         <View style={styles.block}>
-          <FeatureGroupLabel>FOR YOU, THIS MONTH</FeatureGroupLabel>
+          <FeatureGroupLabel>FOR YOU THIS MONTH</FeatureGroupLabel>
 
           {needsBirthConfirmation ? (
             <BirthConfirmationCard
@@ -383,24 +401,6 @@ export default function YouHub() {
           )}
         </View>
       )}
-
-      {/* Zone: the reference library, organised by area — for browsing
-          over time rather than today's one recommendation. Already
-          role-filtered by visibleCareAreas: a father never sees "Physical
-          recovery", "For dads" only ever appears for a father. */}
-      <FeatureGroupLabel>WELL BEING</FeatureGroupLabel>
-      <FeatureGrid>
-        {careAreas.map((area) => (
-          <FeatureCard
-            key={area.key}
-            icon={<FeatureIcon name={CARE_ICONS[area.key]} color={p.primary} />}
-            title={area.label}
-            description={careAreaDescription(area)}
-            status={`${area.topicCount} ${area.topicCount === 1 ? "topic" : "topics"}`}
-            onPress={() => router.push(`/you/care?area=${area.key}`)}
-          />
-        ))}
-      </FeatureGrid>
 
       {guidedTour && (
         <GuidedTourDialog
@@ -478,11 +478,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: typeScale.body,
     lineHeight: typeScale.body * 1.6,
-  },
-  learnLink: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.bodySmall,
-    marginTop: spacing.md,
   },
   activityCard: {
     padding: spacing.lg,

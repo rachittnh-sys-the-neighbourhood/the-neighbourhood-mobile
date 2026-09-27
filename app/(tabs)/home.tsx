@@ -19,6 +19,7 @@ import { DidYouKnowTile } from "../../components/DidYouKnowTile";
 import { FamilyMealTile } from "../../components/FamilyMealTile";
 import { GuidedTourDialog } from "../../components/GuidedTourDialog";
 import { LogoMark } from "../../components/Logo";
+import { PartnerNamePrompt } from "../../components/PartnerNamePrompt";
 import { PrimaryButton } from "../../components/ui";
 import { useAuth, type Child, type Profile } from "../../lib/AuthProvider";
 import { computeAge, developmentalAgeMonths, stageLabel, youngestChild } from "../../lib/childAge";
@@ -85,12 +86,20 @@ export default function Home() {
     tourComplete?: string;
     replay?: string;
   }>();
-  const { child, children: kids, parentName, profile: authProfile } = useAuth();
+  const { child, children: kids, parentName, profile: authProfile, session, refreshFamily } = useAuth();
   const [coachVisible, setCoachVisible] = useState(false);
   const [coachStep, setCoachStep] = useState(0);
   const [showTourDone, setShowTourDone] = useState(params.tourComplete === "1");
   const [nextVaccination, setNextVaccination] = useState<VaccinationScheduleItem | null>(null);
   const [nextMilestone, setNextMilestone] = useState<Milestone | null>(null);
+
+  // "What's next" (vaccination due / milestone to watch for) is about the
+  // youngest child, same rule the postpartum/family-meal framing already
+  // follows below — a toddler sibling's old vaccination shouldn't eclipse
+  // a newborn's, and vice versa isn't right either. This has to be hoisted
+  // above the two effects that use it, unlike the family-care version
+  // further down which only needs to exist by render time.
+  const recoveryChild = youngestChild(kids.length > 0 ? kids : child ? [child] : []);
   // See guide.tsx: only the focused screen on matching route with step 0 may show a tour dialog.
   const isFocused = useScreenFocus();
   const isHomeRoute = pathname === "/home" || pathname === "/";
@@ -158,12 +167,12 @@ export default function Home() {
   }, [params.tourComplete]);
 
   useEffect(() => {
-    if (!child) return;
+    if (!recoveryChild) return;
     let alive = true;
     const ageDays = Math.floor(
-      (Date.now() - new Date(`${child.date_of_birth}T00:00:00`).getTime()) / 86_400_000
+      (Date.now() - new Date(`${recoveryChild.date_of_birth}T00:00:00`).getTime()) / 86_400_000
     );
-    Promise.all([growth.getVaccinationSchedule(), growth.getAdministeredVaccinations(child.id)])
+    Promise.all([growth.getVaccinationSchedule(), growth.getAdministeredVaccinations(recoveryChild.id)])
       .then(([schedule, recorded]) => {
         if (!alive) return;
         const recordedIds = new Set(recorded.map((item) => item.vaccination_id));
@@ -176,15 +185,18 @@ export default function Home() {
     return () => {
       alive = false;
     };
-  }, [child]);
+  }, [recoveryChild]);
 
   useEffect(() => {
-    if (!child) return;
+    if (!recoveryChild) return;
     let alive = true;
     // Corrected, not chronological: which discoveries are "current" is a
     // developmental question. See lib/childAge.ts developmentalAge.
-    const ageMonths = developmentalAgeMonths(child);
-    Promise.all([growth.getMilestonesForCurrentAge(ageMonths), growth.getAchievedMilestones(child.id)])
+    const ageMonths = developmentalAgeMonths(recoveryChild);
+    Promise.all([
+      growth.getMilestonesForCurrentAge(ageMonths),
+      growth.getAchievedMilestones(recoveryChild.id),
+    ])
       .then(([current, achieved]) => {
         if (!alive) return;
         const achievedIds = new Set(achieved.map((item) => item.milestone_id));
@@ -203,7 +215,7 @@ export default function Home() {
     return () => {
       alive = false;
     };
-  }, [child]);
+  }, [recoveryChild]);
 
   const closeCoach = async () => {
     setCoachVisible(false);
@@ -273,10 +285,14 @@ export default function Home() {
   // otherwise it's not "today", it's just what the Vaccinations screen is
   // for. Everything else about it (schedule, records) lives on Child.
   // This is the ONE reminder slot — it never competes with the two
-  // recommendation cards below for space or attention.
-  const ageDays = Math.floor(
-    (Date.now() - new Date(`${child.date_of_birth}T00:00:00`).getTime()) / 86_400_000
-  );
+  // recommendation cards below for space or attention. Keyed to the
+  // youngest child (recoveryChild, hoisted above) rather than whichever
+  // child is active in the pager — a toddler sibling's schedule shouldn't
+  // eclipse a newborn's next shot, and a settled newborn shouldn't hide an
+  // older sibling's upcoming one either.
+  const ageDays = recoveryChild
+    ? Math.floor((Date.now() - new Date(`${recoveryChild.date_of_birth}T00:00:00`).getTime()) / 86_400_000)
+    : 0;
   const vaccinationDueSoon =
     nextVaccination && nextVaccination.age_days - ageDays <= 60 ? nextVaccination : null;
   const reminder = vaccinationDueSoon
@@ -300,7 +316,8 @@ export default function Home() {
   // You's own hub and Today already apply (see lib/childAge.ts
   // youngestChild). Using the active child here would show a stale
   // "recovering" framing for an older sibling once a new baby arrives.
-  const recoveryChild = youngestChild(kids.length > 0 ? kids : [child]);
+  // (recoveryChild itself is hoisted near the top of the component, since
+  // the vaccination/milestone effects above need it too.)
   const recoveryAgeMonths = recoveryChild
     ? computeAge(recoveryChild.date_of_birth)?.totalMonths ?? 0
     : ageMonths;
@@ -356,25 +373,36 @@ export default function Home() {
             )}
           </View>
 
-          {/* Did you know — the first thing on the screen. Carries its own
-              eyebrow (the fact's lane, e.g. "DID YOU KNOW · CHILD'S EYES"),
-              so no outer SectionLabel is needed here — same pattern as Ask
-              below. */}
-          <View style={styles.dykWrap}>
-            <DidYouKnowTile ageMonths={recoveryAgeMonths} role={careProfile.role} />
-          </View>
+          {/* A one-time nudge for a father whose profile predates the
+              partner-name onboarding question (or who skipped it) — see
+              components/PartnerNamePrompt.tsx. Never shown to a mother:
+              her own profile doesn't drive any "her"-shaped copy today. */}
+          {careProfile.role === "father" && !authProfile?.partner_name && session?.user?.id && (
+            <PartnerNamePrompt
+              profileId={session.user.id}
+              onSaved={() => void refreshFamily()}
+            />
+          )}
 
           <SectionLabel accent={colors.warmTaupe}>
             TODAY
           </SectionLabel>
           <TodayActivitiesPager kids={kids.length > 0 ? kids : [child]} activeChildId={child.id} guidedTour={guidedTour} />
 
+          {/* Did you know — right under today's activities. Carries its
+              own heading (the fact's lane, e.g. "CHILD'S EYES"), so no
+              outer SectionLabel is needed here — same pattern as Ask
+              below. */}
+          <View style={styles.dykWrap}>
+            <DidYouKnowTile ageMonths={recoveryAgeMonths} role={careProfile.role} />
+          </View>
+
           <View style={styles.familyMealWrap}>
             <FamilyMealTile
               ageMonths={recoveryAgeMonths}
               diet={careProfile.diet}
               allergies={familyAllergies}
-              onPress={() => router.push("/you/nutrition")}
+              onPress={() => router.push("/you/nutrition?from=home")}
             />
           </View>
 
@@ -1108,15 +1136,18 @@ const styles = StyleSheet.create({
     color: colors.warmTaupe,
   },
 
-  // The primary block: today's activities live inside a solid sage card,
-  // so it reads as one elevated "today" surface rather than text sitting
-  // loose on the page background — the loudest thing on screen, by
-  // container as well as by type size.
+  // The primary block: today's activities live inside a solid card, so it
+  // reads as one elevated "today" surface rather than text sitting loose
+  // on the page background — the loudest thing on screen, by container as
+  // well as by type size. A darker, warmer sand rather than sage green —
+  // the same creamish/brownish family the Child tab already lives in
+  // (colors.cream), just a shade deeper, so this doesn't read as an
+  // unrelated color dropped into an otherwise warm-toned screen.
   childSection: {
     marginTop: spacing.sm,
     padding: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: colors.sage,
+    backgroundColor: colors.softSand,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(96, 79, 60, 0.08)",
   },
@@ -1164,7 +1195,7 @@ const styles = StyleSheet.create({
 
   safetyNote: {
     ...type.meta,
-    // Sits directly on the green childSection background (not a white
+    // Sits directly on the softSand childSection background (not a white
     // sub-card), so this needs more contrast than textMuted gives.
     color: colors.charcoal,
     marginTop: spacing.md,
