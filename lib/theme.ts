@@ -27,6 +27,13 @@ export const colors = {
   // outer background, less heavy than full-strength softSand over that
   // much area.
   softSandLight: "#D9C0B0",
+  // Lighter again — deliberately sitting between softSandLight and the
+  // Ask card's own near-cream warmTaupe wash (home.tsx copilotModule,
+  // ~rgba(139,116,91,0.11) over cream, which flattens to roughly
+  // #E8E1D8): the activities tile needed a shade that's clearly a step
+  // down from the Ask tile's near-invisible tint, without going back up
+  // to softSandLight's fuller saturation.
+  softSandLighter: "#E1D1C4",
   white: "#FFFDFC", // cards and clean space
 
   // Derived, not in the PRD table, but needed for real UI: muted text,
