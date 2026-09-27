@@ -25,6 +25,7 @@ import { useAuth, type Child, type Profile } from "../../lib/AuthProvider";
 import { computeAge, developmentalAgeMonths, stageLabel, youngestChild } from "../../lib/childAge";
 import * as growth from "../../lib/db/growth";
 import { DOMAIN_LABEL, type Domain, type Milestone, type VaccinationScheduleItem } from "../../lib/db/types";
+import { transitionForAge } from "../../lib/growthTransitions";
 import {
   hasCompletedHomeCoach,
   hasSwipedActivityPager,
@@ -344,6 +345,21 @@ export default function Home() {
       }
     : null;
 
+  // The guaranteed third source — a vaccination due soon and an
+  // outstanding milestone in the current band can both legitimately be
+  // empty at once (nothing due for 60+ days, everything in-band already
+  // achieved), and the section used to just vanish when that happened.
+  // This never runs out, so WHAT'S NEXT below always has something to
+  // show. Lowest priority of the three: it only appears when neither of
+  // the other two does.
+  const transitionNote = transitionForAge(recoveryAgeMonths);
+  const transitionRecommendation = {
+    eyebrow: "WORTH KNOWING",
+    title: transitionNote.title,
+    body: transitionNote.body,
+    onPress: () => router.push("/child/milestones"),
+  };
+
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
@@ -416,32 +432,34 @@ export default function Home() {
             topic={careTopic}
           />
 
-          {/* What's next — one thing, not two: a vaccination genuinely due
-              soon always wins the slot (it's time-sensitive in a way a
-              milestone isn't); otherwise this is something to watch for,
-              not act on. */}
+          {/* What's next — always exactly one thing, never empty. A
+              vaccination genuinely due soon always wins the slot (it's
+              time-sensitive in a way the other two aren't); then an
+              outstanding milestone for the current age; and finally the
+              guaranteed transition note, so this section never just
+              disappears for a stretch with nothing due or unachieved. */}
+          <SectionLabel accent={colors.softSand}>WHAT'S NEXT</SectionLabel>
           {reminder ? (
-            <>
-              <SectionLabel accent={colors.softSand}>WHAT'S NEXT</SectionLabel>
-              <DiscoveryRow
-                eyebrow="VACCINATION"
-                title={reminder.title}
-                body={reminder.body}
-                onPress={reminder.onPress}
-              />
-            </>
+            <DiscoveryRow
+              eyebrow="VACCINATION"
+              title={reminder.title}
+              body={reminder.body}
+              onPress={reminder.onPress}
+            />
+          ) : milestoneRecommendation ? (
+            <DiscoveryRow
+              eyebrow={milestoneRecommendation.eyebrow}
+              title={milestoneRecommendation.title}
+              body={milestoneRecommendation.body}
+              onPress={milestoneRecommendation.onPress}
+            />
           ) : (
-            milestoneRecommendation && (
-              <>
-                <SectionLabel accent={colors.softSand}>WHAT'S NEXT</SectionLabel>
-                <DiscoveryRow
-                  eyebrow={milestoneRecommendation.eyebrow}
-                  title={milestoneRecommendation.title}
-                  body={milestoneRecommendation.body}
-                  onPress={milestoneRecommendation.onPress}
-                />
-              </>
-            )
+            <DiscoveryRow
+              eyebrow={transitionRecommendation.eyebrow}
+              title={transitionRecommendation.title}
+              body={transitionRecommendation.body}
+              onPress={transitionRecommendation.onPress}
+            />
           )}
         </Animated.View>
       </ScrollView>
