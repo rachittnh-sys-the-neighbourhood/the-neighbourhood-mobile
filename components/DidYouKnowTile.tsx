@@ -1,6 +1,6 @@
 import * as Sharing from "expo-sharing";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Linking, Pressable, Share, StyleSheet, Text, View } from "react-native";
+import { Linking, Platform, Pressable, Share, StyleSheet, Text, View } from "react-native";
 import ViewShot from "react-native-view-shot";
 import * as dyk from "../lib/db/dyk";
 import type { DidYouKnowFact } from "../lib/db/types";
@@ -83,28 +83,37 @@ export function DidYouKnowTile({
   const textMessage = `${heading}\n${fact.card_text}\n\nPowered by The Neighbourhood — ${SHARE_URL}`;
 
   const share = async () => {
-    // Mount the hidden template, give it one frame to actually lay out
-    // and render, then capture it. A failure anywhere in this half —
-    // capture, or the image share itself — falls through to the plain-
-    // text share below rather than leaving the parent with nothing.
-    let uri: string | undefined;
-    try {
-      setPreparingShare(true);
-      await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 50)));
-      uri = await shotRef.current?.capture?.();
-    } catch {
-      uri = undefined;
-    } finally {
-      setPreparingShare(false);
-    }
-
-    try {
-      if (uri && (await Sharing.isAvailableAsync())) {
-        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: "Share" });
-        return;
+    // Neither react-native-view-shot's capture nor expo-sharing's image
+    // share work on web — there's no native layer for either to call
+    // into, so isAvailableAsync() is reliably false there. Skipping
+    // straight to the text share on web avoids mounting the hidden
+    // template and waiting a frame for nothing; on native (iOS/Android,
+    // including Expo Go) the capture attempt below is the real path.
+    if (Platform.OS !== "web") {
+      // Mount the hidden template, give it one frame to actually lay out
+      // and render, then capture it. A failure anywhere in this half —
+      // capture, or the image share itself — falls through to the
+      // plain-text share below rather than leaving the parent with
+      // nothing.
+      let uri: string | undefined;
+      try {
+        setPreparingShare(true);
+        await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 50)));
+        uri = await shotRef.current?.capture?.();
+      } catch {
+        uri = undefined;
+      } finally {
+        setPreparingShare(false);
       }
-    } catch {
-      // Fall through to the text share below.
+
+      try {
+        if (uri && (await Sharing.isAvailableAsync())) {
+          await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: "Share" });
+          return;
+        }
+      } catch {
+        // Fall through to the text share below.
+      }
     }
 
     try {
@@ -124,25 +133,30 @@ export function DidYouKnowTile({
         <Text style={styles.text}>{fact.card_text}</Text>
 
         <View style={styles.row}>
-          <Pressable
-            onPress={() => {
-              setShowSource(false);
-              setOffset((o) => o + 1);
-            }}
-            hitSlop={8}
-          >
-            <Text style={styles.link}>Another one ›</Text>
-          </Pressable>
+          <View style={styles.rowLeft}>
+            <Pressable
+              onPress={() => {
+                setShowSource(false);
+                setOffset((o) => o + 1);
+              }}
+              hitSlop={8}
+            >
+              <Text style={styles.link}>Another one ›</Text>
+            </Pressable>
 
+            {sourceLine && (
+              <Pressable onPress={() => setShowSource((v) => !v)} hitSlop={8}>
+                <Text style={styles.link}>{showSource ? "Hide source" : "Source"}</Text>
+              </Pressable>
+            )}
+          </View>
+
+          {/* Bottom-right, apart from "Another one"/"Source" — a
+              separate, less-frequent action, not one more item in the
+              same row of controls. */}
           <Pressable onPress={share} hitSlop={8}>
             <Text style={styles.link}>Share ›</Text>
           </Pressable>
-
-          {sourceLine && (
-            <Pressable onPress={() => setShowSource((v) => !v)} hitSlop={8}>
-              <Text style={styles.link}>{showSource ? "Hide source" : "Source"}</Text>
-            </Pressable>
-          )}
         </View>
 
         {showSource && sourceLine && (
@@ -226,9 +240,15 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: spacing.md,
+  },
+  rowLeft: {
+    flexDirection: "row",
+    alignItems: "center",
     flexWrap: "wrap",
     gap: spacing.md,
-    marginTop: spacing.md,
+    flexShrink: 1,
   },
   link: {
     ...type.label,
