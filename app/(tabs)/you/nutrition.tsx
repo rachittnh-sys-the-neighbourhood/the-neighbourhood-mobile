@@ -1,3 +1,4 @@
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ExpertReviewBanner } from "../../../components/ExpertReviewBanner";
@@ -36,10 +37,32 @@ const DIET_LABEL: Record<DietaryPreference, string> = {
 
 export default function FamilyMealsScreen() {
   const p = usePalette();
+  const router = useRouter();
+  const navigation = useNavigation();
+  const params = useLocalSearchParams<{ from?: string }>();
   const { children, profile: authProfile } = useAuth();
   const [allMeals, setAllMeals] = useState<FamilyMeal[] | null>(null);
   const [openDayBalancing, setOpenDayBalancing] = useState(false);
   const [expandedMealId, setExpandedMealId] = useState<string | null>(null);
+
+  // This screen is pushed from two different places — Home's Family Meal
+  // tile and You's own Family Meals card — and it lives inside the You
+  // tab's stack either way. Reached from You, the default back behaviour
+  // already does the right thing (pop back to the You hub, same stack).
+  // Reached from Home, that same default back would instead land on the
+  // You hub, not Home, because pushing across tabs doesn't carry Home
+  // onto this stack. So the caller marks itself with ?from=home (see
+  // home.tsx), and this intercepts via beforeRemove rather than just
+  // overriding the header button — beforeRemove also catches the Android
+  // hardware back button and the iOS edge-swipe gesture, neither of which
+  // goes through headerLeft at all.
+  useEffect(() => {
+    if (params.from !== "home") return;
+    return navigation.addListener("beforeRemove", (e) => {
+      e.preventDefault();
+      router.replace("/home");
+    });
+  }, [navigation, params.from, router]);
 
   useEffect(() => {
     let alive = true;
@@ -107,114 +130,124 @@ export default function FamilyMealsScreen() {
 
       <PageHeading
         eyebrow="Family Meals"
-        title={ageStage ? "Today, for the family" : "Milk is the whole diet, for now"}
+        title="Today, for the family"
         body={
-          !ageStage
-            ? `${recoveryChild?.name ?? "Your baby"} is still fully milk-fed — the family meal timeline starts once solids do, around six months.`
-            : isFather
-              ? "The same meals the whole family is eating today."
-              : recoveryFramingApplies
-                ? `Built around your recovery at ${elapsedPhrase(profile.weeksPostpartum)}, for everyone at the table.`
-                : "Simple, familiar meals, for everyone at the table."
+          isFather
+            ? "The same meals the whole family is eating today."
+            : recoveryFramingApplies
+              ? `Built around your recovery at ${elapsedPhrase(profile.weeksPostpartum)}, for everyone at the table.`
+              : "Simple, familiar meals, for everyone at the table."
         }
       />
 
-      {ageStage && (
-        <>
-          <View style={styles.chips}>
-            <Chip label={DIET_LABEL[profile.diet]} />
-            {allergies.map((allergen) => (
-              <Chip key={allergen} label={`No ${allergen}`} />
-            ))}
-          </View>
+      {/* The youngest child being fully milk-fed doesn't mean there's no
+          family meal plan — it means the FAMILY's plan below isn't yet
+          shaped by that baby's own feeding stage. This note says so and
+          sits alongside the plan, rather than replacing it outright. */}
+      {!ageStage && recoveryChild && (
+        <Card style={styles.milkNote}>
+          <Text style={[styles.milkNoteTitle, { color: p.text }]}>
+            {recoveryChild.name} is still fully milk-fed
+          </Text>
+          <Text style={[styles.milkNoteBody, { color: p.textMuted }]}>
+            Milk is the whole diet for now — {recoveryChild.name}&rsquo;s own solid-food timeline
+            starts around six months. The meals below are for the rest of the family.
+          </Text>
+        </Card>
+      )}
 
-          <View style={styles.block}>
-            <SectionLabel>Today</SectionLabel>
-            {slotPicks.map(({ slot, meal, alternative }) => (
-              <View key={slot.key} style={styles.slot}>
-                <View style={styles.slotRail}>
-                  <View style={[styles.slotDot, { borderColor: p.border }]} />
-                  <View style={[styles.slotLine, { backgroundColor: p.border }]} />
-                </View>
-                <View style={styles.slotBody}>
-                  <Text style={[styles.slotWindow, { color: p.textMuted }]}>
-                    {slot.window.toUpperCase()}
+      <View style={styles.chips}>
+        <Chip label={DIET_LABEL[profile.diet]} />
+        {allergies.map((allergen) => (
+          <Chip key={allergen} label={`No ${allergen}`} />
+        ))}
+      </View>
+
+      <View style={styles.block}>
+        <SectionLabel>Today</SectionLabel>
+        {slotPicks.map(({ slot, meal, alternative }) => (
+          <View key={slot.key} style={styles.slot}>
+            <View style={styles.slotRail}>
+              <View style={[styles.slotDot, { borderColor: p.border }]} />
+              <View style={[styles.slotLine, { backgroundColor: p.border }]} />
+            </View>
+            <View style={styles.slotBody}>
+              <Text style={[styles.slotWindow, { color: p.textMuted }]}>
+                {slot.window.toUpperCase()}
+              </Text>
+              <MealCard
+                meal={meal!}
+                diet={profile.diet}
+                showMotherBoost={!isFather}
+                expanded={expandedMealId === meal!.id}
+                onToggle={() => setExpandedMealId(expandedMealId === meal!.id ? null : meal!.id)}
+              />
+              {alternative && (
+                <Pressable
+                  onPress={() =>
+                    setExpandedMealId(expandedMealId === alternative.id ? null : alternative.id)
+                  }
+                  style={({ pressed }) => pressed && { opacity: 0.6 }}
+                >
+                  <Text style={[styles.swap, { color: p.primary }]}>
+                    or {alternative.name.toLowerCase()}
                   </Text>
+                </Pressable>
+              )}
+              {expandedMealId === alternative?.id && alternative && (
+                <View style={styles.altDetail}>
                   <MealCard
-                    meal={meal!}
+                    meal={alternative}
                     diet={profile.diet}
                     showMotherBoost={!isFather}
-                    expanded={expandedMealId === meal!.id}
-                    onToggle={() => setExpandedMealId(expandedMealId === meal!.id ? null : meal!.id)}
+                    expanded
+                    onToggle={() => setExpandedMealId(null)}
                   />
-                  {alternative && (
-                    <Pressable
-                      onPress={() =>
-                        setExpandedMealId(expandedMealId === alternative.id ? null : alternative.id)
-                      }
-                      style={({ pressed }) => pressed && { opacity: 0.6 }}
-                    >
-                      <Text style={[styles.swap, { color: p.primary }]}>
-                        or {alternative.name.toLowerCase()}
-                      </Text>
-                    </Pressable>
-                  )}
-                  {expandedMealId === alternative?.id && alternative && (
-                    <View style={styles.altDetail}>
-                      <MealCard
-                        meal={alternative}
-                        diet={profile.diet}
-                        showMotherBoost={!isFather}
-                        expanded
-                        onToggle={() => setExpandedMealId(null)}
-                      />
-                    </View>
-                  )}
                 </View>
-              </View>
-            ))}
-          </View>
-
-          {!isFather && opportunities.length > 0 && (
-            <View style={styles.block}>
-              <Card onPress={() => setOpenDayBalancing((v) => !v)}>
-                <View style={styles.rowBetween}>
-                  <Text style={[styles.discTitle, { color: p.text }]}>How today's meals add up</Text>
-                  <Text style={[styles.discToggle, { color: p.primary }]}>
-                    {openDayBalancing ? "Hide" : "Show"}
-                  </Text>
-                </View>
-                {!openDayBalancing && (
-                  <Text style={[styles.discHint, { color: p.textMuted }]}>
-                    A rough sense of variety across today's meals — not a nutrient count.
-                  </Text>
-                )}
-              </Card>
-              {openDayBalancing && (
-                <Card style={styles.opportunityCard}>
-                  {opportunities.map((entry, index) => (
-                    <View
-                      key={entry.label}
-                      style={[
-                        styles.opportunityRow,
-                        index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: p.border },
-                      ]}
-                    >
-                      <Text style={[styles.opportunityLabel, { color: p.text }]}>{entry.label}</Text>
-                      <Text style={[styles.opportunityCount, { color: p.textMuted }]}>
-                        appears {entry.count} {entry.count === 1 ? "time" : "times"} today
-                      </Text>
-                    </View>
-                  ))}
-                  <CareNote>
-                    This counts how often a food source shows up today — it does not calculate
-                    nutrient amounts, and it is never a target to hit.
-                  </CareNote>
-                </Card>
               )}
             </View>
+          </View>
+        ))}
+      </View>
+
+      {!isFather && opportunities.length > 0 && (
+        <View style={styles.block}>
+          <Card onPress={() => setOpenDayBalancing((v) => !v)}>
+            <View style={styles.rowBetween}>
+              <Text style={[styles.discTitle, { color: p.text }]}>How today's meals add up</Text>
+              <Text style={[styles.discToggle, { color: p.primary }]}>
+                {openDayBalancing ? "Hide" : "Show"}
+              </Text>
+            </View>
+            {!openDayBalancing && (
+              <Text style={[styles.discHint, { color: p.textMuted }]}>
+                A rough sense of variety across today's meals — not a nutrient count.
+              </Text>
+            )}
+          </Card>
+          {openDayBalancing && (
+            <Card style={styles.opportunityCard}>
+              {opportunities.map((entry, index) => (
+                <View
+                  key={entry.label}
+                  style={[
+                    styles.opportunityRow,
+                    index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: p.border },
+                  ]}
+                >
+                  <Text style={[styles.opportunityLabel, { color: p.text }]}>{entry.label}</Text>
+                  <Text style={[styles.opportunityCount, { color: p.textMuted }]}>
+                    appears {entry.count} {entry.count === 1 ? "time" : "times"} today
+                  </Text>
+                </View>
+              ))}
+              <CareNote>
+                This counts how often a food source shows up today — it does not calculate
+                nutrient amounts, and it is never a target to hit.
+              </CareNote>
+            </Card>
           )}
-        </>
+        </View>
       )}
 
       <Text style={[styles.footer, { color: p.textMuted }]}>
@@ -314,6 +347,21 @@ const styles = StyleSheet.create({
   },
   block: {
     marginTop: spacing.xl,
+  },
+  milkNote: {
+    marginTop: spacing.lg,
+    padding: spacing.lg,
+  },
+  milkNoteTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.h3,
+    lineHeight: typeScale.h3 * 1.3,
+  },
+  milkNoteBody: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.bodySmall,
+    lineHeight: typeScale.bodySmall * 1.55,
+    marginTop: spacing.xs,
   },
   slot: {
     flexDirection: "row",

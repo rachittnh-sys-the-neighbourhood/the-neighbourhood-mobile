@@ -5,12 +5,12 @@ import type { DidYouKnowFact } from "../lib/db/types";
 import { colors, radius, spacing, type } from "../lib/theme";
 
 /**
- * Home's "Did you know" tile — first thing on the screen.
+ * Home's "Did you know" tile — right under today's activities.
  *
- * The heading is dynamic: it names the card's own lane ("DID YOU KNOW ·
- * THROUGH THEIR EYES") when the app has a real one to show, rather than a
- * fixed generic label. The visible card shows only the fact text itself —
- * no lane, no theme, no age range clutter. The one exception is a
+ * The heading is ONLY the card's own dynamic lane ("THROUGH THEIR EYES",
+ * "THAT IS SO US", …) — no literal "Did you know" boilerplate stacked in
+ * front of it on every card. The visible card body shows only the fact
+ * text itself — no theme, no age range clutter. The one exception is a
  * research-based card (Species = Fact or Research insight): that gets a
  * small "Source" control the parent can tap to reveal the citation.
  * Everything else shows no source control at all.
@@ -52,7 +52,7 @@ export function DidYouKnowTile({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.eyebrow}>DID YOU KNOW{fact.lane ? ` · ${fact.lane.toUpperCase()}` : ""}</Text>
+      <Text style={styles.eyebrow}>{fact.lane ? fact.lane.toUpperCase() : "DID YOU KNOW"}</Text>
       <Text style={styles.text}>{fact.card_text}</Text>
 
       <View style={styles.row}>
