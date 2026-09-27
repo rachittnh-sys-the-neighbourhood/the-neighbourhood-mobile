@@ -11,8 +11,8 @@ import { LogoMark } from "./Logo";
  *  app/welcome.tsx, which already links Terms/Privacy off this same
  *  domain), so this is the correct destination for someone who doesn't
  *  have the app yet, not an app-store link that doesn't exist. */
-const SHARE_URL = "https://theneighbourhood.in";
-const SHARE_URL_LABEL = "theneighbourhood.in";
+const SHARE_URL = "https://www.theneighbourhood.co.in";
+const SHARE_URL_LABEL = "theneighbourhood.co.in";
 
 /**
  * Home's "Did you know" tile — first thing on the screen.
