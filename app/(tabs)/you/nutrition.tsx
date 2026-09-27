@@ -302,6 +302,13 @@ function MealCard({
         )}
       </View>
 
+      {/* Embedded on the card itself, not tucked behind "tap to expand" —
+          this is the one line that's actually actionable for her right
+          now (add this, boost that), so it shouldn't need a second tap
+          to surface. Still only for a mother (showMotherBoost), and only
+          when this meal actually has one. */}
+      {boost && <Text style={[styles.motherBoost, { color: p.primary }]}>{boost}</Text>}
+
       {expanded && (
         <View style={styles.recipe}>
           {ingredientsText && (
@@ -347,9 +354,6 @@ function MealCard({
                 </Text>
               ))}
             </>
-          )}
-          {boost && (
-            <Text style={[styles.motherBoost, { color: p.primary }]}>{boost}</Text>
           )}
         </View>
       )}
