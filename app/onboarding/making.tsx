@@ -175,6 +175,10 @@ export default function Making() {
 
       const profile = await family.updateProfile(userId, {
         parent_name: draft.parentName,
+        // "" (asked, left blank) and null (never asked, e.g. "Rather not
+        // say") both mean "nothing to store" here — only a real name is
+        // worth writing.
+        partner_name: draft.partnerName || null,
         // The parent's own facts — role, birth type, feeding method — are
         // asked as part of this same onboarding now, not a separate
         // Parent Care questionnaire later. Empty string (skipped/not
