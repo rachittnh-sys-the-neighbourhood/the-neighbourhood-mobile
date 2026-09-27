@@ -7,6 +7,7 @@ import { useAuth } from "../../../lib/AuthProvider";
 import { computeAge, youngestChild } from "../../../lib/childAge";
 import * as familyMeals from "../../../lib/db/familyMeals";
 import type { FamilyMeal } from "../../../lib/db/types";
+import { formatIngredients, splitGuidanceClauses } from "../../../lib/mealIngredientLabels";
 import { usePalette } from "../../../lib/ModeProvider";
 import { deriveProfile, elapsedPhrase, type DietaryPreference } from "../../../lib/parentCare";
 import { isRecoveryRelevant } from "../../../lib/recoveryRelevance";
@@ -273,6 +274,15 @@ function MealCard({
 }) {
   const p = usePalette();
   const boost = showMotherBoost ? familyMeals.motherBoostFor(meal, diet) : null;
+  const ingredientsText = useMemo(() => formatIngredients(meal.ingredients), [meal.ingredients]);
+  const safetyLines = useMemo(
+    () => splitGuidanceClauses(meal.choking_modifications),
+    [meal.choking_modifications]
+  );
+  const ageLines = useMemo(
+    () => splitGuidanceClauses(meal.adaptation_guidance),
+    [meal.adaptation_guidance]
+  );
 
   return (
     <Card onPress={onToggle}>
@@ -294,30 +304,48 @@ function MealCard({
 
       {expanded && (
         <View style={styles.recipe}>
-          {meal.ingredients && (
+          {ingredientsText && (
             <>
               <Text style={[styles.recipeHeading, { color: p.text }]}>What you need</Text>
-              <Text style={[styles.recipeItem, { color: p.textMuted }]}>{meal.ingredients}</Text>
+              <Text style={[styles.recipeItem, { color: p.textMuted }]}>{ingredientsText}</Text>
             </>
           )}
-          {meal.choking_modifications && (
+          {safetyLines.length > 0 && (
             <>
               <Text style={[styles.recipeHeading, { color: p.text, marginTop: spacing.md }]}>
                 Keeping it safe
               </Text>
-              <Text style={[styles.recipeItem, { color: p.textMuted }]}>
-                {meal.choking_modifications}
-              </Text>
+              {safetyLines.map((line, index) => (
+                <Text
+                  key={index}
+                  style={[
+                    styles.recipeItem,
+                    { color: p.textMuted },
+                    index > 0 && styles.recipeItemStacked,
+                  ]}
+                >
+                  {line}
+                </Text>
+              ))}
             </>
           )}
-          {meal.adaptation_guidance && (
+          {ageLines.length > 0 && (
             <>
               <Text style={[styles.recipeHeading, { color: p.text, marginTop: spacing.md }]}>
                 By age
               </Text>
-              <Text style={[styles.recipeItem, { color: p.textMuted }]}>
-                {meal.adaptation_guidance}
-              </Text>
+              {ageLines.map((line, index) => (
+                <Text
+                  key={index}
+                  style={[
+                    styles.recipeItem,
+                    { color: p.textMuted },
+                    index > 0 && styles.recipeItemStacked,
+                  ]}
+                >
+                  {line}
+                </Text>
+              ))}
             </>
           )}
           {boost && (
@@ -442,6 +470,13 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: typeScale.bodySmall,
     lineHeight: typeScale.bodySmall * 1.7,
+  },
+  // "Keeping it safe" / "By age" render one clause per line (see
+  // splitGuidanceClauses) rather than one semicolon-joined paragraph --
+  // this is the gap between those lines, applied to every line after the
+  // first.
+  recipeItemStacked: {
+    marginTop: spacing.xs,
   },
   motherBoost: {
     fontFamily: fonts.bodySemiBold,
