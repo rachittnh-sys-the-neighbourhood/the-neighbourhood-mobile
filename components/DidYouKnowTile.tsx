@@ -5,7 +5,7 @@ import type { DidYouKnowFact } from "../lib/db/types";
 import { colors, radius, spacing, type } from "../lib/theme";
 
 /**
- * Home's "Did you know" tile — right under today's activities.
+ * Home's "Did you know" tile — first thing on the screen.
  *
  * The heading is ONLY the card's own dynamic lane ("THROUGH THEIR EYES",
  * "THAT IS SO US", …) — no literal "Did you know" boilerplate stacked in
@@ -88,16 +88,20 @@ export function DidYouKnowTile({
 }
 
 const styles = StyleSheet.create({
+  // Solid sage — the green from the original mockup, now here rather than
+  // on the activities tile (see childSection in home.tsx, which took a
+  // darker warm sand instead). Link/source colors below are charcoal-
+  // based rather than sageDark, which would nearly vanish on this bg.
   card: {
     padding: spacing.lg,
     borderRadius: radius.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.sage,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(96, 79, 60, 0.10)",
+    borderColor: "rgba(96, 79, 60, 0.08)",
   },
   eyebrow: {
     ...type.eyebrow,
-    color: colors.warmTaupe,
+    color: colors.charcoal,
   },
   text: {
     ...type.title,
@@ -112,11 +116,11 @@ const styles = StyleSheet.create({
   },
   link: {
     ...type.label,
-    color: colors.sageDark,
+    color: colors.warmTaupe,
   },
   sourceText: {
     ...type.meta,
-    color: colors.textMuted,
+    color: colors.charcoal,
     marginTop: spacing.sm,
   },
   sourceLinkText: {

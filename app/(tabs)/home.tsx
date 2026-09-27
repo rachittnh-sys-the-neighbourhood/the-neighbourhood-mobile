@@ -384,18 +384,17 @@ export default function Home() {
             />
           )}
 
+          {/* Did you know — the first thing on the screen. Carries its own
+              heading (the fact's lane, e.g. "CHILD'S EYES"), so no outer
+              SectionLabel is needed here — same pattern as Ask below. */}
+          <View style={styles.dykWrap}>
+            <DidYouKnowTile ageMonths={recoveryAgeMonths} role={careProfile.role} />
+          </View>
+
           <SectionLabel accent={colors.warmTaupe}>
             TODAY
           </SectionLabel>
           <TodayActivitiesPager kids={kids.length > 0 ? kids : [child]} activeChildId={child.id} guidedTour={guidedTour} />
-
-          {/* Did you know — right under today's activities. Carries its
-              own heading (the fact's lane, e.g. "CHILD'S EYES"), so no
-              outer SectionLabel is needed here — same pattern as Ask
-              below. */}
-          <View style={styles.dykWrap}>
-            <DidYouKnowTile ageMonths={recoveryAgeMonths} role={careProfile.role} />
-          </View>
 
           <View style={styles.familyMealWrap}>
             <FamilyMealTile
