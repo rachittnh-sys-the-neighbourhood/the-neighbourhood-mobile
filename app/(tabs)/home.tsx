@@ -1053,7 +1053,11 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
   inner: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    // Tighter than the other tabs' equivalent top padding — the header
+    // above already carries the logo mark, so a full spacing.lg on top
+    // of that read as an oversized gap before the date line. This pulls
+    // the whole screen up a little without touching the shared header.
+    paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
   },
   loadingInner: {
@@ -1140,13 +1144,14 @@ const styles = StyleSheet.create({
   // on the page background — the loudest thing on screen, by container as
   // well as by type size. A warmer sand rather than sage green — the same
   // creamish/brownish family the Child tab already lives in (colors.cream)
-  // — lightened a tad from the previous round so it doesn't read as heavy
-  // over this much area.
+  // — lightened again from the previous round: a shade between
+  // softSandLight and the Ask card's own much fainter warmTaupe wash
+  // below, rather than sitting at the darker end of that range.
   childSection: {
     marginTop: spacing.sm,
     padding: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: colors.softSandLight,
+    backgroundColor: colors.softSandLighter,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(96, 79, 60, 0.08)",
   },
