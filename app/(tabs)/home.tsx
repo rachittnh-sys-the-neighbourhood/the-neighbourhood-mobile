@@ -1232,21 +1232,21 @@ const styles = StyleSheet.create({
     color: colors.warmTaupe,
   },
 
-  // The primary block: today's activities live inside a solid card, so it
-  // reads as one elevated "today" surface rather than text sitting loose
-  // on the page background — the loudest thing on screen, by container as
-  // well as by type size. A warmer sand rather than sage green — the same
-  // creamish/brownish family the Child tab already lives in (colors.cream)
-  // — lightened again from the previous round: a shade between
-  // softSandLight and the Ask card's own much fainter warmTaupe wash
-  // below, rather than sitting at the darker end of that range.
+  // The primary block: today's activities live inside a solid white card
+  // nested here, so it reads as one elevated "today" surface rather than
+  // text sitting loose on the page background — the loudest thing on
+  // screen, by container as well as by type size. The outer wash now
+  // matches the Ask card's own treatment below (copilotModule) — a faint
+  // warmTaupe tint rather than a solid sand fill — so the two read as the
+  // same "tinted outer / white inner" language instead of one being a
+  // heavier block than the other.
   childSection: {
     marginTop: spacing.sm,
     padding: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: colors.softSandLighter,
+    backgroundColor: "rgba(139, 116, 91, 0.11)",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(96, 79, 60, 0.08)",
+    borderColor: "rgba(96, 79, 60, 0.12)",
   },
   planHero: { paddingHorizontal: spacing.xs },
   planTitle: {
