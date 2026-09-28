@@ -138,6 +138,20 @@ export function clearSwapOverride(slot: FamilyMealSlot): void {
  * mother_boost_good_for line rather than showing nothing, and never
  * "n/a" -- matching the workbook's own explicit rule.
  */
+// The 12 "MF_MOTHER" family_id meals (audience: Mother -- her own quick
+// snacks, not part of the child/family plan) have this literal string in
+// every one of their mother_boost_* fields, ~67 times across the table --
+// the workbook's own placeholder for "not applicable here", not a real
+// boost to show. Same shape of bug as Did You Know's "Source ID not
+// found" citations: a broken-join/placeholder artifact migrated in as if
+// it were content.
+const NO_BOOST_PLACEHOLDER = "n/a (mother option)";
+
+function realBoostText(value: string | null): string | null {
+  if (!value) return null;
+  return value.trim().toLowerCase() === NO_BOOST_PLACEHOLDER ? null : value;
+}
+
 export function motherBoostFor(meal: FamilyMeal, diet: DietaryPreference): string | null {
   const byDiet =
     diet === "vegan"
@@ -147,7 +161,7 @@ export function motherBoostFor(meal: FamilyMeal, diet: DietaryPreference): strin
         : diet === "vegetarian"
           ? meal.mother_boost_vegetarian
           : meal.mother_boost_nonveg;
-  return byDiet || meal.mother_boost_good_for || null;
+  return realBoostText(byDiet) || realBoostText(meal.mother_boost_good_for) || null;
 }
 
 /**

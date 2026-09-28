@@ -273,7 +273,11 @@ export default function FamilyMealsScreen() {
 
       {view === "today" ? (
         <View style={styles.block}>
-          {slotPicks.map(({ slot, meal, pool }) => (
+          {slotPicks.map(({ slot, meal, pool }) => {
+            const boost = isFather
+              ? familyMeals.partnerBoostFor(meal!, profile.diet)
+              : familyMeals.motherBoostFor(meal!, profile.diet);
+            return (
             <View key={slot.key}>
               <Text style={[styles.slotLabel, { color: p.textMuted }]}>{slot.label.toUpperCase()}</Text>
               <Card
@@ -290,6 +294,14 @@ export default function FamilyMealsScreen() {
                       <Text style={[styles.mealMinutes, { color: p.textMuted }]}>
                         {meal!.total_minutes} min
                       </Text>
+                    )}
+                    {/* Embedded here, not tucked behind "View meal" -- this
+                        is an actionable line (add this, boost that) for
+                        whoever's cooking, so it shouldn't need a second
+                        tap to surface. Restored after it was dropped
+                        during the icon-first redesign. */}
+                    {boost && (
+                      <Text style={[styles.mealBoost, { color: p.primary }]}>{boost}</Text>
                     )}
                     <View style={styles.actionsRow}>
                       <Text style={[styles.actionText, { color: p.primary }]}>View meal →</Text>
@@ -317,7 +329,8 @@ export default function FamilyMealsScreen() {
                 </View>
               </Card>
             </View>
-          ))}
+            );
+          })}
         </View>
       ) : (
         <View style={styles.block}>
@@ -373,11 +386,6 @@ export default function FamilyMealsScreen() {
           )}
         </View>
       )}
-
-      <Text style={[styles.footer, { color: p.textMuted }]}>
-        This is here to inform, not to replace. If something feels off, your instinct is worth
-        following. Reach out to your doctor.
-      </Text>
     </ScrollView>
   );
 }
@@ -517,6 +525,12 @@ const styles = StyleSheet.create({
     fontSize: typeScale.caption,
     marginTop: 2,
   },
+  mealBoost: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.caption,
+    lineHeight: typeScale.caption * 1.5,
+    marginTop: spacing.xs,
+  },
   actionsRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -581,13 +595,5 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: typeScale.caption,
     marginTop: 2,
-  },
-  footer: {
-    fontFamily: fonts.body,
-    fontSize: typeScale.caption,
-    lineHeight: typeScale.caption * 1.6,
-    marginTop: spacing.xl,
-    textAlign: "center",
-    paddingHorizontal: spacing.md,
   },
 });
