@@ -694,14 +694,13 @@ function ChildDayActivities({
           <Text style={styles.planTitle}>
             {allDone ? "Nicely done today." : `A moment with ${child.name}.`}
           </Text>
-          {/* "whenever it suits" rather than "for today" — the plan is valid
-              whenever the parent opens the app, and the section label above
-              already says TODAY. Opening at 9pm must not read as late. */}
-          <Text style={styles.subline}>
-            {allDone
-              ? `You and ${child.name} got through all four.`
-              : "One small idea, whenever it suits."}
-          </Text>
+          {/* Only shown for the completion state now -- a real payoff line,
+              not filler. The everyday "one small idea, whenever it suits"
+              reassurance was cut to save space; TODAY above already frames
+              it as valid any time the parent opens the app. */}
+          {allDone && (
+            <Text style={styles.subline}>{`You and ${child.name} got through all four.`}</Text>
+          )}
         </View>
 
         {activities.length === 0 ? (
@@ -1195,10 +1194,10 @@ const styles = StyleSheet.create({
   },
 
   dykWrap: {
-    marginTop: spacing.xl,
+    marginTop: spacing.md,
   },
   familyMealWrap: {
-    marginTop: spacing.xxl,
+    marginTop: spacing.md,
   },
 
   // A quiet colored dot in front of each eyebrow, so the shift between
@@ -1208,8 +1207,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
-    marginTop: spacing.xxl,
-    marginBottom: spacing.sm,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
   },
   sectionLabelFirst: {
     marginTop: spacing.xl,
@@ -1234,7 +1233,7 @@ const styles = StyleSheet.create({
   // below, rather than sitting at the darker end of that range.
   childSection: {
     marginTop: spacing.sm,
-    padding: spacing.md,
+    padding: spacing.sm,
     borderRadius: radius.lg,
     backgroundColor: colors.softSandLighter,
     borderWidth: StyleSheet.hairlineWidth,
@@ -1257,7 +1256,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   featuredWrap: {
-    marginTop: spacing.lg,
+    marginTop: spacing.sm,
   },
   // A real bordered pill rather than a text link — the previous plain
   // "More ideas →" line read as ambient copy, not something to tap.
@@ -1287,7 +1286,7 @@ const styles = StyleSheet.create({
     // Sits directly on the softSand childSection background (not a white
     // sub-card), so this needs more contrast than textMuted gives.
     color: colors.charcoal,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   emptyPlanCard: {
     marginTop: spacing.md,
@@ -1326,7 +1325,7 @@ const styles = StyleSheet.create({
   // Carries a hint of Parent Mode's eucalyptus into Child Mode, so the card
   // looks like it belongs to somewhere else before you tap it.
   forYouCard: {
-    padding: spacing.lg,
+    padding: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: "rgba(94, 115, 96, 0.08)",
     borderWidth: StyleSheet.hairlineWidth,
@@ -1367,8 +1366,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   copilotModule: {
-    marginTop: spacing.xxl,
-    padding: spacing.lg,
+    marginTop: spacing.lg,
+    padding: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: "rgba(139, 116, 91, 0.11)",
     borderWidth: StyleSheet.hairlineWidth,
@@ -1418,8 +1417,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: spacing.md,
-    marginTop: spacing.md,
-    padding: spacing.md,
+    marginTop: spacing.sm,
+    padding: spacing.sm,
     borderRadius: radius.md,
     backgroundColor: colors.white,
     borderWidth: StyleSheet.hairlineWidth,

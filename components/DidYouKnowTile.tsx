@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   // activities tile below uses for its own rows (see childSection +
   // ActivityCollapsedRow in home.tsx), so the two tiles read as siblings.
   card: {
-    padding: spacing.md,
+    padding: spacing.sm,
     borderRadius: radius.lg,
     backgroundColor: colors.sageLight,
     borderWidth: StyleSheet.hairlineWidth,
@@ -228,8 +228,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   innerCard: {
-    marginTop: spacing.sm,
-    padding: spacing.lg,
+    marginTop: spacing.xs,
+    padding: spacing.sm,
     borderRadius: radius.md,
     backgroundColor: colors.white,
   },
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   rowLeft: {
     flexDirection: "row",
