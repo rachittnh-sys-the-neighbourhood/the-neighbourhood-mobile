@@ -35,6 +35,10 @@ export default function YouLayout() {
     >
       <Stack.Screen name="index" options={{ title: "You", headerRight: () => <AvatarButton /> }} />
       <Stack.Screen name="nutrition" options={{ title: "Nutrition" }} />
+      {/* Own custom header (see you/meal.tsx) -- back arrow + slot name,
+          matching the agreed layout exactly rather than the Stack's
+          default. */}
+      <Stack.Screen name="meal" options={{ headerShown: false }} />
       {/* A father's full monthly activity inventory — deliberately not on
           the landing page (see you/index.tsx's FOR TODAY section), one
           tap away via "See more for today →". */}
