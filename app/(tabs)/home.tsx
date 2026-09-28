@@ -738,7 +738,16 @@ function ChildDayActivities({
                     isDone={completed.includes(featured.domain)}
                     onComplete={() => {
                       complete(featured);
-                      setExpandedDomain(null);
+                      // Auto-advance straight into the next undone
+                      // activity's expanded card, rather than folding back
+                      // to a collapsed row the parent has to tap again --
+                      // the momentum of "done, here's the next one" carries
+                      // through all four. Only collapses (to null, which
+                      // the allDone effect above turns into the finished-
+                      // day view) once nothing's left to open.
+                      const updatedCompleted = [...completed, featured.domain];
+                      const next = activities.find((a) => !updatedCompleted.includes(a.domain));
+                      setExpandedDomain(next ? next.domain : null);
                     }}
                     onSwap={() => fadeSwap(featured.domain, () => swap(featured.domain))}
                     onCollapse={() => setExpandedDomain(null)}
@@ -1233,7 +1242,7 @@ const styles = StyleSheet.create({
   // below, rather than sitting at the darker end of that range.
   childSection: {
     marginTop: spacing.sm,
-    padding: spacing.sm,
+    padding: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: colors.softSandLighter,
     borderWidth: StyleSheet.hairlineWidth,
