@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
   // the shared `card` style so it reads closer to a single collapsed row
   // plus a button than a scaled-down detail card.
   featuredCard: {
-    padding: spacing.sm + 2,
+    padding: spacing.sm,
   },
   // Full `title` weight, same as the collapsed and expanded views. This
   // was previously two steps smaller than the "For you" card's heading,
@@ -513,9 +513,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    minHeight: 40,
+    minHeight: 32,
     marginTop: spacing.xs,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.xs,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },

@@ -273,7 +273,11 @@ export default function FamilyMealsScreen() {
 
       {view === "today" ? (
         <View style={styles.block}>
-          {slotPicks.map(({ slot, meal, pool }) => (
+          {slotPicks.map(({ slot, meal, pool }) => {
+            const boost = isFather
+              ? familyMeals.partnerBoostFor(meal!, profile.diet)
+              : familyMeals.motherBoostFor(meal!, profile.diet);
+            return (
             <View key={slot.key}>
               <Text style={[styles.slotLabel, { color: p.textMuted }]}>{slot.label.toUpperCase()}</Text>
               <Card
@@ -291,35 +295,42 @@ export default function FamilyMealsScreen() {
                         {meal!.total_minutes} min
                       </Text>
                     )}
-                    <Text style={[styles.actionText, { color: p.primary, marginTop: spacing.sm }]}>
-                      View meal →
-                    </Text>
+                    {/* Embedded here, not tucked behind "View meal" -- this
+                        is an actionable line (add this, boost that) for
+                        whoever's cooking, so it shouldn't need a second
+                        tap to surface. Restored after it was dropped
+                        during the icon-first redesign. */}
+                    {boost && (
+                      <Text style={[styles.mealBoost, { color: p.primary }]}>{boost}</Text>
+                    )}
+                    <View style={styles.actionsRow}>
+                      <Text style={[styles.actionText, { color: p.primary }]}>View meal →</Text>
+                      <Pressable
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          swap(slot.key, pool, meal!.id);
+                        }}
+                        hitSlop={6}
+                        style={styles.swapButton}
+                      >
+                        <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
+                          <Path
+                            d="M17 2.1 21 6l-4 3.9M3 12v-2a4 4 0 0 1 4-4h14M7 21.9 3 18l4-3.9M21 12v2a4 4 0 0 1-4 4H3"
+                            stroke={p.primary}
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </Svg>
+                        <Text style={[styles.actionText, { color: p.primary }]}>Swap</Text>
+                      </Pressable>
+                    </View>
                   </View>
-                </View>
-                <View style={styles.swapRow}>
-                  <Pressable
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      swap(slot.key, pool, meal!.id);
-                    }}
-                    hitSlop={6}
-                    style={styles.swapButton}
-                  >
-                    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
-                      <Path
-                        d="M17 2.1 21 6l-4 3.9M3 12v-2a4 4 0 0 1 4-4h14M7 21.9 3 18l4-3.9M21 12v2a4 4 0 0 1-4 4H3"
-                        stroke={p.primary}
-                        strokeWidth={2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </Svg>
-                    <Text style={[styles.actionText, { color: p.primary }]}>Swap</Text>
-                  </Pressable>
                 </View>
               </Card>
             </View>
-          ))}
+            );
+          })}
         </View>
       ) : (
         <View style={styles.block}>
@@ -375,11 +386,6 @@ export default function FamilyMealsScreen() {
           )}
         </View>
       )}
-
-      <Text style={[styles.footer, { color: p.textMuted }]}>
-        This is here to inform, not to replace. If something feels off, your instinct is worth
-        following. Reach out to your doctor.
-      </Text>
     </ScrollView>
   );
 }
@@ -519,9 +525,16 @@ const styles = StyleSheet.create({
     fontSize: typeScale.caption,
     marginTop: 2,
   },
-  swapRow: {
+  mealBoost: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.caption,
+    lineHeight: typeScale.caption * 1.5,
+    marginTop: spacing.xs,
+  },
+  actionsRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginTop: spacing.sm,
   },
   swapButton: {
@@ -582,13 +595,5 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: typeScale.caption,
     marginTop: 2,
-  },
-  footer: {
-    fontFamily: fonts.body,
-    fontSize: typeScale.caption,
-    lineHeight: typeScale.caption * 1.6,
-    marginTop: spacing.xl,
-    textAlign: "center",
-    paddingHorizontal: spacing.md,
   },
 });

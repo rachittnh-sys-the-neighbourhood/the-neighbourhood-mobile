@@ -102,7 +102,14 @@ export default function MealDetailsScreen() {
     () => splitGuidanceClauses(meal?.adaptation_guidance),
     [meal?.adaptation_guidance]
   );
-  const dietLabel = meal?.vegetarian ? DIET_LABEL.vegetarian : DIET_LABEL.omnivore;
+  // The household's actual diet choice (profile.diet), not a re-derived
+  // guess from this one meal's own vegetarian flag -- that was wrong for
+  // eggetarian/vegan households (every meal would've read "Vegetarian" or
+  // "Non-vegetarian" regardless of what they'd actually chosen). Every
+  // meal shown here already matches this diet (see matchesDiet in
+  // lib/db/familyMeals.ts), so restating it is just confirming the same
+  // fact the list screen's own pill already shows, correctly this time.
+  const dietLabel = DIET_LABEL[profile.diet];
 
   const swap = () => {
     if (!allMeals || !meal) return;

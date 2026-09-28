@@ -76,7 +76,7 @@ export function FamilyMealTile({
 
 const styles = StyleSheet.create({
   card: {
-    padding: spacing.lg,
+    padding: spacing.sm,
     borderRadius: radius.lg,
     backgroundColor: colors.white,
     borderWidth: StyleSheet.hairlineWidth,
