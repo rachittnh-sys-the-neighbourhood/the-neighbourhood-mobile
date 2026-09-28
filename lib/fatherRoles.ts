@@ -1,6 +1,6 @@
 import type { CareArea, CareTopic, DeliveryType } from "./parentCare";
 import { topicsForProfile } from "./parentCare";
-import type { FatherActivity, FatherActivityCategory } from "./db/types";
+import type { FatherActivity, FatherActivityCategory, MoodValue } from "./db/types";
 
 /**
  * The three-role reorganisation of the father's You experience: "Your
@@ -84,6 +84,24 @@ export function topicsForFatherRole(delivery: DeliveryType, role: FatherRole): C
   );
   return [...fromFathering, ...fromBaseAreas];
 }
+
+/**
+ * A first guess at which role today's mood check-in should suggest --
+ * rough/meh point toward "For you" (self first, before anything else),
+ * "great" points toward "As a partner" (good days are a fair time to give
+ * something back rather than default to himself), and the steady middle
+ * (okay/good) leaves the day-rotated pick alone by pointing at "dad", the
+ * usual default. This is a starting rule, not a validated one -- worth
+ * revisiting once there's real usage to check it against, not more
+ * guessing.
+ */
+export const FATHER_MOOD_ROLE: Record<MoodValue, FatherRole> = {
+  rough: "you",
+  meh: "you",
+  okay: "dad",
+  good: "dad",
+  great: "partner",
+};
 
 /**
  * Today's one DO pick for a role, from the day's already-generated
