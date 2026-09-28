@@ -4,7 +4,7 @@ import { Linking, Platform, Pressable, Share, StyleSheet, Text, View } from "rea
 import ViewShot from "react-native-view-shot";
 import * as dyk from "../lib/db/dyk";
 import type { DidYouKnowFact } from "../lib/db/types";
-import { colors, fonts, radius, spacing, type } from "../lib/theme";
+import { colors, fonts, palettes, radius, spacing, type } from "../lib/theme";
 import { LogoMark } from "./Logo";
 
 /** The one link every share carries — the app is a PWA hosted here (see
@@ -129,47 +129,45 @@ export function DidYouKnowTile({
     <View style={styles.card}>
       <Text style={styles.eyebrow}>{heading.toUpperCase()}</Text>
 
-      <View style={styles.innerCard}>
-        <Text style={styles.text}>{fact.card_text}</Text>
+      <Text style={styles.text}>{fact.card_text}</Text>
 
-        <View style={styles.row}>
-          <View style={styles.rowLeft}>
-            <Pressable
-              onPress={() => {
-                setShowSource(false);
-                setOffset((o) => o + 1);
-              }}
-              hitSlop={8}
-            >
-              <Text style={styles.link}>Another one ›</Text>
-            </Pressable>
-
-            {sourceLine && (
-              <Pressable onPress={() => setShowSource((v) => !v)} hitSlop={8}>
-                <Text style={styles.link}>{showSource ? "Hide source" : "Source"}</Text>
-              </Pressable>
-            )}
-          </View>
-
-          {/* Bottom-right, apart from "Another one"/"Source" — a
-              separate, less-frequent action, not one more item in the
-              same row of controls. */}
-          <Pressable onPress={share} hitSlop={8}>
-            <Text style={styles.link}>Share ›</Text>
+      <View style={styles.row}>
+        <View style={styles.rowLeft}>
+          <Pressable
+            onPress={() => {
+              setShowSource(false);
+              setOffset((o) => o + 1);
+            }}
+            hitSlop={8}
+          >
+            <Text style={styles.link}>Another one ›</Text>
           </Pressable>
+
+          {sourceLine && (
+            <Pressable onPress={() => setShowSource((v) => !v)} hitSlop={8}>
+              <Text style={styles.link}>{showSource ? "Hide source" : "Source"}</Text>
+            </Pressable>
+          )}
         </View>
 
-        {showSource && sourceLine && (
-          <Pressable
-            disabled={!fact.source_url}
-            onPress={() => fact.source_url && Linking.openURL(fact.source_url)}
-          >
-            <Text style={[styles.sourceText, fact.source_url && styles.sourceLinkText]}>
-              {sourceLine}
-            </Text>
-          </Pressable>
-        )}
+        {/* Bottom-right, apart from "Another one"/"Source" — a
+            separate, less-frequent action, not one more item in the
+            same row of controls. */}
+        <Pressable onPress={share} hitSlop={8}>
+          <Text style={styles.link}>Share ›</Text>
+        </Pressable>
       </View>
+
+      {showSource && sourceLine && (
+        <Pressable
+          disabled={!fact.source_url}
+          onPress={() => fact.source_url && Linking.openURL(fact.source_url)}
+        >
+          <Text style={[styles.sourceText, fact.source_url && styles.sourceLinkText]}>
+            {sourceLine}
+          </Text>
+        </Pressable>
+      )}
 
       {/* Off-screen — never visible to the parent, only ever captured.
           Positioned far outside the viewport rather than opacity/size-0,
@@ -218,20 +216,19 @@ const styles = StyleSheet.create({
   card: {
     padding: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: colors.sageLight,
+    // Not a solid green fill -- the same soft tinted wash as the "For
+    // dads"/ForYouCard tile below on Home (home.tsx forYouCard), so the
+    // two read as using the same green language rather than one being a
+    // heavier block than the other. The green itself only shows up as the
+    // eyebrow/link accent color, same as that card.
+    backgroundColor: "rgba(94, 115, 96, 0.08)",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(96, 79, 60, 0.08)",
+    borderColor: "rgba(60, 80, 62, 0.16)",
   },
   eyebrow: {
     ...type.eyebrow,
-    color: colors.charcoal,
+    color: palettes.parent.primary,
     paddingHorizontal: spacing.xs,
-  },
-  innerCard: {
-    marginTop: spacing.xs,
-    padding: spacing.sm,
-    borderRadius: radius.md,
-    backgroundColor: colors.white,
   },
   text: {
     // Same size/line-height as type.title, just not bold -- the fact
@@ -241,12 +238,15 @@ const styles = StyleSheet.create({
     fontSize: type.title.fontSize,
     lineHeight: type.title.lineHeight,
     color: colors.charcoal,
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginTop: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
   rowLeft: {
     flexDirection: "row",
@@ -257,12 +257,13 @@ const styles = StyleSheet.create({
   },
   link: {
     ...type.label,
-    color: colors.sageDark,
+    color: palettes.parent.primary,
   },
   sourceText: {
     ...type.meta,
     color: colors.textMuted,
     marginTop: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
   sourceLinkText: {
     textDecorationLine: "underline",
