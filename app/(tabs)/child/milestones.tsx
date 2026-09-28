@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -20,13 +20,14 @@ import {
   canShowMilestones,
   developmentalAge,
   isBeyondMilestoneRange,
+  MILESTONE_STAGE_ORDER,
   MILESTONES_START_MONTHS,
+  nextMilestoneStageLabel,
+  stageLabelForAge,
 } from "../../../lib/childAge";
 import * as growth from "../../../lib/db/growth";
 import * as plans from "../../../lib/db/plans";
 import {
-  ACTIVITY_LIBRARY_AGE_BANDS,
-  AGE_BAND_LABEL,
   DOMAIN_LABEL,
   DOMAINS,
   type Activity,
@@ -44,38 +45,13 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// Matches the 28 age bands milestones are now seeded at (see
-// supabase/migrations/20260830080500_milestones_batch_00.sql onward) —
-// finer-grained than the old 9 yearly-ish stages, out to 7 years.
-const STAGE_ORDER = ACTIVITY_LIBRARY_AGE_BANDS.map((band) => AGE_BAND_LABEL[band]);
-
 type InitialPhase = "check" | "celebrate" | "recommendations";
 
-/** "m7_9" -> 9. "y3_0" -> 39 (a y-band is a 3-month window starting at its
- *  years/months point, so the upper bound is start + 3). Mirrors
- *  scripts/gen-activity-library-seed.mjs's parseAgeBand. */
-function ageBandUpperBoundMonths(band: string): number {
-  const monthsMatch = band.match(/^m(\d+)_(\d+)$/);
-  if (monthsMatch) return Number(monthsMatch[2]);
-  const yearsMatch = band.match(/^y(\d+)_(\d+)$/);
-  if (yearsMatch) return Number(yearsMatch[1]) * 12 + Number(yearsMatch[2]) + 3;
-  throw new Error(`cannot parse age band "${band}"`);
-}
-
-function getStageLabelForAge(months: number): string {
-  for (const band of ACTIVITY_LIBRARY_AGE_BANDS) {
-    if (months <= ageBandUpperBoundMonths(band)) return AGE_BAND_LABEL[band];
-  }
-  return AGE_BAND_LABEL[ACTIVITY_LIBRARY_AGE_BANDS[ACTIVITY_LIBRARY_AGE_BANDS.length - 1]];
-}
-
-function getNextStageLabel(currentLabel: string): string | null {
-  const idx = STAGE_ORDER.indexOf(currentLabel);
-  if (idx !== -1 && idx < STAGE_ORDER.length - 1) {
-    return STAGE_ORDER[idx + 1];
-  }
-  return null;
-}
+// getStageLabelForAge/getNextStageLabel moved to lib/childAge.ts as
+// stageLabelForAge/nextMilestoneStageLabel, so Home's milestone-stage
+// nudge can use the exact same stage definition.
+const getStageLabelForAge = stageLabelForAge;
+const getNextStageLabel = nextMilestoneStageLabel;
 
 export default function Milestones() {
   const router = useRouter();
@@ -161,6 +137,18 @@ export default function Milestones() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Snapshot of what was already achieved when the initial-check screen
+  // first loaded -- used (not the live achievedMap) to decide which cards
+  // to show, so ticking "I've noticed this" during this same visit checks
+  // the card rather than making it vanish. Only ever needs to be captured
+  // once per visit to this screen.
+  const initialAchievedSnapshot = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (initialCheck && !loading && initialAchievedSnapshot.current === null) {
+      initialAchievedSnapshot.current = new Set(achievedMap.keys());
+    }
+  }, [initialCheck, loading, achievedMap]);
 
   // If this is the initial onboarding check and milestones aren't available yet
   // (child under 3 months), skip the milestone screen entirely and go straight
@@ -422,9 +410,18 @@ export default function Milestones() {
   }
 
   if (initialCheck) {
+    // Only what wasn't already on record when this visit started -- this
+    // screen is meant to be a one-time catch-up (or, from Home's stage
+    // nudge, a "what's new this stage" catch-up), not a re-ask of things
+    // already marked in a previous visit. Uses the load-time snapshot,
+    // not the live achievedMap, so checking a card during this same visit
+    // still shows it as checked rather than making it disappear.
+    const alreadyOnRecord = initialAchievedSnapshot.current ?? new Set<string>();
     const initialGroups = DOMAINS.map((domain) => ({
       domain,
-      items: currentStageMilestones.filter((milestone) => milestone.domain === domain).slice(0, 2),
+      items: currentStageMilestones
+        .filter((milestone) => milestone.domain === domain && !alreadyOnRecord.has(milestone.id))
+        .slice(0, 2),
     })).filter((group) => group.items.length > 0);
 
     return (
@@ -736,7 +733,7 @@ export default function Milestones() {
               style={styles.stageFilterScroll}
               contentContainerStyle={styles.stageFilterContent}
             >
-              {STAGE_ORDER.map((stage) => {
+              {MILESTONE_STAGE_ORDER.map((stage) => {
                 const isSelected = selectedExploreStage === stage;
                 const isCurrent = stage === currentStage;
                 return (

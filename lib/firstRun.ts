@@ -99,3 +99,22 @@ export async function hasSeenPartnerNamePrompt(): Promise<boolean> {
 export async function markPartnerNamePromptSeen(): Promise<void> {
   await AsyncStorage.setItem(PARTNER_NAME_PROMPT_SEEN_KEY, "true");
 }
+
+/**
+ * Home's "new stage, new milestones to check for" nudge (see
+ * useMilestoneStageNudge in home.tsx) -- shown at most once per
+ * developmental stage per child, not on every app open. Keyed by child id
+ * since a family can have more than one child, each on their own
+ * timeline. Stores the stage label itself (e.g. "10-12 months") rather
+ * than a boolean, so "has this stage already been nudged" is a plain
+ * equality check against the child's current stage.
+ */
+const MILESTONE_STAGE_NUDGE_KEY_PREFIX = "tn.milestoneStageNudge.lastShown.v1.";
+
+export async function lastNudgedMilestoneStage(childId: string): Promise<string | null> {
+  return await AsyncStorage.getItem(MILESTONE_STAGE_NUDGE_KEY_PREFIX + childId);
+}
+
+export async function markMilestoneStageNudged(childId: string, stage: string): Promise<void> {
+  await AsyncStorage.setItem(MILESTONE_STAGE_NUDGE_KEY_PREFIX + childId, stage);
+}

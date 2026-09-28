@@ -1,4 +1,5 @@
 /** Age math shared across onboarding and the Home tab. */
+import { ACTIVITY_LIBRARY_AGE_BANDS, AGE_BAND_LABEL } from "./db/types";
 
 export const MILESTONES_START_MONTHS = 3;
 /** The library's oldest tracked stage is 6y9m–7y — see
@@ -13,6 +14,40 @@ export function canShowMilestones(totalMonths: number): boolean {
 
 export function isBeyondMilestoneRange(totalMonths: number): boolean {
   return totalMonths > MILESTONES_END_MONTHS;
+}
+
+// Matches the 28 age bands milestones are now seeded at (see
+// supabase/migrations/20260830080500_milestones_batch_00.sql onward) --
+// finer-grained than the old 9 yearly-ish stages, out to 7 years. Moved
+// here from child/milestones.tsx so Home can use the exact same stage
+// definition for its "new stage" milestone nudge (see
+// useMilestoneStageNudge) rather than inventing a second one.
+export const MILESTONE_STAGE_ORDER = ACTIVITY_LIBRARY_AGE_BANDS.map((band) => AGE_BAND_LABEL[band]);
+
+/** "m7_9" -> 9. "y3_0" -> 39 (a y-band is a 3-month window starting at its
+ *  years/months point, so the upper bound is start + 3). Mirrors
+ *  scripts/gen-activity-library-seed.mjs's parseAgeBand. */
+function ageBandUpperBoundMonths(band: string): number {
+  const monthsMatch = band.match(/^m(\d+)_(\d+)$/);
+  if (monthsMatch) return Number(monthsMatch[2]);
+  const yearsMatch = band.match(/^y(\d+)_(\d+)$/);
+  if (yearsMatch) return Number(yearsMatch[1]) * 12 + Number(yearsMatch[2]) + 3;
+  throw new Error(`cannot parse age band "${band}"`);
+}
+
+export function stageLabelForAge(months: number): string {
+  for (const band of ACTIVITY_LIBRARY_AGE_BANDS) {
+    if (months <= ageBandUpperBoundMonths(band)) return AGE_BAND_LABEL[band];
+  }
+  return AGE_BAND_LABEL[ACTIVITY_LIBRARY_AGE_BANDS[ACTIVITY_LIBRARY_AGE_BANDS.length - 1]];
+}
+
+export function nextMilestoneStageLabel(currentLabel: string): string | null {
+  const idx = MILESTONE_STAGE_ORDER.indexOf(currentLabel);
+  if (idx !== -1 && idx < MILESTONE_STAGE_ORDER.length - 1) {
+    return MILESTONE_STAGE_ORDER[idx + 1];
+  }
+  return null;
 }
 
 export type ChildAge = {
