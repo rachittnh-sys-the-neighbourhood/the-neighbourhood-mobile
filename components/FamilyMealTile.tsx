@@ -67,7 +67,6 @@ export function FamilyMealTile({
     >
       <Text style={styles.eyebrow}>FAMILY MEAL</Text>
       <Text style={styles.title}>{meal.name}</Text>
-      {meal.age_guidance && <Text style={styles.body}>{meal.age_guidance}</Text>}
       <Text style={styles.link}>See today's meals ›</Text>
       <Text style={styles.disclaimer}>Under expert review</Text>
     </Pressable>
@@ -76,7 +75,10 @@ export function FamilyMealTile({
 
 const styles = StyleSheet.create({
   card: {
-    padding: spacing.sm,
+    // Bumped back up from the ultra-compact pass now that dropping the
+    // two-line description freed real space -- give some of it back as
+    // breathing room instead of just shrinking the tile further.
+    padding: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: colors.white,
     borderWidth: StyleSheet.hairlineWidth,
@@ -90,11 +92,6 @@ const styles = StyleSheet.create({
     ...type.title,
     color: colors.charcoal,
     marginTop: spacing.sm,
-  },
-  body: {
-    ...type.body,
-    color: colors.textMuted,
-    marginTop: 4,
   },
   link: {
     ...type.label,

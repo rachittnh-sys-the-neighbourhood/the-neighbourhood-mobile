@@ -4,7 +4,7 @@ import { Linking, Platform, Pressable, Share, StyleSheet, Text, View } from "rea
 import ViewShot from "react-native-view-shot";
 import * as dyk from "../lib/db/dyk";
 import type { DidYouKnowFact } from "../lib/db/types";
-import { colors, radius, spacing, type } from "../lib/theme";
+import { colors, fonts, radius, spacing, type } from "../lib/theme";
 import { LogoMark } from "./Logo";
 
 /** The one link every share carries — the app is a PWA hosted here (see
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   // activities tile below uses for its own rows (see childSection +
   // ActivityCollapsedRow in home.tsx), so the two tiles read as siblings.
   card: {
-    padding: spacing.sm,
+    padding: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: colors.sageLight,
     borderWidth: StyleSheet.hairlineWidth,
@@ -234,7 +234,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   text: {
-    ...type.title,
+    // Same size/line-height as type.title, just not bold -- the fact
+    // itself doesn't need to shout, and the lighter weight reads as more
+    // spacious even at the same line count.
+    fontFamily: fonts.bodyMedium,
+    fontSize: type.title.fontSize,
+    lineHeight: type.title.lineHeight,
     color: colors.charcoal,
   },
   row: {
