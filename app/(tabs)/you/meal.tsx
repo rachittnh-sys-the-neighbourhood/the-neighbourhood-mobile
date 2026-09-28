@@ -46,7 +46,11 @@ export default function MealDetailsScreen() {
   const params = useLocalSearchParams<{ mealId: string; slot: FamilyMealSlot }>();
   const { children, profile: authProfile } = useAuth();
   const [allMeals, setAllMeals] = useState<FamilyMeal[] | null>(null);
-  const [guidanceOpen, setGuidanceOpen] = useState(false);
+  // Open by default -- this is the one section actually worth reading
+  // right away (age-appropriate portion + safety notes), so the chevron
+  // is there to let someone close it once they've read it, not to make
+  // them ask for it first.
+  const [guidanceOpen, setGuidanceOpen] = useState(true);
   const [justSwapped, setJustSwapped] = useState<string | null>(null);
 
   useEffect(() => {
@@ -164,47 +168,64 @@ export default function MealDetailsScreen() {
         )}
 
         {ingredientsText && (
-          <View style={styles.section}>
+          <View style={[styles.section, { backgroundColor: p.surface, borderColor: p.border }]}>
             <Text style={[styles.sectionTitle, { color: p.text }]}>What you need</Text>
             <Text style={[styles.sectionBody, { color: p.textMuted }]}>{ingredientsText}</Text>
           </View>
         )}
 
         {(ageLines.length > 0 || safetyLines.length > 0) && (
-          <Pressable
-            onPress={() => setGuidanceOpen((v) => !v)}
-            style={[styles.disclosure, { borderColor: p.border }]}
-          >
-            <Text style={[styles.disclosureTitle, { color: p.text }]}>Serving guidance</Text>
-            <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-              <Path
-                d={guidanceOpen ? "m6 15 6-6 6 6" : "m6 9 6 6 6-6"}
-                stroke={p.textMuted}
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-          </Pressable>
-        )}
-        {guidanceOpen && (
-          <View style={styles.disclosureBody}>
-            {/* Some meals repeat a clause verbatim across adaptation_guidance
-                and choking_modifications (e.g. "Ensure paratha is soft" in
-                both) -- deduped here rather than showing the same line twice. */}
-            {Array.from(new Set([...ageLines, ...safetyLines])).map((line, index) => (
-              <Text
-                key={index}
-                style={[styles.sectionBody, { color: p.textMuted }, index > 0 && styles.stackedLine]}
-              >
-                {line}
-              </Text>
-            ))}
+          <View style={[styles.section, { backgroundColor: p.surface, borderColor: p.border }]}>
+            <Pressable
+              onPress={() => setGuidanceOpen((v) => !v)}
+              style={styles.disclosureHeader}
+              hitSlop={6}
+            >
+              <Text style={[styles.disclosureTitle, { color: p.text }]}>Serving guidance</Text>
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d={guidanceOpen ? "m6 15 6-6 6 6" : "m6 9 6 6 6-6"}
+                  stroke={p.textMuted}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+            </Pressable>
+            {guidanceOpen && (
+              <View style={[styles.disclosureBody, { borderTopColor: p.border }]}>
+                {/* Some meals repeat a clause verbatim across
+                    adaptation_guidance and choking_modifications (e.g.
+                    "Ensure paratha is soft" in both) -- deduped here
+                    rather than showing the same line twice. */}
+                {Array.from(new Set([...ageLines, ...safetyLines])).map((line, index) => (
+                  <Text
+                    key={index}
+                    style={[
+                      styles.sectionBody,
+                      { color: p.textMuted },
+                      index > 0 && styles.stackedLine,
+                    ]}
+                  >
+                    {line}
+                  </Text>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
         {boost && (
-          <View style={[styles.boostCallout, { backgroundColor: p.surfaceAlt }]}>
+          <View style={[styles.boostCallout, { backgroundColor: p.surface, borderLeftColor: p.primary }]}>
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M12 13.5c0-4 2.6-7 6.5-7.5.4 3.9-1.7 7.6-6.5 7.5Z"
+                stroke={p.primary}
+                strokeWidth={1.8}
+                strokeLinejoin="round"
+              />
+              <Path d="M12 21v-7.5M12 14c-.4-2.7-2-4.4-4.5-4.8" stroke={p.primary} strokeWidth={1.8} strokeLinecap="round" />
+            </Svg>
             <Text style={[styles.boostText, { color: p.text }]}>{boost}</Text>
           </View>
         )}
@@ -294,9 +315,9 @@ const styles = StyleSheet.create({
   },
   section: {
     marginTop: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(96, 79, 60, 0.14)",
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   sectionTitle: {
     fontFamily: fonts.bodySemiBold,
@@ -311,30 +332,34 @@ const styles = StyleSheet.create({
   stackedLine: {
     marginTop: spacing.xs,
   },
-  disclosure: {
+  disclosureHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: spacing.md,
-    marginTop: spacing.sm,
   },
   disclosureTitle: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.bodySmall,
+    fontSize: typeScale.h3,
   },
   disclosureBody: {
-    padding: spacing.md,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   boostCallout: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
     borderRadius: radius.md,
+    borderLeftWidth: 3,
     padding: spacing.md,
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
   },
   boostText: {
-    fontFamily: fonts.body,
-    fontSize: typeScale.caption,
+    flex: 1,
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.bodySmall,
+    lineHeight: typeScale.bodySmall * 1.5,
   },
   primaryButton: {
     borderRadius: radius.md,
