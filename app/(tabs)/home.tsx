@@ -22,15 +22,17 @@ import { LogoMark } from "../../components/Logo";
 import { PartnerNamePrompt } from "../../components/PartnerNamePrompt";
 import { PrimaryButton } from "../../components/ui";
 import { useAuth, type Child, type Profile } from "../../lib/AuthProvider";
-import { computeAge, developmentalAgeMonths, stageLabel, youngestChild } from "../../lib/childAge";
+import { computeAge, developmentalAgeMonths, stageLabel, stageLabelForAge, youngestChild } from "../../lib/childAge";
 import * as growth from "../../lib/db/growth";
 import { DOMAIN_LABEL, type Domain, type Milestone, type VaccinationScheduleItem } from "../../lib/db/types";
 import { transitionForAge } from "../../lib/growthTransitions";
 import {
   hasCompletedHomeCoach,
   hasSwipedActivityPager,
+  lastNudgedMilestoneStage,
   markFirstRunComplete,
   markHomeCoachComplete,
+  markMilestoneStageNudged,
   markSwipedActivityPager,
 } from "../../lib/firstRun";
 import {
@@ -93,6 +95,14 @@ export default function Home() {
   const [showTourDone, setShowTourDone] = useState(params.tourComplete === "1");
   const [nextVaccination, setNextVaccination] = useState<VaccinationScheduleItem | null>(null);
   const [nextMilestone, setNextMilestone] = useState<Milestone | null>(null);
+  // "You've reached a new stage — N things to check for" -- see
+  // useEffect below and lib/firstRun.ts's milestone-stage-nudge helpers.
+  // Only ever set to a genuinely new stage the parent hasn't been shown
+  // before, with real outstanding (unfilled) milestones behind it.
+  const [milestoneStageNudge, setMilestoneStageNudge] = useState<{
+    stage: string;
+    count: number;
+  } | null>(null);
 
   // "What's next" (vaccination due / milestone to watch for) is about the
   // youngest child, same rule the postpartum/family-meal framing already
@@ -211,6 +221,46 @@ export default function Home() {
         // from suggesting the same one every morning.
         const dayIndex = Math.floor(Date.now() / 86_400_000);
         setNextMilestone(outstanding[dayIndex % outstanding.length]);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [recoveryChild]);
+
+  // "New stage, new things to check for" -- separate from nextMilestone
+  // above (that's a quiet daily "watch for" rotation; this is an
+  // occasional nudge toward the full Milestones screen, and it only ever
+  // fires once per stage transition, not on every visit). Distinct from
+  // the onboarding-only initial catch-up checklist in child/milestones.tsx
+  // -- this never touches that flow or its own one-time gates.
+  useEffect(() => {
+    if (!recoveryChild) return;
+    let alive = true;
+    const ageMonths = developmentalAgeMonths(recoveryChild);
+    const currentStage = stageLabelForAge(ageMonths);
+    lastNudgedMilestoneStage(recoveryChild.id)
+      .then(async (lastStage) => {
+        if (!alive || lastStage === currentStage) return;
+        const [dueWindow, achieved] = await Promise.all([
+          growth.getMilestonesForAge(ageMonths, 6),
+          growth.getAchievedMilestones(recoveryChild.id),
+        ]);
+        if (!alive) return;
+        const achievedIds = new Set(achieved.map((item) => item.milestone_id));
+        // "Kids would have met by then" -- milestones whose typical window
+        // has already fully passed, not just anything in the current band,
+        // and only the ones nobody's marked yet (see child/milestones.tsx's
+        // own achievedMap filtering, same idea here).
+        const due = dueWindow.filter(
+          (m) => m.typical_age_max_months <= ageMonths && !achievedIds.has(m.id)
+        );
+        // The stage is marked "nudged" either way, due milestones or not --
+        // otherwise a stage with nothing outstanding would just get
+        // re-checked (harmlessly, but pointlessly) on every future visit
+        // until the child ages out of it.
+        await markMilestoneStageNudged(recoveryChild.id, currentStage);
+        if (due.length > 0) setMilestoneStageNudge({ stage: currentStage, count: due.length });
       })
       .catch(() => {});
     return () => {
@@ -460,6 +510,23 @@ export default function Home() {
               body={transitionRecommendation.body}
               onPress={transitionRecommendation.onPress}
             />
+          )}
+
+          {/* Shown at most once per developmental stage (see the effect
+              above) -- never on every app open, and only when there's
+              something genuinely unfilled behind it. Points at the
+              always-reachable Milestones screen; doesn't open any special
+              onboarding-style flow. */}
+          {milestoneStageNudge && (
+            <>
+              <SectionLabel accent={colors.softSand}>NEW STAGE</SectionLabel>
+              <DiscoveryRow
+                eyebrow={milestoneStageNudge.stage.toUpperCase()}
+                title={`${milestoneStageNudge.count} ${milestoneStageNudge.count === 1 ? "thing" : "things"} to check for`}
+                body="A few milestones from this stage haven't been marked yet."
+                onPress={() => router.push("/child/milestones")}
+              />
+            </>
           )}
         </Animated.View>
       </ScrollView>

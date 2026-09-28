@@ -1,33 +1,37 @@
-import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ExpertReviewBanner } from "../../../components/ExpertReviewBanner";
-import { Card, CareNote, Chip, PageHeading, SectionLabel } from "../../../components/parentUI";
+import { MealSlotIcon } from "../../../components/MealSlotIcon";
+import { Card, CareNote } from "../../../components/parentUI";
 import { useAuth } from "../../../lib/AuthProvider";
 import { computeAge, youngestChild } from "../../../lib/childAge";
+import * as family from "../../../lib/db/family";
 import * as familyMeals from "../../../lib/db/familyMeals";
+import type { FamilyMealSlot } from "../../../lib/db/familyMeals";
 import type { FamilyMeal } from "../../../lib/db/types";
-import { formatIngredients, splitGuidanceClauses } from "../../../lib/mealIngredientLabels";
 import { usePalette } from "../../../lib/ModeProvider";
-import { deriveProfile, elapsedPhrase, type DietaryPreference } from "../../../lib/parentCare";
+import { deriveProfile, type DietaryPreference } from "../../../lib/parentCare";
 import { isRecoveryRelevant } from "../../../lib/recoveryRelevance";
 import { fonts, radius, spacing, typeScale } from "../../../lib/theme";
 
 /**
- * Family Meals — replaces the old, separate role-based "Nutrition"
- * screen (a hardcoded mother/father meal timeline) and the Child tab's
- * own "Meal Planner" (a hardcoded feeding-stage timeline): one whole-
- * family meal plan, sourced from the v11 Meal Planner workbook, for
- * everyone at the table.
+ * Family Meals -- one whole-family meal plan, sourced from the v11 Meal
+ * Planner workbook, for everyone at the table.
  *
- * STILL PENDING RD/PAEDIATRICIAN SIGN-OFF — see ExpertReviewBanner and
+ * STILL PENDING RD/PAEDIATRICIAN SIGN-OFF -- see ExpertReviewBanner and
  * supabase/migrations/20260910090000_family_meal_planner.sql.
  *
- * A mother sees her own diet-specific addition on each meal ("For you:
- * add curd and a squeeze of lemon") and a day-balancing summary — a
- * HEURISTIC count of how many times a nutrient source shows up today,
- * never a number met or a target reached, per the workbook's own rule. A
- * father sees the same family meals without the mother-specific layer.
+ * Colour is reserved for actionable things only -- "View meal", "Swap",
+ * the primary button, the diet-preference options -- everything else
+ * (the slot icon badges, the allergen chip, section labels) is plain
+ * neutral gray. That split (not "one accent color everywhere") is what
+ * actually keeps this calm rather than just quieter.
+ *
+ * Allergens show on a meal's own detail screen only, not on this list --
+ * the top pill here is purely the household's diet type (veg/non-veg/
+ * eggetarian/vegan), asked once on first visit if never answered (see
+ * needsDietConfirmation below), never assumed silently.
  */
 const DIET_LABEL: Record<DietaryPreference, string> = {
   omnivore: "Non-vegetarian",
@@ -36,27 +40,44 @@ const DIET_LABEL: Record<DietaryPreference, string> = {
   vegan: "Vegan",
 };
 
+const DIET_OPTIONS: { value: DietaryPreference; label: string }[] = [
+  { value: "vegetarian", label: "Vegetarian" },
+  { value: "omnivore", label: "Non-vegetarian" },
+  { value: "eggetarian", label: "Eggetarian" },
+  { value: "vegan", label: "Vegan" },
+];
+
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 export default function FamilyMealsScreen() {
   const p = usePalette();
   const router = useRouter();
   const navigation = useNavigation();
   const params = useLocalSearchParams<{ from?: string }>();
-  const { children, profile: authProfile } = useAuth();
+  const { session, children, profile: authProfile, refreshFamily } = useAuth();
   const [allMeals, setAllMeals] = useState<FamilyMeal[] | null>(null);
   const [openDayBalancing, setOpenDayBalancing] = useState(false);
-  const [expandedMealId, setExpandedMealId] = useState<string | null>(null);
+  const [view, setView] = useState<"today" | "week">("today");
+  const [savingDiet, setSavingDiet] = useState(false);
+  const [editingDiet, setEditingDiet] = useState(false);
+  // The swap-override store (lib/db/familyMeals.ts) is a plain module Map,
+  // not React state -- this counter's only job is to force a re-render
+  // after a Swap tap changes it, since bumping it is cheaper than lifting
+  // the whole store into context for something this local.
+  const [swapVersion, setSwapVersion] = useState(0);
 
-  // This screen is pushed from two different places — Home's Family Meal
-  // tile and You's own Family Meals card — and it lives inside the You
-  // tab's stack either way. Reached from You, the default back behaviour
-  // already does the right thing (pop back to the You hub, same stack).
-  // Reached from Home, that same default back would instead land on the
-  // You hub, not Home, because pushing across tabs doesn't carry Home
-  // onto this stack. So the caller marks itself with ?from=home (see
-  // home.tsx), and this intercepts via beforeRemove rather than just
-  // overriding the header button — beforeRemove also catches the Android
-  // hardware back button and the iOS edge-swipe gesture, neither of which
-  // goes through headerLeft at all.
+  // The meal detail screen (you/meal.tsx) can swap a slot via the same
+  // module-level override store this screen reads -- but it's a separate
+  // screen instance, kept mounted by the stack navigator rather than
+  // remounted on back, so nothing here re-renders on its own when that
+  // happens. Re-checking on focus (not just on mount) is what actually
+  // picks up a swap made there and shows it here too.
+  useFocusEffect(
+    useCallback(() => {
+      setSwapVersion((v) => v + 1);
+    }, [])
+  );
+
   useEffect(() => {
     if (params.from !== "home") return;
     return navigation.addListener("beforeRemove", (e) => {
@@ -80,9 +101,6 @@ export default function FamilyMealsScreen() {
     };
   }, []);
 
-  // The parent's own postpartum stage, and the family's meal filtering,
-  // both follow the youngest child — same rule every other You screen
-  // applies (see lib/childAge.ts youngestChild).
   const recoveryChild = youngestChild(children);
   const ageMonths = recoveryChild ? computeAge(recoveryChild.date_of_birth)?.totalMonths ?? 0 : 0;
   const profile = useMemo(() => deriveProfile(ageMonths, authProfile), [ageMonths, authProfile]);
@@ -95,23 +113,71 @@ export default function FamilyMealsScreen() {
     [profile.allergies, recoveryChild?.allergies]
   );
 
-  const dayIndex = Math.floor(Date.now() / 86_400_000);
+  // Never answered vs. explicitly "no restrictions" -- deriveProfile falls
+  // back to "vegetarian" silently for either, which is right for existing
+  // accounts (preserves what they already see) but wrong for a brand new
+  // one, who should be asked once rather than have a diet assumed for
+  // them. Same pattern as needsBirthConfirmation elsewhere in You.
+  const needsDietConfirmation = authProfile?.diet == null;
+
+  const chooseDiet = async (value: DietaryPreference) => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    setSavingDiet(true);
+    try {
+      await family.updateProfile(userId, { diet: value });
+      await refreshFamily();
+      setEditingDiet(false);
+    } finally {
+      setSavingDiet(false);
+    }
+  };
+
+  const today = new Date();
+  const dayIndex = Math.floor(today.getTime() / 86_400_000);
 
   const slotPicks = useMemo(() => {
     if (!allMeals) return [];
     return familyMeals.FAMILY_MEAL_SLOTS.map((slot) => {
       const pool = familyMeals.mealsForSlot(allMeals, slot.key, ageStage, profile.diet, allergies);
-      const meal = familyMeals.pickForDay(pool, dayIndex);
-      const alternative = pool.length > 1 ? pool[(dayIndex + 1) % pool.length] : null;
-      return { slot, meal, alternative: alternative?.id === meal?.id ? null : alternative };
+      const overrideId = familyMeals.getSwapOverride(slot.key);
+      const meal = (overrideId && pool.find((m) => m.id === overrideId)) || familyMeals.pickForDay(pool, dayIndex);
+      return { slot, meal, pool };
+      // swapVersion is read only to force this to recompute after a swap;
+      // the override store itself lives outside React state.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }).filter((entry) => entry.meal);
-  }, [allMeals, ageStage, profile.diet, allergies, dayIndex]);
+  }, [allMeals, ageStage, profile.diet, allergies, dayIndex, swapVersion]);
 
   const todaysMeals = slotPicks.map((entry) => entry.meal!).filter(Boolean);
   const opportunities = useMemo(
     () => familyMeals.dayBalancingOpportunities(todaysMeals, profile.diet),
     [todaysMeals, profile.diet]
   );
+
+  const weekPreview = useMemo(() => {
+    if (!allMeals || view !== "week") return [];
+    return Array.from({ length: 7 }, (_, offset) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() + offset);
+      const di = dayIndex + offset;
+      const meals = familyMeals.FAMILY_MEAL_SLOTS.map((slot) => {
+        const pool = familyMeals.mealsForSlot(allMeals, slot.key, ageStage, profile.diet, allergies);
+        return familyMeals.pickForDay(pool, di);
+      }).filter((m): m is FamilyMeal => !!m);
+      return { date, meals };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    });
+  }, [allMeals, view, ageStage, profile.diet, allergies, dayIndex]);
+
+  const swap = (slot: FamilyMealSlot, pool: FamilyMeal[], currentMealId: string) => {
+    if (pool.length < 2) return;
+    const currentIndex = pool.findIndex((m) => m.id === currentMealId);
+    const next = pool[(currentIndex + 1) % pool.length];
+    if (!next) return;
+    familyMeals.setSwapOverride(slot, next.id);
+    setSwapVersion((v) => v + 1);
+  };
 
   if (allMeals === null) {
     return (
@@ -129,87 +195,131 @@ export default function FamilyMealsScreen() {
     >
       <ExpertReviewBanner />
 
-      <PageHeading
-        eyebrow="Family Meals"
-        title="Today, for the family"
-        body={
-          isFather
-            ? "The same meals the whole family is eating today."
-            : recoveryFramingApplies
-              ? `Built around your recovery at ${elapsedPhrase(profile.weeksPostpartum)}, for everyone at the table.`
-              : "Simple, familiar meals, for everyone at the table."
-        }
-      />
+      <Text style={[styles.pageLabel, { color: p.text }]}>Family meals</Text>
+      <Text style={[styles.headline, { color: p.text }]}>Today, for the family</Text>
+      <Text style={[styles.dateLine, { color: p.textMuted }]}>
+        {DAY_NAMES[today.getDay()]}, {today.toLocaleDateString("en-US", { day: "numeric", month: "long" })}
+      </Text>
 
-      {/* The youngest child being fully milk-fed doesn't mean there's no
-          family meal plan — it means the FAMILY's plan below isn't yet
-          shaped by that baby's own feeding stage. This note says so and
-          sits alongside the plan, rather than replacing it outright. */}
-      {!ageStage && recoveryChild && (
-        <Card style={styles.milkNote}>
-          <Text style={[styles.milkNoteTitle, { color: p.text }]}>
-            {recoveryChild.name} is still fully milk-fed
+      {needsDietConfirmation || editingDiet ? (
+        <Card style={styles.dietCard}>
+          <Text style={[styles.dietCardTitle, { color: p.text }]}>What does your family eat?</Text>
+          <Text style={[styles.dietCardBody, { color: p.textMuted }]}>
+            So the meals below actually fit your table.
           </Text>
-          <Text style={[styles.milkNoteBody, { color: p.textMuted }]}>
-            Milk is the whole diet for now — {recoveryChild.name}&rsquo;s own solid-food timeline
-            starts around six months. The meals below are for the rest of the family.
-          </Text>
+          <View style={styles.dietOptionRow}>
+            {DIET_OPTIONS.map((option) => (
+              <Pressable
+                key={option.value}
+                disabled={savingDiet}
+                onPress={() => chooseDiet(option.value)}
+                style={[
+                  styles.dietOption,
+                  { borderColor: p.border },
+                  profile.diet === option.value && { backgroundColor: p.primary, borderColor: p.primary },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.dietOptionLabel,
+                    { color: profile.diet === option.value ? "#FFFDFC" : p.text },
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          {savingDiet && <ActivityIndicator style={{ marginTop: spacing.sm }} />}
         </Card>
+      ) : (
+        <View style={styles.dietRow}>
+          <View style={[styles.dietPill, { backgroundColor: p.surfaceAlt }]}>
+            <Text style={[styles.dietPillText, { color: p.text }]}>{DIET_LABEL[profile.diet]}</Text>
+          </View>
+          <Pressable onPress={() => setEditingDiet(true)} hitSlop={8}>
+            <Text style={[styles.preferencesLink, { color: p.text }]}>Preferences</Text>
+          </Pressable>
+        </View>
       )}
 
-      <View style={styles.chips}>
-        <Chip label={DIET_LABEL[profile.diet]} />
-        {allergies.map((allergen) => (
-          <Chip key={allergen} label={`No ${allergen}`} />
-        ))}
+      {!ageStage && recoveryChild && (
+        <View style={[styles.milkNote, { backgroundColor: p.surfaceAlt }]}>
+          <Text style={[styles.milkNoteText, { color: p.text }]}>
+            {recoveryChild.name} is still fully milk-fed — this menu is for the rest of the family.
+          </Text>
+        </View>
+      )}
+
+      <View style={[styles.toggleRow, { backgroundColor: p.surface }]}>
+        <Pressable
+          onPress={() => setView("today")}
+          style={[styles.toggleOption, view === "today" && { backgroundColor: p.primary }]}
+        >
+          <Text style={[styles.toggleLabel, { color: view === "today" ? "#FFFDFC" : p.textMuted }]}>
+            Today
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setView("week")}
+          style={[styles.toggleOption, view === "week" && { backgroundColor: p.primary }]}
+        >
+          <Text style={[styles.toggleLabel, { color: view === "week" ? "#FFFDFC" : p.textMuted }]}>
+            This week
+          </Text>
+        </Pressable>
       </View>
 
-      <View style={styles.block}>
-        <SectionLabel>Today</SectionLabel>
-        {slotPicks.map(({ slot, meal, alternative }) => (
-          <View key={slot.key} style={styles.slot}>
-            <View style={styles.slotRail}>
-              <View style={[styles.slotDot, { borderColor: p.border }]} />
-              <View style={[styles.slotLine, { backgroundColor: p.border }]} />
-            </View>
-            <View style={styles.slotBody}>
-              <Text style={[styles.slotWindow, { color: p.textMuted }]}>
-                {slot.window.toUpperCase()}
-              </Text>
-              <MealCard
-                meal={meal!}
-                diet={profile.diet}
-                isFather={isFather}
-                expanded={expandedMealId === meal!.id}
-                onToggle={() => setExpandedMealId(expandedMealId === meal!.id ? null : meal!.id)}
-              />
-              {alternative && (
-                <Pressable
-                  onPress={() =>
-                    setExpandedMealId(expandedMealId === alternative.id ? null : alternative.id)
-                  }
-                  style={({ pressed }) => pressed && { opacity: 0.6 }}
-                >
-                  <Text style={[styles.swap, { color: p.primary }]}>
-                    or {alternative.name.toLowerCase()}
-                  </Text>
-                </Pressable>
-              )}
-              {expandedMealId === alternative?.id && alternative && (
-                <View style={styles.altDetail}>
-                  <MealCard
-                    meal={alternative}
-                    diet={profile.diet}
-                    isFather={isFather}
-                    expanded
-                    onToggle={() => setExpandedMealId(null)}
-                  />
+      {view === "today" ? (
+        <View style={styles.block}>
+          {slotPicks.map(({ slot, meal, pool }) => (
+            <View key={slot.key}>
+              <Text style={[styles.slotLabel, { color: p.textMuted }]}>{slot.label.toUpperCase()}</Text>
+              <Card style={styles.mealRow}>
+                <View style={styles.mealRowInner}>
+                  <View style={[styles.iconBadge, { backgroundColor: p.surfaceAlt }]}>
+                    <MealSlotIcon slot={slot.key} color={p.textMuted} size={20} />
+                  </View>
+                  <View style={styles.mealRowText}>
+                    <Text style={[styles.mealTitle, { color: p.text }]}>{meal!.name}</Text>
+                    {meal!.total_minutes != null && (
+                      <Text style={[styles.mealMinutes, { color: p.textMuted }]}>
+                        {meal!.total_minutes} min
+                      </Text>
+                    )}
+                    <View style={styles.mealActions}>
+                      <Pressable
+                        onPress={() =>
+                          router.push(`/you/meal?mealId=${meal!.id}&slot=${slot.key}`)
+                        }
+                        hitSlop={6}
+                      >
+                        <Text style={[styles.actionText, { color: p.primary }]}>View meal →</Text>
+                      </Pressable>
+                      <Pressable onPress={() => swap(slot.key, pool, meal!.id)} hitSlop={6}>
+                        <Text style={[styles.actionText, { color: p.primary }]}>Swap</Text>
+                      </Pressable>
+                    </View>
+                  </View>
                 </View>
-              )}
+              </Card>
             </View>
-          </View>
-        ))}
-      </View>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.block}>
+          {weekPreview.map(({ date, meals }) => (
+            <View key={date.toDateString()} style={styles.weekDayRow}>
+              <Text style={[styles.weekDayLabel, { color: p.text }]}>
+                {date.toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" })}
+              </Text>
+              <Text style={[styles.weekDayMeals, { color: p.textMuted }]}>
+                {meals.map((m) => m.name).join(" · ")}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       {!isFather && opportunities.length > 0 && (
         <View style={styles.block}>
@@ -259,114 +369,6 @@ export default function FamilyMealsScreen() {
   );
 }
 
-function MealCard({
-  meal,
-  diet,
-  isFather,
-  expanded,
-  onToggle,
-}: {
-  meal: FamilyMeal;
-  diet: DietaryPreference;
-  isFather: boolean;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
-  const p = usePalette();
-  // Family meals are cooked and eaten together -- a father isn't a
-  // bystander being briefed on someone else's needs, he's just as able
-  // to be the one adding the curd. So he still gets the line, reframed
-  // to say what it's for rather than addressed to the wrong person (see
-  // reframeBoostForPartner) -- never hidden outright.
-  const boost = isFather
-    ? familyMeals.partnerBoostFor(meal, diet)
-    : familyMeals.motherBoostFor(meal, diet);
-  const ingredientsText = useMemo(() => formatIngredients(meal.ingredients), [meal.ingredients]);
-  const safetyLines = useMemo(
-    () => splitGuidanceClauses(meal.choking_modifications),
-    [meal.choking_modifications]
-  );
-  const ageLines = useMemo(
-    () => splitGuidanceClauses(meal.adaptation_guidance),
-    [meal.adaptation_guidance]
-  );
-
-  return (
-    <Card onPress={onToggle}>
-      <Text style={[styles.mealTitle, { color: p.text }]}>{meal.name}</Text>
-      {meal.age_guidance && (
-        <Text style={[styles.mealBlurb, { color: p.textMuted }]}>{meal.age_guidance}</Text>
-      )}
-
-      <View style={styles.mealMeta}>
-        {meal.total_minutes != null && (
-          <Text style={[styles.mealMinutes, { color: p.primary }]}>{meal.total_minutes} min</Text>
-        )}
-        {meal.allergen_flags.length > 0 && (
-          <Text style={[styles.mealFlag, { color: p.textMuted }]}>
-            · contains {meal.allergen_flags.join(", ").toLowerCase()}
-          </Text>
-        )}
-      </View>
-
-      {/* Embedded on the card itself, not tucked behind "tap to expand" —
-          this is an actionable line (add this, boost that) for whoever's
-          cooking, mother or father, so it shouldn't need a second tap to
-          surface. Only when this meal actually has one. */}
-      {boost && <Text style={[styles.motherBoost, { color: p.primary }]}>{boost}</Text>}
-
-      {expanded && (
-        <View style={styles.recipe}>
-          {ingredientsText && (
-            <>
-              <Text style={[styles.recipeHeading, { color: p.text }]}>What you need</Text>
-              <Text style={[styles.recipeItem, { color: p.textMuted }]}>{ingredientsText}</Text>
-            </>
-          )}
-          {safetyLines.length > 0 && (
-            <>
-              <Text style={[styles.recipeHeading, { color: p.text, marginTop: spacing.md }]}>
-                Keeping it safe
-              </Text>
-              {safetyLines.map((line, index) => (
-                <Text
-                  key={index}
-                  style={[
-                    styles.recipeItem,
-                    { color: p.textMuted },
-                    index > 0 && styles.recipeItemStacked,
-                  ]}
-                >
-                  {line}
-                </Text>
-              ))}
-            </>
-          )}
-          {ageLines.length > 0 && (
-            <>
-              <Text style={[styles.recipeHeading, { color: p.text, marginTop: spacing.md }]}>
-                By age
-              </Text>
-              {ageLines.map((line, index) => (
-                <Text
-                  key={index}
-                  style={[
-                    styles.recipeItem,
-                    { color: p.textMuted },
-                    index > 0 && styles.recipeItemStacked,
-                  ]}
-                >
-                  {line}
-                </Text>
-              ))}
-            </>
-          )}
-        </View>
-      )}
-    </Card>
-  );
-}
-
 const styles = StyleSheet.create({
   loadingScreen: {
     flex: 1,
@@ -378,121 +380,151 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.xxl,
   },
-  chips: {
+  pageLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.body,
+  },
+  headline: {
+    fontFamily: fonts.bodyBold,
+    fontSize: typeScale.h1,
+    marginTop: spacing.sm,
+  },
+  dateLine: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.bodySmall,
+    marginTop: 2,
+  },
+  dietRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: spacing.md,
+  },
+  dietPill: {
+    borderRadius: radius.pill,
+    paddingVertical: 5,
+    paddingHorizontal: spacing.md,
+  },
+  dietPillText: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.bodySmall,
+  },
+  preferencesLink: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: typeScale.bodySmall,
+  },
+  dietCard: {
+    marginTop: spacing.md,
+    padding: spacing.lg,
+  },
+  dietCardTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.h3,
+  },
+  dietCardBody: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.bodySmall,
+    marginTop: spacing.xs,
+  },
+  dietOptionRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
+    marginTop: spacing.md,
   },
-  block: {
-    marginTop: spacing.xl,
+  dietOption: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  dietOptionLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: typeScale.bodySmall,
   },
   milkNote: {
-    marginTop: spacing.lg,
-    padding: spacing.lg,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.md,
   },
-  milkNoteTitle: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.h3,
-    lineHeight: typeScale.h3 * 1.3,
-  },
-  milkNoteBody: {
+  milkNoteText: {
     fontFamily: fonts.body,
-    fontSize: typeScale.bodySmall,
-    lineHeight: typeScale.bodySmall * 1.55,
-    marginTop: spacing.xs,
+    fontSize: typeScale.caption,
+    lineHeight: typeScale.caption * 1.5,
   },
-  slot: {
+  toggleRow: {
     flexDirection: "row",
-    gap: spacing.md,
+    borderRadius: radius.md,
+    padding: 3,
+    marginTop: spacing.lg,
   },
-  slotRail: {
+  toggleOption: {
+    flex: 1,
     alignItems: "center",
-    width: 12,
-    paddingTop: 18,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
   },
-  slotDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 1.5,
+  toggleLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.bodySmall,
   },
-  slotLine: {
-    flex: 1,
-    width: StyleSheet.hairlineWidth,
-    marginTop: 4,
+  block: {
+    marginTop: spacing.lg,
   },
-  slotBody: {
-    flex: 1,
-    paddingBottom: spacing.lg,
-  },
-  slotWindow: {
+  slotLabel: {
     fontFamily: fonts.bodySemiBold,
     fontSize: typeScale.caption,
     letterSpacing: 1.2,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
-  swap: {
-    fontFamily: fonts.body,
-    fontSize: typeScale.bodySmall,
-    marginTop: spacing.sm,
-    marginLeft: spacing.xs,
+  mealRow: {
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
-  altDetail: {
-    marginTop: spacing.sm,
+  mealRowInner: {
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  iconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mealRowText: {
+    flex: 1,
   },
   mealTitle: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.h3,
-    lineHeight: typeScale.h3 * 1.3,
-  },
-  mealBlurb: {
-    fontFamily: fonts.body,
-    fontSize: typeScale.bodySmall,
-    lineHeight: typeScale.bodySmall * 1.55,
-    marginTop: spacing.xs,
-  },
-  mealMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: spacing.sm,
+    fontSize: typeScale.body,
   },
   mealMinutes: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.caption,
+    marginTop: 2,
+  },
+  mealActions: {
+    flexDirection: "row",
+    gap: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  actionText: {
     fontFamily: fonts.bodySemiBold,
     fontSize: typeScale.caption,
   },
-  mealFlag: {
+  weekDayRow: {
+    marginBottom: spacing.md,
+  },
+  weekDayLabel: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.bodySmall,
+  },
+  weekDayMeals: {
     fontFamily: fonts.body,
     fontSize: typeScale.caption,
-  },
-  recipe: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(60, 80, 62, 0.13)",
-  },
-  recipeHeading: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.bodySmall,
-    marginBottom: spacing.xs,
-  },
-  recipeItem: {
-    fontFamily: fonts.body,
-    fontSize: typeScale.bodySmall,
-    lineHeight: typeScale.bodySmall * 1.7,
-  },
-  // "Keeping it safe" / "By age" render one clause per line (see
-  // splitGuidanceClauses) rather than one semicolon-joined paragraph --
-  // this is the gap between those lines, applied to every line after the
-  // first.
-  recipeItemStacked: {
-    marginTop: spacing.xs,
-  },
-  motherBoost: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.bodySmall,
-    lineHeight: typeScale.bodySmall * 1.6,
-    marginTop: spacing.md,
+    marginTop: 2,
+    lineHeight: typeScale.caption * 1.5,
   },
   rowBetween: {
     flexDirection: "row",
