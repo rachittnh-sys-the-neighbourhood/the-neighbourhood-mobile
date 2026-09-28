@@ -21,9 +21,9 @@ export type FamilyMealSlot = FamilyMeal["slots"][number];
 
 export const FAMILY_MEAL_SLOTS: { key: FamilyMealSlot; label: string; window: string }[] = [
   { key: "breakfast", label: "Breakfast", window: "Morning" },
-  { key: "morning_snack", label: "Something small", window: "Mid-morning" },
+  { key: "morning_snack", label: "Morning Snack", window: "Mid-morning" },
   { key: "lunch", label: "Lunch", window: "Midday" },
-  { key: "afternoon_snack", label: "Something small", window: "Afternoon" },
+  { key: "afternoon_snack", label: "Evening Snack", window: "Afternoon" },
   { key: "dinner", label: "Dinner", window: "Evening" },
 ];
 
@@ -86,6 +86,12 @@ export function mealsForSlot(
   allergies: string[]
 ): FamilyMeal[] {
   return allMeals.filter((meal) => {
+    // 41 of the 204 rows are audience="Child"-only entries (a baby's own
+    // mash, not a dish for the table) and are flagged as such via this
+    // exact boolean -- excluded here, not just from display, since this
+    // pool also feeds the swap alternatives. Previously unchecked, which
+    // meant a child-only item could surface as a "family" meal.
+    if (!meal.family_meal_compatible) return false;
     if (!meal.slots.includes(slot)) return false;
     if (ageStage && !meal.age_stages.includes(ageStage)) return false;
     if (!matchesDiet(meal, diet)) return false;
@@ -99,6 +105,31 @@ export function mealsForSlot(
 export function pickForDay<T>(pool: T[], dayIndex: number): T | null {
   if (pool.length === 0) return null;
   return pool[dayIndex % pool.length];
+}
+
+/**
+ * Today's swap choices -- a slot the parent tapped "Swap" on shows the
+ * next alternative from that same slot's pool instead of the day's
+ * default pick, until they undo it or the app restarts. Session-only, in
+ * memory: swapping is "not today, thanks", not a standing preference, so
+ * nothing here is persisted to the database. A single module-level store
+ * rather than component state because both the meal list and the meal
+ * detail screen (a separate route) need to read and act on the same
+ * swap, and there's no simpler way to share that between two screens
+ * than the module both already import.
+ */
+const swapOverrides = new Map<FamilyMealSlot, string>();
+
+export function getSwapOverride(slot: FamilyMealSlot): string | null {
+  return swapOverrides.get(slot) ?? null;
+}
+
+export function setSwapOverride(slot: FamilyMealSlot, mealId: string): void {
+  swapOverrides.set(slot, mealId);
+}
+
+export function clearSwapOverride(slot: FamilyMealSlot): void {
+  swapOverrides.delete(slot);
 }
 
 /**
