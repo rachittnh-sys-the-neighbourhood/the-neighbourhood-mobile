@@ -1,6 +1,7 @@
 import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import Svg, { Path } from "react-native-svg";
 import { ExpertReviewBanner } from "../../../components/ExpertReviewBanner";
 import { MealSlotIcon } from "../../../components/MealSlotIcon";
 import { Card, CareNote } from "../../../components/parentUI";
@@ -275,7 +276,10 @@ export default function FamilyMealsScreen() {
           {slotPicks.map(({ slot, meal, pool }) => (
             <View key={slot.key}>
               <Text style={[styles.slotLabel, { color: p.textMuted }]}>{slot.label.toUpperCase()}</Text>
-              <Card style={styles.mealRow}>
+              <Card
+                style={styles.mealRow}
+                onPress={() => router.push(`/you/meal?mealId=${meal!.id}&slot=${slot.key}`)}
+              >
                 <View style={styles.mealRowInner}>
                   <View style={[styles.iconBadge, { backgroundColor: p.surfaceAlt }]}>
                     <MealSlotIcon slot={slot.key} color={p.textMuted} size={20} />
@@ -287,20 +291,31 @@ export default function FamilyMealsScreen() {
                         {meal!.total_minutes} min
                       </Text>
                     )}
-                    <View style={styles.mealActions}>
-                      <Pressable
-                        onPress={() =>
-                          router.push(`/you/meal?mealId=${meal!.id}&slot=${slot.key}`)
-                        }
-                        hitSlop={6}
-                      >
-                        <Text style={[styles.actionText, { color: p.primary }]}>View meal →</Text>
-                      </Pressable>
-                      <Pressable onPress={() => swap(slot.key, pool, meal!.id)} hitSlop={6}>
-                        <Text style={[styles.actionText, { color: p.primary }]}>Swap</Text>
-                      </Pressable>
-                    </View>
+                    <Text style={[styles.actionText, { color: p.primary, marginTop: spacing.sm }]}>
+                      View meal →
+                    </Text>
                   </View>
+                </View>
+                <View style={styles.swapRow}>
+                  <Pressable
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      swap(slot.key, pool, meal!.id);
+                    }}
+                    hitSlop={6}
+                    style={styles.swapButton}
+                  >
+                    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M17 2.1 21 6l-4 3.9M3 12v-2a4 4 0 0 1 4-4h14M7 21.9 3 18l4-3.9M21 12v2a4 4 0 0 1-4 4H3"
+                        stroke={p.primary}
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                    <Text style={[styles.actionText, { color: p.primary }]}>Swap</Text>
+                  </Pressable>
                 </View>
               </Card>
             </View>
@@ -504,10 +519,15 @@ const styles = StyleSheet.create({
     fontSize: typeScale.caption,
     marginTop: 2,
   },
-  mealActions: {
+  swapRow: {
     flexDirection: "row",
-    gap: spacing.lg,
+    justifyContent: "flex-end",
     marginTop: spacing.sm,
+  },
+  swapButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
   },
   actionText: {
     fontFamily: fonts.bodySemiBold,
