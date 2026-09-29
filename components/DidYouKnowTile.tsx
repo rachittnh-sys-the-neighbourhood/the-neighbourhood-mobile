@@ -11,9 +11,8 @@ import { LogoMark } from "./Logo";
 /** The one link every share carries — the app is a PWA hosted here, so
  *  this is the correct destination for someone who doesn't have the app
  *  yet, not an app-store link that doesn't exist. (app/welcome.tsx's own
- *  Terms/Privacy links point at theneighbourhood.in, a different domain
- *  — that looks like the stale one, tracked separately; this is the
- *  domain to treat as correct.) */
+ *  Terms/Privacy links used to point at the stale theneighbourhood.in —
+ *  fixed to this same domain.) */
 const SHARE_URL_LABEL = "theneighbourhood.co.in";
 
 /** The actual tap target for the text-share fallback below — written out
