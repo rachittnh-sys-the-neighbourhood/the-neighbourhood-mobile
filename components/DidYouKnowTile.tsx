@@ -5,6 +5,7 @@ import ViewShot from "react-native-view-shot";
 import * as dyk from "../lib/db/dyk";
 import type { DidYouKnowFact } from "../lib/db/types";
 import { colors, fonts, homeType, palettes, radius, spacing, type } from "../lib/theme";
+import { LightbulbIcon } from "./HomeTileIcons";
 import { LogoMark } from "./Logo";
 
 /** The one link every share carries — the app is a PWA hosted here (see
@@ -18,19 +19,13 @@ const SHARE_URL_LABEL = "theneighbourhood.co.in";
 /**
  * Home's "Did you know" tile — first thing on the screen.
  *
- * The heading is the card's own `header` field from the source workbook
- * (DidYouKnow_PRODUCTION_READY.xlsx's "Header" column — "Sound
- * familiar?", "Through their eyes", "Been there?", …) — NOT `lane`
- * (Food is fascinating / Children are fascinating / …), which is a
- * broader categorical tag, not a per-card heading. No literal "Did you
- * know" boilerplate stacked in front of it on every card, either way —
- * and it sits directly on the tile's own lightly-tinted sage background.
- * The actual fact content (text, source controls) lives on a white
- * sub-card nested inside, the same shape the activities tile uses for
- * its own rows. The one exception to "only the fact text" is a
- * research-based card (Species = Fact or Research insight): that gets a
- * small "Source" control the parent can tap to reveal the citation.
- * Everything else shows no source control at all.
+ * No per-card heading -- the v4 content workbook dropped that column
+ * entirely, so the fact text is the whole card, with a small lightbulb
+ * icon leading it instead of an eyebrow label. The one exception to
+ * "only the fact text" is a research-based card (Species = Fact or
+ * Research insight): that gets a small "Source" control the parent can
+ * tap to reveal the citation. Everything else shows no source control at
+ * all.
  *
  * "Share" shares the card as an actual IMAGE — heading, fact text, and
  * The Neighbourhood's own logo + website link baked into the picture —
@@ -47,9 +42,14 @@ const SHARE_URL_LABEL = "theneighbourhood.co.in";
 export function DidYouKnowTile({
   ageMonths,
   role,
+  childId,
 }: {
   ageMonths: number;
   role: "mother" | "father" | "prefer_not_to_say";
+  /** Seeds which fact today's pick lands on (see lib/db/dyk.ts
+   *  pickFactIndex) -- without this, every family with a similarly-aged
+   *  child would see the literal identical fact on the same date. */
+  childId: string;
 }) {
   const [pool, setPool] = useState<DidYouKnowFact[] | null>(null);
   const [showSource, setShowSource] = useState(false);
@@ -74,17 +74,16 @@ export function DidYouKnowTile({
   // No manual "show me another one" control anymore -- pickFactIndex's
   // own day-seeded hash still rotates the fact day to day on its own,
   // this just no longer takes a within-session nudge on top of it.
+  // childId's hash keeps that day-pick from being the literal same fact
+  // for every family with a similarly-aged child.
   const fact = useMemo(() => {
     if (!pool || pool.length === 0) return null;
-    return pool[dyk.pickFactIndex(pool.length, 0)];
-  }, [pool]);
+    return pool[dyk.pickFactIndex(pool.length, dyk.hashString(childId))];
+  }, [pool, childId]);
 
   if (!fact) return null;
 
   const sourceLine = dyk.sourceLineFor(fact);
-  const heading = fact.header || "Did you know?";
-  // Just the fact itself -- the heading ("Sound familiar?" etc.) is a
-  // label for the on-screen card, not part of the thing worth sharing.
   const textMessage = `${fact.card_text}\n\nUnderstand their world before they have the words. Build your village at ${SHARE_URL_LABEL}.`;
 
   const share = async () => {
@@ -132,13 +131,17 @@ export function DidYouKnowTile({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.eyebrow}>{heading}</Text>
-
-      {/* Share sits on the fact text's own line now, right-aligned --
-          no separate action row beneath it. flex:1 on the text lets it
-          keep wrapping normally while Share stays pinned to the right. */}
-      <View style={styles.row}>
+      {/* No eyebrow anymore -- the lightbulb leads the fact text itself,
+          top-aligned with its first line. */}
+      <View style={styles.factRow}>
+        <LightbulbIcon size={16} color={palettes.parent.primary} />
         <Text style={[styles.text, styles.textFlex]}>{fact.card_text}</Text>
+      </View>
+
+      {/* Its own row beneath the text, right-aligned -- sits at the
+          text block's own bottom-right corner rather than floating level
+          with its first line. */}
+      <View style={styles.shareRow}>
         <Pressable onPress={share} hitSlop={8}>
           <Text style={styles.link}>Share ›</Text>
         </Pressable>
@@ -217,13 +220,6 @@ const styles = StyleSheet.create({
     // heavier block than the other. The green itself only shows up as the
     // eyebrow/link accent color, same as that card.
     backgroundColor: "rgba(94, 115, 96, 0.08)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(60, 80, 62, 0.16)",
-  },
-  eyebrow: {
-    ...homeType.eyebrow,
-    color: palettes.parent.primary,
-    paddingHorizontal: spacing.xs,
   },
   text: {
     // homeType.bodyText's size, but Medium (500) rather than Regular --
@@ -237,18 +233,23 @@ const styles = StyleSheet.create({
   textFlex: {
     flex: 1,
   },
-  // Text + Share share this one row now -- Share pinned to the right via
-  // flex:1 on the text (above), top-aligned with the first line rather
-  // than centered against the full (possibly 2-line) paragraph.
-  row: {
+  // The lightbulb leads the fact text -- no eyebrow anymore, so this is
+  // the card's first row.
+  factRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  // Right-aligned only -- Share sits at the text block's own
+  // bottom-right corner, its own row rather than sharing one with the
+  // text.
+  shareRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
     marginTop: spacing.xs,
     paddingHorizontal: spacing.xs,
   },
-  // Its own line below the text+Share row now that "Another one" (its
-  // former row-mate) is gone.
   sourceToggle: {
     marginTop: spacing.sm,
     paddingHorizontal: spacing.xs,

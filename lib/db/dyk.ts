@@ -3,14 +3,13 @@ import type { DidYouKnowFact } from "./types";
 
 /**
  * Home's "Did you know" tile -- see supabase/migrations/
- * 20260910091000_did_you_know_facts.sql.
+ * 20260929100000_did_you_know_facts_v4_refresh.sql.
  *
- * The heading is dynamic (the calling screen composes it from the lane —
- * "DID YOU KNOW · Through their eyes" — or falls back to a plain "DID YOU
- * KNOW"); the visible card shows only the fact text itself. The one
- * exception: a card whose Species is "Fact" or "Research insight"
- * (is_research_based) gets a "Source" control the parent can tap, which
- * reveals the citation. Every other card (the large majority — plain
+ * No per-card heading -- the v4 workbook dropped that column entirely, so
+ * the visible card shows only the fact text itself. The one exception: a
+ * card whose Species is "Fact" or "Research insight" (is_research_based)
+ * gets a "Source" control the parent can tap, which reveals the
+ * citation. Every other card (the large majority — plain
  * human-observation facts) shows no source control at all, because there
  * is no source to show.
  */
@@ -52,21 +51,39 @@ export function factsForAge(
   });
 }
 
-/** Same deterministic day-index rotation every other rotating card in the
- *  app uses (see home.tsx). "Another one" advances the SAME session's
- *  local index by one instead of waiting for tomorrow.
+/**
+ * Deterministic day-index rotation, same idea every other rotating card
+ * in the app uses (see home.tsx) -- one pick per calendar day, so the
+ * card doesn't change mid-session or on every reload.
  *
- *  Hashed rather than used directly as `(dayIndex + offset) % poolLength`:
- *  the table is naturally grouped by lane/theme (rows for one lane sit
- *  together), so walking the pool sequentially meant many consecutive
- *  days — or consecutive "Another one" taps — landing in the same lane
- *  before moving to the next. That read as repetitive rather than
- *  varied. Hashing the seed spreads picks across the whole pool while
- *  staying fully deterministic: same day, same offset, same card. */
-export function pickFactIndex(poolLength: number, offset: number): number {
+ * `familySeed` (a hash of the child's id, see hashString below) mixes
+ * into the same seed as the day index -- without it, every family with a
+ * similarly-aged child sees the literal identical fact on the same date,
+ * which is the opposite of "random." With it, two families land on
+ * different, still-day-stable picks.
+ *
+ * Hashed rather than used directly as `(dayIndex + familySeed) %
+ * poolLength`: the table is naturally grouped by lane/theme (rows for
+ * one lane sit together), so walking the pool sequentially meant many
+ * consecutive days landing in the same lane before moving to the next.
+ * That read as repetitive rather than varied. Hashing the seed spreads
+ * picks across the whole pool while staying fully deterministic: same
+ * day, same family, same card.
+ */
+export function pickFactIndex(poolLength: number, familySeed: number): number {
   if (poolLength === 0) return 0;
   const dayIndex = Math.floor(Date.now() / 86_400_000);
-  return hashToIndex(dayIndex + offset, poolLength);
+  return hashToIndex(dayIndex + familySeed, poolLength);
+}
+
+/** Turns a child id (or any string) into a small integer seed for
+ *  pickFactIndex -- so the per-day pick varies by family. */
+export function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  }
+  return h;
 }
 
 /** A small integer hash (a variant of Murmur3's finalizer) turning a

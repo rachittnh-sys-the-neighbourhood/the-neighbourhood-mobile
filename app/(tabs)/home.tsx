@@ -16,6 +16,8 @@ import {
 import Svg, { Path } from "react-native-svg";
 import { ActivityCollapsedRow, ActivityDoneRow, ActivityExpandedCard, EndOfDay, FeaturedActivityCard } from "../../components/ActivityCard";
 import { DidYouKnowTile } from "../../components/DidYouKnowTile";
+import { HandIcon, HeartIcon, LeafIcon } from "../../components/HomeTileIcons";
+import { SparkleMark } from "../../components/TabIcons";
 import { FamilyMealTile } from "../../components/FamilyMealTile";
 import { GuidedTourDialog } from "../../components/GuidedTourDialog";
 import { LogoMark } from "../../components/Logo";
@@ -491,7 +493,11 @@ export default function Home() {
               heading (the fact's lane, e.g. "CHILD'S EYES"), so no outer
               SectionLabel is needed here — same pattern as Ask below. */}
           <View style={styles.dykWrap}>
-            <DidYouKnowTile ageMonths={recoveryAgeMonths} role={careProfile.role} />
+            <DidYouKnowTile
+              ageMonths={recoveryAgeMonths}
+              role={careProfile.role}
+              childId={recoveryChild ? recoveryChild.id : child.id}
+            />
           </View>
 
           <SectionLabel accent={colors.warmTaupe}>
@@ -528,6 +534,7 @@ export default function Home() {
           <SectionLabel accent={colors.softSand}>WHAT'S NEXT</SectionLabel>
           {reminder ? (
             <DiscoveryRow
+              icon={<LeafIcon size={14} color={colors.warmTaupe} />}
               eyebrow="VACCINATION"
               title={reminder.title}
               body={reminder.body}
@@ -535,6 +542,7 @@ export default function Home() {
             />
           ) : milestoneRecommendation ? (
             <DiscoveryRow
+              icon={<LeafIcon size={14} color={colors.warmTaupe} />}
               eyebrow={milestoneRecommendation.eyebrow}
               title={milestoneRecommendation.title}
               body={milestoneRecommendation.body}
@@ -542,6 +550,7 @@ export default function Home() {
             />
           ) : (
             <DiscoveryRow
+              icon={<LeafIcon size={14} color={colors.warmTaupe} />}
               eyebrow={transitionRecommendation.eyebrow}
               title={transitionRecommendation.title}
               body={transitionRecommendation.body}
@@ -728,9 +737,12 @@ function ChildDayActivities({
         {/* Once there's nothing left to pick, "Pick one" is stale copy —
             the hero switches to acknowledging the day instead. */}
         <View style={styles.planHero}>
-          <Text style={styles.planTitle}>
-            {allDone ? "Nicely done today." : `A moment with ${child.name}.`}
-          </Text>
+          <View style={styles.planTitleRow}>
+            <HandIcon size={18} color={colors.charcoal} />
+            <Text style={styles.planTitle}>
+              {allDone ? "Nicely done today." : `A moment with ${child.name}.`}
+            </Text>
+          </View>
           {/* Only shown for the completion state now -- a real payoff line,
               not filler. The everyday "one small idea, whenever it suits"
               reassurance was cut to save space; TODAY above already frames
@@ -999,16 +1011,23 @@ function DiscoveryRow({
   title,
   body,
   onPress,
+  icon,
 }: {
   eyebrow: string;
   title: string;
   body: string;
   onPress: () => void;
+  /** Optional -- only the WHAT'S NEXT variants pass this; the milestone-
+   *  stage-nudge use of this same row stays icon-less. */
+  icon?: React.ReactNode;
 }) {
   return (
     <Pressable style={styles.discoveryRow} onPress={onPress} accessibilityRole="button">
       <View style={styles.discoveryText}>
-        <Text style={styles.discoveryEyebrow}>{eyebrow}</Text>
+        <View style={styles.discoveryEyebrowRow}>
+          {icon}
+          <Text style={styles.discoveryEyebrow}>{eyebrow}</Text>
+        </View>
         <Text style={styles.discoveryRowTitle}>{title}</Text>
         <Text style={styles.discoveryRowBody}>{body}</Text>
       </View>
@@ -1082,7 +1101,10 @@ function ForYouCard({
         accessibilityRole="button"
         style={({ pressed }) => [styles.forYouCard, pressed && { opacity: 0.75 }]}
       >
-        <Text style={styles.forYouEyebrow}>{area.label.toUpperCase()}</Text>
+        <View style={styles.forYouEyebrowRow}>
+          <HeartIcon size={14} color={styles.forYouEyebrow.color} />
+          <Text style={styles.forYouEyebrow}>{area.label.toUpperCase()}</Text>
+        </View>
         <Text style={styles.forYouTitle}>{topic.title}</Text>
         <Text style={styles.forYouBody}>{topic.blurb}</Text>
         <Text style={styles.forYouLink}>{topic.minutes} min read →</Text>
@@ -1106,7 +1128,10 @@ function ForYouCard({
       accessibilityRole="button"
       style={({ pressed }) => [styles.forYouCard, pressed && { opacity: 0.75 }]}
     >
-      <Text style={styles.forYouEyebrow}>WHILE {childName.toUpperCase()} PLAYS</Text>
+      <View style={styles.forYouEyebrowRow}>
+        <HeartIcon size={14} color={styles.forYouEyebrow.color} />
+        <Text style={styles.forYouEyebrow}>WHILE {childName.toUpperCase()} PLAYS</Text>
+      </View>
       <Text style={styles.forYouTitle}>{bridge.parentOffer}</Text>
       <Text style={styles.forYouBody}>{bridge.detail}</Text>
       <Text style={styles.forYouLink}>{bridge.minutes} min · in your space →</Text>
@@ -1120,7 +1145,10 @@ function CopilotHomeCard({ onPress }: { onPress: (prompt: string) => void }) {
 
   return (
     <View style={styles.copilotModule}>
-      <Text style={styles.copilotEyebrow}>ASK</Text>
+      <View style={styles.copilotEyebrowRow}>
+        <SparkleMark size={14} color={colors.warmTaupe} />
+        <Text style={styles.copilotEyebrow}>ASK</Text>
+      </View>
       <Text style={styles.copilotQuestion}>What would you like help with today?</Text>
       <View style={styles.copilotComposer}>
         <TextInput
@@ -1323,17 +1351,20 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: "rgba(139, 116, 91, 0.11)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(96, 79, 60, 0.12)",
   },
   planHero: { paddingHorizontal: spacing.xs },
   // homeType.sectionHeading (20/600), not the old display role (26/700) —
   // still the loudest thing in this card, just no longer a cliff above
   // the 18px card titles two tiles down.
+  planTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
   planTitle: {
     ...homeType.sectionHeading,
     color: colors.charcoal,
-    marginTop: spacing.xs,
   },
   subline: {
     ...type.lead,
@@ -1386,8 +1417,6 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.md,
     backgroundColor: colors.white,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(96, 79, 60, 0.1)",
   },
   emptyPlanTitle: {
     ...type.title,
@@ -1421,13 +1450,16 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: "rgba(94, 115, 96, 0.08)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(60, 80, 62, 0.16)",
     shadowColor: "#3C503E",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 14,
     elevation: 1,
+  },
+  forYouEyebrowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   forYouEyebrow: {
     ...type.eyebrow,
@@ -1463,8 +1495,11 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: "rgba(139, 116, 91, 0.11)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(96, 79, 60, 0.12)",
+  },
+  copilotEyebrowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   copilotEyebrow: {
     ...type.eyebrow,
@@ -1514,14 +1549,17 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     borderRadius: radius.md,
     backgroundColor: colors.white,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(96, 79, 60, 0.1)",
   },
   discoveryText: { flex: 1 },
+  discoveryEyebrowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 2,
+  },
   discoveryEyebrow: {
     ...type.eyebrow,
     color: colors.warmTaupe,
-    marginBottom: 2,
   },
   discoveryRowTitle: {
     ...type.label,
