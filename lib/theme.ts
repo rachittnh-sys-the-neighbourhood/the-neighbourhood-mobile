@@ -220,16 +220,20 @@ export const homeType = {
    *  actionable" -- it doesn't also need to be heavier than bodyText, or
    *  a secondary link ends up competing with the card's actual content
    *  instead of sitting quietly beneath it. */
-  action: { fontFamily: fonts.body, fontSize: 15, lineHeight: 20 },
-  /** Metadata, duration, disclaimers, safety copy -- deliberately NOT
-   *  shrunk to save space; legibility on trust/safety text wins over
-   *  density every time on this screen. */
+  action: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18 },
+  /** Metadata, duration, disclaimers, safety copy. */
   meta: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
+  /** Sentence case, not uppercase -- the source strings (DYK headers,
+   *  DOMAIN_LABEL, etc.) already carry their own natural casing; this
+   *  role no longer forces its own on top of them. */
   eyebrow: {
     fontFamily: fonts.bodyMedium,
     fontSize: 12,
     lineHeight: 16,
-    letterSpacing: 1.4,
-    textTransform: "uppercase",
+    // Wide 1.4 tracking read fine on all-caps text; on sentence case it
+    // just looks loose, so this drops to the same 0.2 the bottom nav's
+    // own sentence-case labels already use (type.eyebrow's own
+    // tabBarLabelStyle override in app/(tabs)/_layout.tsx).
+    letterSpacing: 0.2,
   },
 } as const;

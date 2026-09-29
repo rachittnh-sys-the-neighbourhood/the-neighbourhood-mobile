@@ -65,7 +65,7 @@ export function FamilyMealTile({
       accessibilityRole="button"
       style={({ pressed }) => [styles.card, pressed && { opacity: 0.75 }]}
     >
-      <Text style={styles.eyebrow}>FAMILY MEAL</Text>
+      <Text style={styles.eyebrow}>Family meal</Text>
       <View style={styles.titleRow}>
         {/* Same row as the link now, matching the reference layout --
             but the real data has names up to "Chicken Vegetable Curry
@@ -120,9 +120,9 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   disclaimer: {
-    // homeType.meta (14px) -- "Under expert review" is trust-critical
-    // copy, not shrunk to save space.
     ...homeType.meta,
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.textMuted,
     marginTop: spacing.xs,
   },
