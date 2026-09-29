@@ -8,13 +8,21 @@ import { colors, fonts, homeType, palettes, radius, spacing, type } from "../lib
 import { LightbulbIcon } from "./HomeTileIcons";
 import { LogoMark } from "./Logo";
 
-/** The one link every share carries — the app is a PWA hosted here (see
- *  app/welcome.tsx, which already links Terms/Privacy off this same
- *  domain), so this is the correct destination for someone who doesn't
- *  have the app yet, not an app-store link that doesn't exist. Written
- *  out bare (no https://www.) since that's the exact wording the share
- *  copy uses — most messaging apps auto-linkify a bare domain anyway. */
+/** The one link every share carries — the app is a PWA hosted here, so
+ *  this is the correct destination for someone who doesn't have the app
+ *  yet, not an app-store link that doesn't exist. (app/welcome.tsx's own
+ *  Terms/Privacy links point at theneighbourhood.in, a different domain
+ *  — that looks like the stale one, tracked separately; this is the
+ *  domain to treat as correct.) */
 const SHARE_URL_LABEL = "theneighbourhood.co.in";
+
+/** The actual tap target for the text-share fallback below — written out
+ *  in full (https://www.…) rather than the bare label above, so it's a
+ *  real link regardless of whether the recipient's app auto-linkifies a
+ *  bare domain. The image footer keeps the bare label -- it's baked into
+ *  a static PNG there and can never be tapped either way, so the shorter
+ *  wording reads better. */
+const SHARE_URL = `https://www.${SHARE_URL_LABEL}`;
 
 /**
  * Home's "Did you know" tile — first thing on the screen.
@@ -84,7 +92,7 @@ export function DidYouKnowTile({
   if (!fact) return null;
 
   const sourceLine = dyk.sourceLineFor(fact);
-  const textMessage = `${fact.card_text}\n\nUnderstand their world before they have the words. Build your village at ${SHARE_URL_LABEL}.`;
+  const textMessage = `${fact.card_text}\n\nUnderstand their world before they have the words. Build your village at ${SHARE_URL}.`;
 
   const share = async () => {
     // Neither react-native-view-shot's capture nor expo-sharing's image
