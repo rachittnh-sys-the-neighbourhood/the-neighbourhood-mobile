@@ -500,7 +500,9 @@ export type CopilotMessage = {
 
 /**
  * Home's "Did you know" tile content -- see supabase/migrations/
- * 20260910091000_did_you_know_facts.sql and lib/db/dyk.ts.
+ * 20260929100000_did_you_know_facts_v4_refresh.sql and lib/db/dyk.ts.
+ * No per-card heading anymore (the v4 workbook dropped that column
+ * entirely) -- the fact text is the whole card.
  *
  * Only `is_research_based` cards carry a real citation to show behind a
  * "Source" tap; the rest (most of them -- plain human-observation facts)
@@ -508,7 +510,9 @@ export type CopilotMessage = {
  */
 export type DidYouKnowFact = {
   id: string;
-  header: string;
+  /** The v4 workbook's own secondary id (e.g. "NEW-0001") -- not used for
+   *  anything in the app today, kept for tracing a card back to source. */
+  card_id: string | null;
   card_text: string;
   india_variant_text: string | null;
   species: "Human observation" | "Fact" | "Research insight";
@@ -526,6 +530,10 @@ export type DidYouKnowFact = {
   source_citation: string | null;
   source_url: string | null;
   is_research_based: boolean;
+  /** Which content round this card shipped in (e.g. "Round 1"). Not used
+   *  for anything in the app today, kept for tracing a card back to
+   *  source. */
+  batch: string | null;
 };
 
 /**

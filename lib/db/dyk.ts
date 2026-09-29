@@ -3,14 +3,13 @@ import type { DidYouKnowFact } from "./types";
 
 /**
  * Home's "Did you know" tile -- see supabase/migrations/
- * 20260910091000_did_you_know_facts.sql.
+ * 20260929100000_did_you_know_facts_v4_refresh.sql.
  *
- * The heading is dynamic (the calling screen composes it from the lane —
- * "DID YOU KNOW · Through their eyes" — or falls back to a plain "DID YOU
- * KNOW"); the visible card shows only the fact text itself. The one
- * exception: a card whose Species is "Fact" or "Research insight"
- * (is_research_based) gets a "Source" control the parent can tap, which
- * reveals the citation. Every other card (the large majority — plain
+ * No per-card heading -- the v4 workbook dropped that column entirely, so
+ * the visible card shows only the fact text itself. The one exception: a
+ * card whose Species is "Fact" or "Research insight" (is_research_based)
+ * gets a "Source" control the parent can tap, which reveals the
+ * citation. Every other card (the large majority — plain
  * human-observation facts) shows no source control at all, because there
  * is no source to show.
  */
