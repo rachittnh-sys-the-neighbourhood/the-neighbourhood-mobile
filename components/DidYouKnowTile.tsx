@@ -5,6 +5,7 @@ import ViewShot from "react-native-view-shot";
 import * as dyk from "../lib/db/dyk";
 import type { DidYouKnowFact } from "../lib/db/types";
 import { colors, fonts, homeType, palettes, radius, spacing, type } from "../lib/theme";
+import { LightbulbIcon } from "./HomeTileIcons";
 import { LogoMark } from "./Logo";
 
 /** The one link every share carries — the app is a PWA hosted here (see
@@ -132,11 +133,16 @@ export function DidYouKnowTile({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.eyebrow}>{heading}</Text>
+      <View style={styles.eyebrowRow}>
+        <LightbulbIcon size={15} color={styles.eyebrow.color} />
+        <Text style={styles.eyebrow}>{heading}</Text>
+      </View>
 
-      {/* Share sits on the fact text's own line now, right-aligned --
-          no separate action row beneath it. flex:1 on the text lets it
-          keep wrapping normally while Share stays pinned to the right. */}
+      {/* Share sits on the fact text's own line now, right-aligned and
+          bottom-aligned -- flex:1 on the text lets it keep wrapping
+          normally while Share stays pinned to the text block's own
+          bottom-right corner rather than floating level with the first
+          line. */}
       <View style={styles.row}>
         <Text style={[styles.text, styles.textFlex]}>{fact.card_text}</Text>
         <Pressable onPress={share} hitSlop={8}>
@@ -217,8 +223,6 @@ const styles = StyleSheet.create({
     // heavier block than the other. The green itself only shows up as the
     // eyebrow/link accent color, same as that card.
     backgroundColor: "rgba(94, 115, 96, 0.08)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(60, 80, 62, 0.16)",
   },
   eyebrow: {
     ...homeType.eyebrow,
@@ -240,9 +244,17 @@ const styles = StyleSheet.create({
   // Text + Share share this one row now -- Share pinned to the right via
   // flex:1 on the text (above), top-aligned with the first line rather
   // than centered against the full (possibly 2-line) paragraph.
+  eyebrowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: spacing.xs,
+  },
+  // flex-end, not flex-start -- Share sits at the text block's own
+  // bottom-right corner, not level with its first line.
   row: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "flex-end",
     gap: spacing.sm,
     marginTop: spacing.xs,
     paddingHorizontal: spacing.xs,

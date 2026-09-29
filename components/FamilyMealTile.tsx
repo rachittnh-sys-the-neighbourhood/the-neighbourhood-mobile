@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import * as familyMeals from "../lib/db/familyMeals";
 import type { DietaryPreference } from "../lib/parentCare";
 import type { FamilyMeal } from "../lib/db/types";
+import { BowlIcon } from "./HomeTileIcons";
 import { colors, homeType, radius, spacing } from "../lib/theme";
 
 function slotForHour(hour: number): familyMeals.FamilyMealSlot {
@@ -65,7 +66,10 @@ export function FamilyMealTile({
       accessibilityRole="button"
       style={({ pressed }) => [styles.card, pressed && { opacity: 0.75 }]}
     >
-      <Text style={styles.eyebrow}>Family meal</Text>
+      <View style={styles.eyebrowRow}>
+        <BowlIcon size={14} color={colors.warmTaupe} />
+        <Text style={styles.eyebrow}>Family meal</Text>
+      </View>
       <View style={styles.titleRow}>
         {/* Same row as the link now, matching the reference layout --
             but the real data has names up to "Chicken Vegetable Curry
@@ -90,12 +94,15 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: colors.white,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(96, 79, 60, 0.10)",
   },
   eyebrow: {
     ...homeType.eyebrow,
     color: colors.warmTaupe,
+  },
+  eyebrowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   titleRow: {
     flexDirection: "row",
