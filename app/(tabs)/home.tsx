@@ -493,7 +493,11 @@ export default function Home() {
               heading (the fact's lane, e.g. "CHILD'S EYES"), so no outer
               SectionLabel is needed here — same pattern as Ask below. */}
           <View style={styles.dykWrap}>
-            <DidYouKnowTile ageMonths={recoveryAgeMonths} role={careProfile.role} />
+            <DidYouKnowTile
+              ageMonths={recoveryAgeMonths}
+              role={careProfile.role}
+              childId={recoveryChild ? recoveryChild.id : child.id}
+            />
           </View>
 
           <SectionLabel accent={colors.warmTaupe}>

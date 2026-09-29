@@ -42,9 +42,14 @@ const SHARE_URL_LABEL = "theneighbourhood.co.in";
 export function DidYouKnowTile({
   ageMonths,
   role,
+  childId,
 }: {
   ageMonths: number;
   role: "mother" | "father" | "prefer_not_to_say";
+  /** Seeds which fact today's pick lands on (see lib/db/dyk.ts
+   *  pickFactIndex) -- without this, every family with a similarly-aged
+   *  child would see the literal identical fact on the same date. */
+  childId: string;
 }) {
   const [pool, setPool] = useState<DidYouKnowFact[] | null>(null);
   const [showSource, setShowSource] = useState(false);
@@ -69,10 +74,12 @@ export function DidYouKnowTile({
   // No manual "show me another one" control anymore -- pickFactIndex's
   // own day-seeded hash still rotates the fact day to day on its own,
   // this just no longer takes a within-session nudge on top of it.
+  // childId's hash keeps that day-pick from being the literal same fact
+  // for every family with a similarly-aged child.
   const fact = useMemo(() => {
     if (!pool || pool.length === 0) return null;
-    return pool[dyk.pickFactIndex(pool.length, 0)];
-  }, [pool]);
+    return pool[dyk.pickFactIndex(pool.length, dyk.hashString(childId))];
+  }, [pool, childId]);
 
   if (!fact) return null;
 
