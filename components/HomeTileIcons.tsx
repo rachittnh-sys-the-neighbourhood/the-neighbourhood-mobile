@@ -66,11 +66,12 @@ export function BowlIcon({ size = 16, color }: IconProps) {
   );
 }
 
-/** ForYouCard -- a plain head-and-shoulders silhouette, deliberately not
- *  the heart shape the Child tab icon uses: this card rotates between
- *  "For dads", a mother's own recovery content, and other parent-neutral
- *  self-care topics, so its icon needs to read as "about you, the
- *  parent" regardless of who's looking at it, not as romance/relationships. */
+/** ForYouCard -- a head-and-shoulders silhouette with a small heart on
+ *  the chest, rather than the plain heart shape the Child tab icon uses:
+ *  this card rotates between "For dads", a mother's own recovery
+ *  content, and other parent-neutral self-care topics, so it needs to
+ *  read as "self-care for you, the parent" regardless of who's looking
+ *  at it, not as romance/relationships. */
 export function PersonIcon({ size = 16, color }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -85,6 +86,12 @@ export function PersonIcon({ size = 16, color }: IconProps) {
         stroke={color}
         strokeWidth={1.6}
         strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M12 18.6c0 0-2-1.3-2-2.7 0-.7.6-1.3 1.3-1.3.3 0 .6.1.7.4.1-.3.4-.4.7-.4.7 0 1.3.6 1.3 1.3 0 1.4-2 2.7-2 2.7Z"
+        stroke={color}
+        strokeWidth={1.3}
         strokeLinejoin="round"
       />
     </Svg>

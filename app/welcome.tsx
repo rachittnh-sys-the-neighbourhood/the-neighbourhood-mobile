@@ -300,7 +300,7 @@ export default function Welcome() {
           <Text
             style={styles.legalLink}
             onPress={() =>
-              Linking.openURL("https://theneighbourhood.in/terms")
+              Linking.openURL("https://www.theneighbourhood.co.in/terms")
             }
           >
             Terms of Service
@@ -309,7 +309,7 @@ export default function Welcome() {
           <Text
             style={styles.legalLink}
             onPress={() =>
-              Linking.openURL("https://theneighbourhood.in/privacy")
+              Linking.openURL("https://www.theneighbourhood.co.in/privacy")
             }
           >
             Privacy Policy

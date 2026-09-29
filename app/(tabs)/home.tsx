@@ -24,7 +24,7 @@ import { LogoLockup, LogoMark } from "../../components/Logo";
 import { PartnerNamePrompt } from "../../components/PartnerNamePrompt";
 import { PrimaryButton } from "../../components/ui";
 import { useAuth, type Child, type Profile } from "../../lib/AuthProvider";
-import { computeAge, developmentalAgeMonths, stageLabel, stageLabelForAge, youngestChild } from "../../lib/childAge";
+import { computeAge, developmentalAgeMonths, stageLabelForAge, youngestChild } from "../../lib/childAge";
 import * as growth from "../../lib/db/growth";
 import { DOMAIN_LABEL, type Domain, type Milestone, type VaccinationScheduleItem } from "../../lib/db/types";
 import { transitionForAge } from "../../lib/growthTransitions";
@@ -1092,7 +1092,6 @@ function ForYouCard({
   topic: CareTopic | null;
 }) {
   const router = useRouter();
-  const [showWhyThis, setShowWhyThis] = useState(false);
 
   if (area && topic) {
     return (
@@ -1108,15 +1107,6 @@ function ForYouCard({
         <Text style={styles.forYouTitle}>{topic.title}</Text>
         <Text style={styles.forYouBody}>{topic.blurb}</Text>
         <Text style={styles.forYouLink}>{topic.minutes} min read →</Text>
-        <Pressable onPress={(e) => { e.stopPropagation(); setShowWhyThis((v) => !v); }} hitSlop={6}>
-          <Text style={styles.forYouWhyThis}>{showWhyThis ? "Hide" : "Why this?"}</Text>
-        </Pressable>
-        {showWhyThis && (
-          <Text style={styles.forYouWhyThisText}>
-            {area.label} is one of the areas most relevant to you right now, based on your role
-            and {stageLabel(ageMonths)}.
-          </Text>
-        )}
       </Pressable>
     );
   }
@@ -1479,16 +1469,6 @@ const styles = StyleSheet.create({
     ...type.label,
     color: "#5E7360",
     marginTop: spacing.md,
-  },
-  forYouWhyThis: {
-    ...type.meta,
-    color: colors.textMuted,
-    marginTop: spacing.sm,
-  },
-  forYouWhyThisText: {
-    ...type.meta,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
   },
   copilotModule: {
     marginTop: spacing.lg,
