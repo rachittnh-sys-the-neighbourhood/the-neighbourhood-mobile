@@ -5,7 +5,7 @@ import { ActivityVideo } from "./ActivityVideo";
 import { kitItemsFor } from "../lib/devKit";
 import { DOMAIN_LABEL, type Activity, type Domain } from "../lib/db/types";
 import { storyForActivity } from "../lib/storiesLibrary";
-import { colors, radius, spacing, type } from "../lib/theme";
+import { colors, homeType, radius, spacing, type } from "../lib/theme";
 
 /**
  * The day's activity cards — shared between Home and the Child hub so
@@ -153,28 +153,34 @@ export function FeaturedActivityCard({
     <View style={[styles.card, styles.featuredCard, highlighted && styles.tourHighlight]}>
       <Pressable
         onPress={onOpen}
-        style={styles.cardHeader}
+        style={styles.featuredCardHeader}
         accessibilityRole="button"
         accessibilityLabel={`Open ${activity.title}`}
       >
-        <View style={styles.cardCopy}>
-          <Text style={styles.domainLabel}>{DOMAIN_LABEL[activity.domain].toUpperCase()}</Text>
-          <Text style={styles.featuredTitle}>{activity.title}</Text>
+        {/* One dominant element in this card: the activity's own name,
+            with the domain eyebrow tight above it (one group). The
+            chevron sits on the title's own line now rather than paired
+            with a "tap for how & why" hint -- `activity.why` (a real,
+            existing field, "shown in the collapsed preview" per its own
+            doc comment, previously unused here) gives the card real
+            content instead, so a parent who never taps still gets the
+            what/why. That lowers the discoverability risk a bare
+            chevron carries, though it doesn't fully remove it -- worth
+            revisiting if this ever gets a real usability check. Duration
+            drops to its own row below with a clearly larger gap -- a
+            second, secondary group, separated by spacing rather than by
+            being smaller/lighter than it'd otherwise need to be. */}
+        <Text style={styles.domainLabel}>{DOMAIN_LABEL[activity.domain].toUpperCase()}</Text>
+        <View style={styles.featuredTitleRow}>
+          <Text style={[styles.featuredTitle, styles.featuredTitleFlex]}>{activity.title}</Text>
+          <ChevronRight />
         </View>
-        <View style={styles.featuredMeta}>
-          <View style={styles.duration}>
-            <ClockIcon />
-            <Text style={styles.durationText}>
-              {activity.duration_label ?? `${activity.duration_minutes} min`}
-            </Text>
-          </View>
-          {/* The only cue that this header is tappable — the chevron
-              alone read as decoration, so it's paired with the words it's
-              pointing at. */}
-          <View style={styles.featuredTapRow}>
-            <Text style={styles.featuredTapHint}>Tap for how &amp; why</Text>
-            <ChevronRight />
-          </View>
+        {activity.why && <Text style={styles.featuredWhyText}>{activity.why}</Text>}
+        <View style={[styles.duration, styles.featuredDurationRow]}>
+          <ClockIcon />
+          <Text style={styles.durationText}>
+            {activity.duration_label ?? `${activity.duration_minutes} min`}
+          </Text>
         </View>
       </Pressable>
 
@@ -480,31 +486,28 @@ const styles = StyleSheet.create({
   featuredCard: {
     padding: spacing.sm,
   },
-  // Full `title` weight, same as the collapsed and expanded views. This
-  // was previously two steps smaller than the "For you" card's heading,
-  // which inverted the hierarchy: the day's one suggested activity read
-  // as less important than an article recommendation beneath it.
+  // homeType.cardTitle -- same role FamilyMealTile's dish name uses
+  // (an entity name, full width now that duration moved to its own row
+  // below rather than sharing this line).
   featuredTitle: {
-    ...type.title,
+    ...homeType.cardTitle,
     color: colors.charcoal,
   },
-  featuredMeta: {
-    alignItems: "flex-end",
-    gap: 2,
-  },
-  // A parent who's never opened this card has no reason to assume the
-  // header is tappable — the chevron alone was too easy to miss the first
-  // time, so this spells it out once, right-aligned under the duration
-  // it sits beneath.
-  featuredTapRow: {
+  featuredTitleRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    marginTop: 1,
+    alignItems: "flex-start",
+    gap: spacing.sm,
   },
-  featuredTapHint: {
-    ...type.meta,
+  featuredTitleFlex: {
+    flex: 1,
+  },
+  // activity.why -- real content, not filler, so it earns bodyText's
+  // size rather than being squeezed to meta. Muted rather than charcoal
+  // since the title above it is still the one dominant element.
+  featuredWhyText: {
+    ...homeType.action,
     color: colors.textMuted,
+    marginTop: spacing.xs,
   },
   // A footer row rather than a floating pill — full-width and divided by
   // a hairline, so it reads as part of the card instead of a stray
@@ -519,8 +522,11 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
+  // homeType.action -- kept in muted warmTaupe (not the link/primary
+  // green) so it stays a secondary option, never competing with the
+  // featured activity's own title above it.
   moreIdeasRowText: {
-    ...type.label,
+    ...homeType.action,
     color: colors.warmTaupe,
   },
   // Points down instead of right once the list is open, so the chevron
@@ -529,13 +535,18 @@ const styles = StyleSheet.create({
   moreIdeasChevronOpen: {
     transform: [{ rotate: "90deg" }],
   },
+  // Shared by the featured, collapsed and expanded headers -- same
+  // eyebrow role everywhere this domain tag appears.
   domainLabel: {
-    ...type.eyebrow,
+    ...homeType.eyebrow,
     color: colors.warmTaupe,
     marginBottom: 3,
   },
+  // The expanded card's own collapsed header -- homeType.cardTitle, same
+  // role as featuredTitle above, so an activity's name reads identically
+  // whichever of these three views is showing it.
   title: {
-    ...type.title,
+    ...homeType.cardTitle,
     color: colors.charcoal,
   },
   blockLabel: {
@@ -624,13 +635,26 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   cardCopy: { flex: 1 },
+  // Column, not a row -- only FeaturedActivityCard uses this (not the
+  // shared cardHeader above), since its title gets the card's full width
+  // instead of splitting it with duration/tap-hint on the same line.
+  featuredCardHeader: {
+    flexDirection: "column",
+  },
+  // Separates the duration from the title/why group above it -- a
+  // clearly bigger gap than the tight one between the title and its own
+  // why-text, since duration is a different, secondary kind of
+  // information (metadata, not content).
+  featuredDurationRow: {
+    marginTop: spacing.sm,
+  },
   duration: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
   durationText: {
-    ...type.meta,
+    ...homeType.meta,
     color: colors.textMuted,
   },
   actionRow: {

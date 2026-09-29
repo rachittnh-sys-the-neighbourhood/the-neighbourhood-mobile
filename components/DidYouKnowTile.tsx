@@ -4,7 +4,7 @@ import { Linking, Platform, Pressable, Share, StyleSheet, Text, View } from "rea
 import ViewShot from "react-native-view-shot";
 import * as dyk from "../lib/db/dyk";
 import type { DidYouKnowFact } from "../lib/db/types";
-import { colors, fonts, palettes, radius, spacing, type } from "../lib/theme";
+import { colors, homeType, palettes, radius, spacing, type } from "../lib/theme";
 import { LogoMark } from "./Logo";
 
 /** The one link every share carries — the app is a PWA hosted here (see
@@ -226,17 +226,15 @@ const styles = StyleSheet.create({
     borderColor: "rgba(60, 80, 62, 0.16)",
   },
   eyebrow: {
-    ...type.eyebrow,
+    ...homeType.eyebrow,
     color: palettes.parent.primary,
     paddingHorizontal: spacing.xs,
   },
   text: {
-    // Same size/line-height as type.title, just not bold -- the fact
-    // itself doesn't need to shout, and the lighter weight reads as more
-    // spacious even at the same line count.
-    fontFamily: fonts.bodyMedium,
-    fontSize: type.title.fontSize,
-    lineHeight: type.title.lineHeight,
+    // homeType.bodyText (16/400) -- a descriptive sentence, not an
+    // entity name, so regular weight rather than the cardTitle role
+    // used for the meal/activity NAME below on Home.
+    ...homeType.bodyText,
     color: colors.charcoal,
     marginTop: spacing.xs,
     paddingHorizontal: spacing.xs,
@@ -256,11 +254,11 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   link: {
-    ...type.label,
+    ...homeType.action,
     color: palettes.parent.primary,
   },
   sourceText: {
-    ...type.meta,
+    ...homeType.meta,
     color: colors.textMuted,
     marginTop: spacing.sm,
     paddingHorizontal: spacing.xs,
