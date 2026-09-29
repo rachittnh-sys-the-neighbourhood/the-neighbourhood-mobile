@@ -6,6 +6,7 @@ import { PrimaryButton } from "../components/ui";
 import { useAuth } from "../lib/AuthProvider";
 import { hasCompletedFirstRun } from "../lib/firstRun";
 import { reloadApp } from "../lib/reload";
+import { landedFromAuthRedirectNotStandalone } from "../lib/supabase";
 import { colors, spacing, type } from "../lib/theme";
 import { useStuckWatchdog } from "../lib/useStuckWatchdog";
 
@@ -32,6 +33,9 @@ export default function Index() {
   const { session, loading, familyLoading, child, profile, connectionError } = useAuth();
   const [firstRunChecked, setFirstRunChecked] = useState(false);
   const [firstRunComplete, setFirstRunComplete] = useState(false);
+  // Only ever true once per real page load (landedFromAuthRedirectNotStandalone
+  // is computed once at module load, not per-render) — see lib/supabase.ts.
+  const [standaloneNoticeDismissed, setStandaloneNoticeDismissed] = useState(false);
   const isLoadingGate = loading || (session && familyLoading) || (child && !firstRunChecked);
   // The very first thing this app does is `supabase.auth.getSession()` —
   // if a stored session's refresh token hangs the client instead of
@@ -85,6 +89,34 @@ export default function Index() {
     );
   }
 
+  // A parent who started Google/Apple sign-in from the installed Home
+  // Screen icon can get handed off to a regular browser tab for the
+  // provider's consent screen — iOS's own platform behavior, not
+  // something this app controls (see lib/supabase.ts). Rather than
+  // silently continuing in a plain tab (confusing if this device's
+  // storage isn't actually shared with the standalone icon), say so
+  // once and let the parent choose: reopen the icon, or continue here.
+  if (session && landedFromAuthRedirectNotStandalone && !standaloneNoticeDismissed) {
+    return (
+      <View style={styles.gate}>
+        <LogoMark size={40} />
+        <Text style={styles.standaloneTitle}>You&rsquo;re signed in.</Text>
+        <Text style={styles.stuckText}>
+          This opened in your browser instead of your Home Screen icon. If
+          you started from that icon, reopen it now to make sure you stay
+          signed in there too — or continue here.
+        </Text>
+        <View style={styles.stuckReload}>
+          <PrimaryButton
+            tone="accent"
+            title="Continue here"
+            onPress={() => setStandaloneNoticeDismissed(true)}
+          />
+        </View>
+      </View>
+    );
+  }
+
   // Only meaningful when a session exists — it's set by the server fetch.
   if (session && connectionError) return <Redirect href="/connection-error" />;
 
@@ -105,6 +137,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cream,
     paddingHorizontal: spacing.xl,
     gap: spacing.md,
+  },
+  standaloneTitle: {
+    ...type.title,
+    color: colors.charcoal,
   },
   stuckText: {
     ...type.body,

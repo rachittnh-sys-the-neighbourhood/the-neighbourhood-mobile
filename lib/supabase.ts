@@ -2,6 +2,7 @@ import "react-native-url-polyfill/auto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
 import { AppState, Platform } from "react-native";
+import { isStandalonePWA } from "./platform";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -41,6 +42,23 @@ export const initialAuthCallbackError: string | null = (() => {
   const error = params.get("error");
   if (!description && !error) return null;
   return (description || error || "Sign-in didn't go through.").replace(/\+/g, " ");
+})();
+
+/**
+ * Whether this page load looks like the tail end of an OAuth redirect
+ * (Google/Apple via Supabase) that landed OUTSIDE an installed Home
+ * Screen app's standalone context. iOS's own platform behavior can hand
+ * a third-party sign-in redirect off to a regular Safari tab instead of
+ * keeping it inside the installed icon's window — that isn't something
+ * client code can prevent, but it can be detected and explained rather
+ * than left confusing. `document.referrer` still points at Supabase's
+ * hosted auth domain at this exact moment; read it here, at module
+ * load, before any navigation this page does can clear it. See
+ * app/index.tsx for where this is used.
+ */
+export const landedFromAuthRedirectNotStandalone: boolean = (() => {
+  if (Platform.OS !== "web" || typeof document === "undefined") return false;
+  return document.referrer.includes("supabase.co") && !isStandalonePWA();
 })();
 
 // Same project the website's waitlist already uses (kvayhcablmsorycpqmkg) —

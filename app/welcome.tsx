@@ -19,6 +19,7 @@ import { useAuth } from "../lib/AuthProvider";
 import { EMAIL_OTP_READY } from "../lib/authMode";
 import * as session from "../lib/db/session";
 import { useOnboarding } from "../lib/OnboardingProvider";
+import { isStandalonePWA } from "../lib/platform";
 import { colors, fonts, radius, spacing, typeScale } from "../lib/theme";
 
 /**
@@ -57,6 +58,11 @@ export default function Welcome() {
   const [busyProvider, setBusyProvider] = useState<"apple" | "google" | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [appleAvailable, setAppleAvailable] = useState(false);
+  // Set expectations before Google's redirect can hand the parent off to
+  // a regular browser tab -- iOS's own platform behavior for an installed
+  // Home Screen icon, not something this app can prevent (see
+  // lib/platform.ts and app/index.tsx's matching return-trip notice).
+  const [isStandalone] = useState(() => Platform.OS === "web" && isStandalonePWA());
 
   useEffect(() => {
     if (Platform.OS !== "ios") return;
@@ -248,6 +254,13 @@ export default function Welcome() {
             </>
           )}
         </Pressable>
+
+        {isStandalone && !authError && (
+          <Text style={styles.standaloneHint}>
+            This will briefly open your browser to sign in — come back to
+            this Home Screen icon afterward.
+          </Text>
+        )}
 
         {authError && <Text style={styles.authError}>{authError}</Text>}
 
@@ -455,6 +468,13 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: typeScale.caption,
     color: colors.error,
+    textAlign: "center",
+    marginTop: spacing.xs,
+  },
+  standaloneHint: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.caption,
+    color: colors.textMuted,
     textAlign: "center",
     marginTop: spacing.xs,
   },
