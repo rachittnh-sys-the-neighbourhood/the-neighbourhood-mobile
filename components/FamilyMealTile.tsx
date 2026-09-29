@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import * as familyMeals from "../lib/db/familyMeals";
 import type { DietaryPreference } from "../lib/parentCare";
 import type { FamilyMeal } from "../lib/db/types";
-import { colors, radius, spacing, type } from "../lib/theme";
+import { colors, homeType, radius, spacing } from "../lib/theme";
 
 function slotForHour(hour: number): familyMeals.FamilyMealSlot {
   if (hour < 10) return "breakfast";
@@ -66,8 +66,17 @@ export function FamilyMealTile({
       style={({ pressed }) => [styles.card, pressed && { opacity: 0.75 }]}
     >
       <Text style={styles.eyebrow}>FAMILY MEAL</Text>
-      <Text style={styles.title}>{meal.name}</Text>
-      <Text style={styles.link}>See today's meals ›</Text>
+      <View style={styles.titleRow}>
+        {/* Same row as the link now, matching the reference layout --
+            but the real data has names up to "Chicken Vegetable Curry
+            Rice" (28 chars), which won't fit beside "See today's meals"
+            at full size. numberOfLines+ellipsis lets it truncate
+            gracefully instead of wrapping into the link or overflowing. */}
+        <Text style={[styles.title, styles.titleFlex]} numberOfLines={1} ellipsizeMode="tail">
+          {meal.name}
+        </Text>
+        <Text style={styles.link}>See today's meals ›</Text>
+      </View>
       <Text style={styles.disclaimer}>Under expert review</Text>
     </Pressable>
   );
@@ -85,21 +94,35 @@ const styles = StyleSheet.create({
     borderColor: "rgba(96, 79, 60, 0.10)",
   },
   eyebrow: {
-    ...type.eyebrow,
+    ...homeType.eyebrow,
     color: colors.warmTaupe,
   },
-  title: {
-    ...type.title,
-    color: colors.charcoal,
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
     marginTop: spacing.sm,
   },
+  titleFlex: {
+    flex: 1,
+  },
+  // homeType.cardTitle -- the exact same role "Gentle Wrist Turns" uses
+  // (components/ActivityCard.tsx featuredTitle), since both are entity
+  // names (a dish, an activity) that should read as the same weight of
+  // "thing" regardless of which tile they're in.
+  title: {
+    ...homeType.cardTitle,
+    color: colors.charcoal,
+  },
   link: {
-    ...type.label,
+    ...homeType.action,
     color: colors.sageDark,
-    marginTop: spacing.md,
+    flexShrink: 0,
   },
   disclaimer: {
-    ...type.meta,
+    // homeType.meta (14px) -- "Under expert review" is trust-critical
+    // copy, not shrunk to save space.
+    ...homeType.meta,
     color: colors.textMuted,
     marginTop: spacing.xs,
   },

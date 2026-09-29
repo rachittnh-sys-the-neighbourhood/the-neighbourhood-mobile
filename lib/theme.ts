@@ -186,3 +186,50 @@ export const type = {
   /** Metadata and fine print. Never body copy. */
   meta: { fontFamily: fonts.body, fontSize: 11, lineHeight: 16 },
 } as const;
+
+/**
+ * Home's own revised scale -- deliberately separate from `type` above
+ * rather than redefining `body`/`label`/`eyebrow` in place. Those shared
+ * roles are load-bearing across the Family Meal Planner, You tab and
+ * Milestones screens tuned earlier this same project; changing them here
+ * would resize text on every one of those screens as a side effect. This
+ * scale exists to close two problems on Home specifically: the old
+ * `display` role (26/700) sat as a cliff above everything else on the
+ * page with nothing between it and `title` (17px), and the smallest
+ * roles (`eyebrow`/`meta` at 11px) read uncomfortably small for a
+ * screen a tired parent skims one-handed. So this compresses BOTH ends
+ * toward the middle rather than just inserting one more step.
+ *
+ * Shared by home.tsx and the Home-adjacent components it composes
+ * (DidYouKnowTile, FamilyMealTile, ActivityCard -- the last of which is
+ * also reused on the Child tab, so this scale reaches there too).
+ */
+export const homeType = {
+  /** The one greeting line at the very top. Never two intro treatments. */
+  pageHeading: { fontFamily: fonts.bodySemiBold, fontSize: 24, lineHeight: 30 },
+  /** A card's own heading, one step under the page heading. */
+  sectionHeading: { fontFamily: fonts.bodySemiBold, fontSize: 20, lineHeight: 26 },
+  /** An entity name -- an activity, a dish -- never a sentence. */
+  cardTitle: { fontFamily: fonts.bodySemiBold, fontSize: 18, lineHeight: 24 },
+  /** A descriptive sentence, not an entity name -- regular weight, same
+   *  size class as cardTitle so the two only differ in what they say,
+   *  not how loud they are. */
+  bodyText: { fontFamily: fonts.body, fontSize: 16, lineHeight: 24 },
+  /** Links and secondary taps -- Regular weight, not Medium. Color (green
+   *  or warmTaupe, depending on context) is what signals "this is
+   *  actionable" -- it doesn't also need to be heavier than bodyText, or
+   *  a secondary link ends up competing with the card's actual content
+   *  instead of sitting quietly beneath it. */
+  action: { fontFamily: fonts.body, fontSize: 15, lineHeight: 20 },
+  /** Metadata, duration, disclaimers, safety copy -- deliberately NOT
+   *  shrunk to save space; legibility on trust/safety text wins over
+   *  density every time on this screen. */
+  meta: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
+  eyebrow: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+  },
+} as const;

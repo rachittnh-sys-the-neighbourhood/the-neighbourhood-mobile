@@ -47,7 +47,7 @@ import { reloadApp } from "../../lib/reload";
 import { useGuidedTourStep } from "../../lib/useGuidedTourStep";
 import { useStuckWatchdog } from "../../lib/useStuckWatchdog";
 import { useTodaysPlan } from "../../lib/useTodaysPlan";
-import { colors, radius, spacing, type } from "../../lib/theme";
+import { colors, homeType, radius, spacing, type } from "../../lib/theme";
 
 function greetingWord(hour: number): string {
   if (hour < 5) return "Good night";
@@ -89,8 +89,13 @@ export default function Home() {
     tourComplete?: string;
     replay?: string;
   }>();
-  const { child, children: kids, parentName, profile: authProfile, session, refreshFamily } = useAuth();
+  const { child, children: kids, parentName, profile: authProfile, session, refreshFamily, setActiveChild } = useAuth();
   const [coachVisible, setCoachVisible] = useState(false);
+  // The child chip on Home is a real switcher, not decoration -- only
+  // shown as one when there's actually more than one child to switch
+  // between (child/index.tsx already has its own switcher for this same
+  // `setActiveChild`; this is a second, lighter-weight entry point).
+  const [childPickerOpen, setChildPickerOpen] = useState(false);
   const [coachStep, setCoachStep] = useState(0);
   const [showTourDone, setShowTourDone] = useState(params.tourComplete === "1");
   const [nextVaccination, setNextVaccination] = useState<VaccinationScheduleItem | null>(null);
@@ -421,23 +426,55 @@ export default function Home() {
             ],
           }}
         >
-          {/* Date orients the day; greeting and intro stay smaller than the
-              activity title, which is the loudest thing on screen. */}
-          <Text style={styles.dateLine}>{todayLabel()}</Text>
+          {/* Heading first, date second and muted beneath it -- what
+              matters (the greeting) leads, orientation (the date)
+              follows. No separate italic voice here (Playfair is
+              reserved for rare editorial moments elsewhere). */}
           <Text style={styles.greeting}>
             {greetingWord(new Date().getHours())}
             {parentName ? `, ${parentName.split(" ")[0]}` : ""}.
           </Text>
-          <View style={styles.introRow}>
-            <Text style={styles.familyIntro}>Today with your family.</Text>
-            {age && (
-              <View style={styles.stageChip}>
+          <Text style={styles.dateLine}>{todayLabel()}</Text>
+          {age && (
+            <View style={styles.introRow}>
+              {/* A real switcher, not a static label, when there's
+                  actually more than one child -- setActiveChild already
+                  exists and is used the same way on the Child tab. A
+                  single-child family gets the plain chip with no
+                  chevron, since there's nothing to switch to. */}
+              <Pressable
+                onPress={() => kids.length > 1 && setChildPickerOpen((v) => !v)}
+                style={styles.stageChip}
+                accessibilityRole={kids.length > 1 ? "button" : undefined}
+                accessibilityLabel={kids.length > 1 ? "Switch child" : undefined}
+              >
                 <Text style={styles.stageChipText}>
                   {child.name} · {age.label}
                 </Text>
-              </View>
-            )}
-          </View>
+                {kids.length > 1 && (
+                  <View style={childPickerOpen && styles.chipChevronOpen}>
+                    <ChevronDown />
+                  </View>
+                )}
+              </Pressable>
+            </View>
+          )}
+          {childPickerOpen && kids.length > 1 && (
+            <View style={styles.childPicker}>
+              {kids.map((kid) => (
+                <Pressable
+                  key={kid.id}
+                  onPress={() => {
+                    setActiveChild(kid.id);
+                    setChildPickerOpen(false);
+                  }}
+                  style={[styles.childPickerRow, kid.id === child.id && styles.childPickerRowActive]}
+                >
+                  <Text style={styles.childPickerRowText}>{kid.name}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
 
           {/* A one-time nudge for a father whose profile predates the
               partner-name onboarding question (or who skipped it) — see
@@ -1142,6 +1179,20 @@ function ChevronRight() {
   );
 }
 
+function ChevronDown() {
+  return (
+    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M5 9l7 7 7-7"
+        stroke={colors.warmTaupe}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
   inner: {
@@ -1170,36 +1221,69 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
 
-  // Header — stepped down so the activity title is the largest text here.
-  dateLine: {
-    ...type.meta,
-    color: colors.textMuted,
-    marginBottom: 2,
-  },
+  // Header — one page heading (homeType.pageHeading) instead of three
+  // stacked intro treatments (meta date / semibold greeting / separate
+  // italic line). Heading leads now, date follows underneath it -- what
+  // matters (the greeting) reads first, orientation (the date) second.
+  // The child chip gets its own row below rather than sitting inline
+  // with a headline.
   greeting: {
-    ...type.label,
+    ...homeType.pageHeading,
     color: colors.charcoal,
+  },
+  dateLine: {
+    // Bigger than the old 11px meta role -- reads as a real second line
+    // under the heading, not a barely-there footnote.
+    ...homeType.bodyText,
+    color: colors.textMuted,
+    marginTop: 2,
   },
   introRow: {
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
     gap: spacing.sm,
-    marginTop: 2,
-  },
-  familyIntro: {
-    ...type.serif,
-    color: colors.charcoal,
+    marginTop: spacing.sm,
   },
   stageChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderRadius: radius.pill,
     backgroundColor: "rgba(137, 116, 91, 0.1)",
   },
   stageChipText: {
-    ...type.meta,
+    ...homeType.meta,
     color: colors.warmTaupe,
+  },
+  chipChevronOpen: {
+    transform: [{ rotate: "180deg" }],
+  },
+  // A lightweight inline dropdown rather than a modal -- switching child
+  // is a quick, low-stakes action that doesn't need to take over the
+  // screen (the Child tab's own switcher is the fuller version of this).
+  childPicker: {
+    marginTop: spacing.xs,
+    borderRadius: radius.md,
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    overflow: "hidden",
+    alignSelf: "flex-start",
+    minWidth: 160,
+  },
+  childPickerRow: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  childPickerRowActive: {
+    backgroundColor: "rgba(137, 116, 91, 0.08)",
+  },
+  childPickerRowText: {
+    ...homeType.action,
+    color: colors.charcoal,
   },
 
   dykWrap: {
@@ -1228,7 +1312,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   sectionLabel: {
-    ...type.eyebrow,
+    ...homeType.eyebrow,
     color: colors.warmTaupe,
   },
 
@@ -1249,8 +1333,11 @@ const styles = StyleSheet.create({
     borderColor: "rgba(96, 79, 60, 0.12)",
   },
   planHero: { paddingHorizontal: spacing.xs },
+  // homeType.sectionHeading (20/600), not the old display role (26/700) —
+  // still the loudest thing in this card, just no longer a cliff above
+  // the 18px card titles two tiles down.
   planTitle: {
-    ...type.display,
+    ...homeType.sectionHeading,
     color: colors.charcoal,
     marginTop: spacing.xs,
   },
@@ -1291,7 +1378,9 @@ const styles = StyleSheet.create({
   },
 
   safetyNote: {
-    ...type.meta,
+    // homeType.meta (14px), not the old 11px meta -- safety/guidance
+    // copy stays readable rather than being shrunk to save space.
+    ...homeType.meta,
     // Sits directly on the softSand childSection background (not a white
     // sub-card), so this needs more contrast than textMuted gives.
     color: colors.charcoal,
