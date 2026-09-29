@@ -539,8 +539,8 @@ const styles = StyleSheet.create({
   moreIdeasRow: {
     flexDirection: "row",
     alignItems: "center",
-    // Right side only, not space-between across the full row width.
-    justifyContent: "flex-end",
+    // Left side only, not space-between across the full row width.
+    justifyContent: "flex-start",
     gap: 2,
     minHeight: 32,
     marginTop: spacing.xs,

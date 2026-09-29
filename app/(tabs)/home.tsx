@@ -752,9 +752,7 @@ function ChildDayActivities({
           <>
             <View style={styles.list}>{activities.map(renderActivityRow)}</View>
 
-            <Text style={styles.safetyNote}>
-              General guidance; take what works, skip what doesn&rsquo;t.
-            </Text>
+            <Text style={styles.safetyNote}>Guidelines, not rules. Adapt freely.</Text>
 
             <EndOfDay
               childName={child.name}
@@ -806,9 +804,7 @@ function ChildDayActivities({
               <View style={styles.list}>{otherActivities.map(renderActivityRow)}</View>
             )}
 
-            <Text style={styles.safetyNote}>
-              General guidance; take what works, skip what doesn&rsquo;t.
-            </Text>
+            <Text style={styles.safetyNote}>Guidelines, not rules. Adapt freely.</Text>
           </>
         )}
       </View>
