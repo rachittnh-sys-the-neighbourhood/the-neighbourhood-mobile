@@ -16,7 +16,7 @@ import {
 import Svg, { Path } from "react-native-svg";
 import { ActivityCollapsedRow, ActivityDoneRow, ActivityExpandedCard, EndOfDay, FeaturedActivityCard } from "../../components/ActivityCard";
 import { DidYouKnowTile } from "../../components/DidYouKnowTile";
-import { HandIcon, HeartIcon, LeafIcon } from "../../components/HomeTileIcons";
+import { FlagIcon, HandIcon, PersonIcon } from "../../components/HomeTileIcons";
 import { SparkleMark } from "../../components/TabIcons";
 import { FamilyMealTile } from "../../components/FamilyMealTile";
 import { GuidedTourDialog } from "../../components/GuidedTourDialog";
@@ -534,7 +534,7 @@ export default function Home() {
           <SectionLabel accent={colors.softSand}>What's next</SectionLabel>
           {reminder ? (
             <DiscoveryRow
-              icon={<LeafIcon size={14} color={colors.warmTaupe} />}
+              icon={<FlagIcon size={14} color={colors.warmTaupe} />}
               eyebrow="Vaccination"
               title={reminder.title}
               body={reminder.body}
@@ -542,7 +542,7 @@ export default function Home() {
             />
           ) : milestoneRecommendation ? (
             <DiscoveryRow
-              icon={<LeafIcon size={14} color={colors.warmTaupe} />}
+              icon={<FlagIcon size={14} color={colors.warmTaupe} />}
               eyebrow={milestoneRecommendation.eyebrow}
               title={milestoneRecommendation.title}
               body={milestoneRecommendation.body}
@@ -550,7 +550,7 @@ export default function Home() {
             />
           ) : (
             <DiscoveryRow
-              icon={<LeafIcon size={14} color={colors.warmTaupe} />}
+              icon={<FlagIcon size={14} color={colors.warmTaupe} />}
               eyebrow={transitionRecommendation.eyebrow}
               title={transitionRecommendation.title}
               body={transitionRecommendation.body}
@@ -1102,7 +1102,7 @@ function ForYouCard({
         style={({ pressed }) => [styles.forYouCard, pressed && { opacity: 0.75 }]}
       >
         <View style={styles.forYouEyebrowRow}>
-          <HeartIcon size={14} color={styles.forYouEyebrow.color} />
+          <PersonIcon size={14} color={styles.forYouEyebrow.color} />
           <Text style={styles.forYouEyebrow}>{area.label}</Text>
         </View>
         <Text style={styles.forYouTitle}>{topic.title}</Text>
@@ -1129,7 +1129,7 @@ function ForYouCard({
       style={({ pressed }) => [styles.forYouCard, pressed && { opacity: 0.75 }]}
     >
       <View style={styles.forYouEyebrowRow}>
-        <HeartIcon size={14} color={styles.forYouEyebrow.color} />
+        <PersonIcon size={14} color={styles.forYouEyebrow.color} />
         <Text style={styles.forYouEyebrow}>While {childName} plays</Text>
       </View>
       <Text style={styles.forYouTitle}>{bridge.parentOffer}</Text>

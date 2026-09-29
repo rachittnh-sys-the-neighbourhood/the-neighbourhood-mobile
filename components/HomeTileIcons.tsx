@@ -66,12 +66,22 @@ export function BowlIcon({ size = 16, color }: IconProps) {
   );
 }
 
-/** "For dads"/ForYouCard -- same heart shape the Child tab icon uses. */
-export function HeartIcon({ size = 16, color }: IconProps) {
+/** ForYouCard -- a plain head-and-shoulders silhouette, deliberately not
+ *  the heart shape the Child tab icon uses: this card rotates between
+ *  "For dads", a mother's own recovery content, and other parent-neutral
+ *  self-care topics, so its icon needs to read as "about you, the
+ *  parent" regardless of who's looking at it, not as romance/relationships. */
+export function PersonIcon({ size = 16, color }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
-        d="M12 19.5c0 0-8-5-8-11.2C4 5 6.2 3 9 3c1.4 0 2.7.7 3 1.8C12.3 3.7 13.6 3 15 3c2.8 0 5 2 5 5.3 0 6.2-8 11.2-8 11.2Z"
+        d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
+        stroke={color}
+        strokeWidth={1.6}
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M4.5 20c1-3.9 4.2-6 7.5-6s6.5 2.1 7.5 6"
         stroke={color}
         strokeWidth={1.6}
         strokeLinecap="round"
@@ -81,21 +91,20 @@ export function HeartIcon({ size = 16, color }: IconProps) {
   );
 }
 
-/** WHAT'S NEXT row -- same leaf shape the You tab icon uses. */
-export function LeafIcon({ size = 16, color }: IconProps) {
+/** WHAT'S NEXT row -- a small flag: this row rotates between "Worth
+ *  knowing", an upcoming milestone to watch for, a vaccination due, and a
+ *  new developmental stage, so the icon needs to read as "flagged for
+ *  your attention" across all four rather than any one of them
+ *  specifically. */
+export function FlagIcon({ size = 16, color }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
-        d="M12 13.5c0-4 2.6-7 6.5-7.5.4 3.9-1.7 7.6-6.5 7.5Z"
-        stroke={color}
-        strokeWidth={1.6}
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M12 21v-7.5M12 14c-.4-2.7-2-4.4-4.5-4.8"
+        d="M6 21V4M6 5h11l-3 3.5L17 12H6"
         stroke={color}
         strokeWidth={1.6}
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </Svg>
   );
