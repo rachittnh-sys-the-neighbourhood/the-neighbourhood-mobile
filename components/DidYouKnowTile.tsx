@@ -234,10 +234,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   // The lightbulb leads the fact text -- no eyebrow anymore, so this is
-  // the card's first row.
+  // the card's first row. Centered rather than top-aligned: the icon
+  // reads as sitting in line with the text rather than pinned to its
+  // first line specifically.
   factRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: spacing.sm,
     paddingHorizontal: spacing.xs,
   },

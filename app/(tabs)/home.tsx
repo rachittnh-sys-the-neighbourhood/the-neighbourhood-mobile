@@ -20,7 +20,7 @@ import { HandIcon, HeartIcon, LeafIcon } from "../../components/HomeTileIcons";
 import { SparkleMark } from "../../components/TabIcons";
 import { FamilyMealTile } from "../../components/FamilyMealTile";
 import { GuidedTourDialog } from "../../components/GuidedTourDialog";
-import { LogoMark } from "../../components/Logo";
+import { LogoLockup, LogoMark } from "../../components/Logo";
 import { PartnerNamePrompt } from "../../components/PartnerNamePrompt";
 import { PrimaryButton } from "../../components/ui";
 import { useAuth, type Child, type Profile } from "../../lib/AuthProvider";
@@ -146,7 +146,7 @@ export default function Home() {
   // finishing onboarding, until the real Home content is ready.
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerTitle: () => (isLoadingGate ? null : <LogoMark size={26} />),
+      headerTitle: () => (isLoadingGate ? null : <LogoLockup />),
     });
   }, [navigation, isLoadingGate]);
 
@@ -395,7 +395,7 @@ export default function Home() {
 
   const milestoneRecommendation = nextMilestone
     ? {
-        eyebrow: `WATCH FOR · ${DOMAIN_LABEL[nextMilestone.domain].toUpperCase()}`,
+        eyebrow: `Watch for · ${DOMAIN_LABEL[nextMilestone.domain]}`,
         title: nextMilestone.description,
         body: "Typical for this age. No rush, just something to notice.",
         onPress: () => router.push("/child/milestones"),
@@ -411,7 +411,7 @@ export default function Home() {
   // the other two does.
   const transitionNote = transitionForAge(recoveryAgeMonths);
   const transitionRecommendation = {
-    eyebrow: "WORTH KNOWING",
+    eyebrow: "Worth knowing",
     title: transitionNote.title,
     body: transitionNote.body,
     onPress: () => router.push("/child/milestones"),
@@ -516,7 +516,7 @@ export default function Home() {
 
           <CopilotHomeCard onPress={(prompt) => router.push(prompt ? `/ask?prompt=${encodeURIComponent(prompt)}` : "/ask")} />
 
-          <SectionLabel accent="#5E7360">FOR YOU</SectionLabel>
+          <SectionLabel accent="#5E7360">For you</SectionLabel>
           <ForYouCard
             childName={child.name}
             ageMonths={ageMonths}
@@ -531,11 +531,11 @@ export default function Home() {
               outstanding milestone for the current age; and finally the
               guaranteed transition note, so this section never just
               disappears for a stretch with nothing due or unachieved. */}
-          <SectionLabel accent={colors.softSand}>WHAT'S NEXT</SectionLabel>
+          <SectionLabel accent={colors.softSand}>What's next</SectionLabel>
           {reminder ? (
             <DiscoveryRow
               icon={<LeafIcon size={14} color={colors.warmTaupe} />}
-              eyebrow="VACCINATION"
+              eyebrow="Vaccination"
               title={reminder.title}
               body={reminder.body}
               onPress={reminder.onPress}
@@ -565,9 +565,9 @@ export default function Home() {
               onboarding-style flow. */}
           {milestoneStageNudge && (
             <>
-              <SectionLabel accent={colors.softSand}>NEW STAGE</SectionLabel>
+              <SectionLabel accent={colors.softSand}>New stage</SectionLabel>
               <DiscoveryRow
-                eyebrow={milestoneStageNudge.stage.toUpperCase()}
+                eyebrow={milestoneStageNudge.stage}
                 title={`${milestoneStageNudge.count} ${milestoneStageNudge.count === 1 ? "thing" : "things"} to check for`}
                 body="A few milestones from this stage haven't been marked yet."
                 onPress={() => router.push("/child/milestones")}
@@ -1103,7 +1103,7 @@ function ForYouCard({
       >
         <View style={styles.forYouEyebrowRow}>
           <HeartIcon size={14} color={styles.forYouEyebrow.color} />
-          <Text style={styles.forYouEyebrow}>{area.label.toUpperCase()}</Text>
+          <Text style={styles.forYouEyebrow}>{area.label}</Text>
         </View>
         <Text style={styles.forYouTitle}>{topic.title}</Text>
         <Text style={styles.forYouBody}>{topic.blurb}</Text>
@@ -1130,7 +1130,7 @@ function ForYouCard({
     >
       <View style={styles.forYouEyebrowRow}>
         <HeartIcon size={14} color={styles.forYouEyebrow.color} />
-        <Text style={styles.forYouEyebrow}>WHILE {childName.toUpperCase()} PLAYS</Text>
+        <Text style={styles.forYouEyebrow}>While {childName} plays</Text>
       </View>
       <Text style={styles.forYouTitle}>{bridge.parentOffer}</Text>
       <Text style={styles.forYouBody}>{bridge.detail}</Text>
@@ -1147,7 +1147,7 @@ function CopilotHomeCard({ onPress }: { onPress: (prompt: string) => void }) {
     <View style={styles.copilotModule}>
       <View style={styles.copilotEyebrowRow}>
         <SparkleMark size={14} color={colors.warmTaupe} />
-        <Text style={styles.copilotEyebrow}>ASK</Text>
+        <Text style={styles.copilotEyebrow}>Ask</Text>
       </View>
       <Text style={styles.copilotQuestion}>What would you like help with today?</Text>
       <View style={styles.copilotComposer}>
@@ -1462,7 +1462,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   forYouEyebrow: {
-    ...type.eyebrow,
+    ...homeType.eyebrow,
     color: "#5E7360",
   },
   forYouTitle: {
@@ -1502,7 +1502,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   copilotEyebrow: {
-    ...type.eyebrow,
+    ...homeType.eyebrow,
     color: colors.warmTaupe,
   },
   copilotQuestion: {
@@ -1558,7 +1558,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   discoveryEyebrow: {
-    ...type.eyebrow,
+    ...homeType.eyebrow,
     color: colors.warmTaupe,
   },
   discoveryRowTitle: {
