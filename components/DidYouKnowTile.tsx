@@ -10,8 +10,9 @@ import { LogoMark } from "./Logo";
 /** The one link every share carries — the app is a PWA hosted here (see
  *  app/welcome.tsx, which already links Terms/Privacy off this same
  *  domain), so this is the correct destination for someone who doesn't
- *  have the app yet, not an app-store link that doesn't exist. */
-const SHARE_URL = "https://www.theneighbourhood.co.in";
+ *  have the app yet, not an app-store link that doesn't exist. Written
+ *  out bare (no https://www.) since that's the exact wording the share
+ *  copy uses — most messaging apps auto-linkify a bare domain anyway. */
 const SHARE_URL_LABEL = "theneighbourhood.co.in";
 
 /**
@@ -51,7 +52,6 @@ export function DidYouKnowTile({
   role: "mother" | "father" | "prefer_not_to_say";
 }) {
   const [pool, setPool] = useState<DidYouKnowFact[] | null>(null);
-  const [offset, setOffset] = useState(0);
   const [showSource, setShowSource] = useState(false);
   const [preparingShare, setPreparingShare] = useState(false);
   const shotRef = useRef<ViewShot>(null);
@@ -71,10 +71,13 @@ export function DidYouKnowTile({
     };
   }, [ageMonths, role]);
 
+  // No manual "show me another one" control anymore -- pickFactIndex's
+  // own day-seeded hash still rotates the fact day to day on its own,
+  // this just no longer takes a within-session nudge on top of it.
   const fact = useMemo(() => {
     if (!pool || pool.length === 0) return null;
-    return pool[dyk.pickFactIndex(pool.length, offset)];
-  }, [pool, offset]);
+    return pool[dyk.pickFactIndex(pool.length, 0)];
+  }, [pool]);
 
   if (!fact) return null;
 
@@ -82,7 +85,7 @@ export function DidYouKnowTile({
   const heading = fact.header || "Did you know?";
   // Just the fact itself -- the heading ("Sound familiar?" etc.) is a
   // label for the on-screen card, not part of the thing worth sharing.
-  const textMessage = `${fact.card_text}\n\nJoin us at ${SHARE_URL} to start your parenting journey with us.`;
+  const textMessage = `${fact.card_text}\n\nUnderstand their world before they have the words. Build your village at ${SHARE_URL_LABEL}.`;
 
   const share = async () => {
     // Neither react-native-view-shot's capture nor expo-sharing's image
@@ -131,34 +134,21 @@ export function DidYouKnowTile({
     <View style={styles.card}>
       <Text style={styles.eyebrow}>{heading}</Text>
 
-      <Text style={styles.text}>{fact.card_text}</Text>
-
+      {/* Share sits on the fact text's own line now, right-aligned --
+          no separate action row beneath it. flex:1 on the text lets it
+          keep wrapping normally while Share stays pinned to the right. */}
       <View style={styles.row}>
-        <View style={styles.rowLeft}>
-          <Pressable
-            onPress={() => {
-              setShowSource(false);
-              setOffset((o) => o + 1);
-            }}
-            hitSlop={8}
-          >
-            <Text style={styles.link}>Another one ›</Text>
-          </Pressable>
-
-          {sourceLine && (
-            <Pressable onPress={() => setShowSource((v) => !v)} hitSlop={8}>
-              <Text style={styles.link}>{showSource ? "Hide source" : "Source"}</Text>
-            </Pressable>
-          )}
-        </View>
-
-        {/* Bottom-right, apart from "Another one"/"Source" — a
-            separate, less-frequent action, not one more item in the
-            same row of controls. */}
+        <Text style={[styles.text, styles.textFlex]}>{fact.card_text}</Text>
         <Pressable onPress={share} hitSlop={8}>
           <Text style={styles.link}>Share ›</Text>
         </Pressable>
       </View>
+
+      {sourceLine && (
+        <Pressable onPress={() => setShowSource((v) => !v)} hitSlop={8} style={styles.sourceToggle}>
+          <Text style={styles.link}>{showSource ? "Hide source" : "Source"}</Text>
+        </Pressable>
+      )}
 
       {showSource && sourceLine && (
         <Pressable
@@ -204,7 +194,8 @@ function ShareCardTemplate({ factText }: { factText: string }) {
       <View style={styles.shareFooter}>
         <LogoMark size={22} color={colors.warmTaupe} />
         <Text style={styles.shareFooterText}>
-          Join us at {SHARE_URL_LABEL} to start your parenting journey with us.
+          Understand their world before they have the words. Build your village at{" "}
+          {SHARE_URL_LABEL}.
         </Text>
       </View>
     </View>
@@ -242,22 +233,25 @@ const styles = StyleSheet.create({
     ...homeType.bodyText,
     fontFamily: fonts.bodyMedium,
     color: colors.charcoal,
+  },
+  textFlex: {
+    flex: 1,
+  },
+  // Text + Share share this one row now -- Share pinned to the right via
+  // flex:1 on the text (above), top-aligned with the first line rather
+  // than centered against the full (possibly 2-line) paragraph.
+  row: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
     marginTop: spacing.xs,
     paddingHorizontal: spacing.xs,
   },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  // Its own line below the text+Share row now that "Another one" (its
+  // former row-mate) is gone.
+  sourceToggle: {
     marginTop: spacing.sm,
     paddingHorizontal: spacing.xs,
-  },
-  rowLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: spacing.md,
-    flexShrink: 1,
   },
   link: {
     ...homeType.action,
