@@ -127,7 +127,7 @@ export function DidYouKnowTile({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.eyebrow}>{heading.toUpperCase()}</Text>
+      <Text style={styles.eyebrow}>{heading}</Text>
 
       <Text style={styles.text}>{fact.card_text}</Text>
 

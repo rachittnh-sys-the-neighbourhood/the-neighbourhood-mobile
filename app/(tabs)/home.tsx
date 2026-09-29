@@ -495,7 +495,7 @@ export default function Home() {
           </View>
 
           <SectionLabel accent={colors.warmTaupe}>
-            TODAY
+            Today
           </SectionLabel>
           <TodayActivitiesPager kids={kids.length > 0 ? kids : [child]} activeChildId={child.id} guidedTour={guidedTour} />
 
@@ -753,8 +753,7 @@ function ChildDayActivities({
             <View style={styles.list}>{activities.map(renderActivityRow)}</View>
 
             <Text style={styles.safetyNote}>
-              General guidance, not exact instructions, stay close, and skip whatever
-              doesn&rsquo;t feel right for {child.name}.
+              General guidance; take what works, skip what doesn&rsquo;t.
             </Text>
 
             <EndOfDay
@@ -808,8 +807,7 @@ function ChildDayActivities({
             )}
 
             <Text style={styles.safetyNote}>
-              General guidance, not exact instructions, stay close, and skip whatever
-              doesn&rsquo;t feel right for {child.name}.
+              General guidance; take what works, skip what doesn&rsquo;t.
             </Text>
           </>
         )}
@@ -1378,9 +1376,10 @@ const styles = StyleSheet.create({
   },
 
   safetyNote: {
-    // homeType.meta (14px), not the old 11px meta -- safety/guidance
-    // copy stays readable rather than being shrunk to save space.
     ...homeType.meta,
+    fontSize: 12,
+    lineHeight: 16,
+    fontStyle: "italic",
     // Sits directly on the softSand childSection background (not a white
     // sub-card), so this needs more contrast than textMuted gives.
     color: colors.charcoal,

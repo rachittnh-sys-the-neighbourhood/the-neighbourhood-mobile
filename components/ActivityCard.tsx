@@ -164,23 +164,34 @@ export function FeaturedActivityCard({
             existing field, "shown in the collapsed preview" per its own
             doc comment, previously unused here) gives the card real
             content instead, so a parent who never taps still gets the
-            what/why. That lowers the discoverability risk a bare
-            chevron carries, though it doesn't fully remove it -- worth
-            revisiting if this ever gets a real usability check. Duration
-            drops to its own row below with a clearly larger gap -- a
-            second, secondary group, separated by spacing rather than by
-            being smaller/lighter than it'd otherwise need to be. */}
-        <Text style={styles.domainLabel}>{DOMAIN_LABEL[activity.domain].toUpperCase()}</Text>
+            what/why. Held to one line (numberOfLines + ellipsis) so it
+            signals "there's more" without ever pushing the card into a
+            second line -- exact truncation point depends on the device
+            width and the specific activity's why-text, not a fixed word
+            count. Duration shares that same row now, right-aligned, so
+            the two pieces of secondary info read as one compact group
+            instead of stacking the card taller. */}
+        <Text style={styles.domainLabel}>{DOMAIN_LABEL[activity.domain]}</Text>
         <View style={styles.featuredTitleRow}>
           <Text style={[styles.featuredTitle, styles.featuredTitleFlex]}>{activity.title}</Text>
           <ChevronRight />
         </View>
-        {activity.why && <Text style={styles.featuredWhyText}>{activity.why}</Text>}
-        <View style={[styles.duration, styles.featuredDurationRow]}>
-          <ClockIcon />
-          <Text style={styles.durationText}>
-            {activity.duration_label ?? `${activity.duration_minutes} min`}
-          </Text>
+        <View style={styles.featuredMetaRow}>
+          {activity.why && (
+            <Text
+              style={[styles.featuredWhyText, styles.featuredWhyTextFlex]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {activity.why}
+            </Text>
+          )}
+          <View style={styles.duration}>
+            <ClockIcon />
+            <Text style={styles.durationText}>
+              {activity.duration_label ?? `${activity.duration_minutes} min`}
+            </Text>
+          </View>
         </View>
       </Pressable>
 
@@ -246,7 +257,7 @@ export function ActivityExpandedCard({
       {activity.title === "Reach for it" && <ActivityVideo style={styles.activityVideo} />}
       <Pressable onPress={onCollapse} style={styles.cardHeader} accessibilityRole="button" accessibilityLabel="Collapse">
         <View style={styles.cardCopy}>
-          <Text style={styles.domainLabel}>{DOMAIN_LABEL[activity.domain].toUpperCase()}</Text>
+          <Text style={styles.domainLabel}>{DOMAIN_LABEL[activity.domain]}</Text>
           <Text style={styles.title}>{activity.title}</Text>
         </View>
         <View style={styles.duration}>
@@ -501,12 +512,25 @@ const styles = StyleSheet.create({
   featuredTitleFlex: {
     flex: 1,
   },
-  // activity.why -- real content, not filler, so it earns bodyText's
-  // size rather than being squeezed to meta. Muted rather than charcoal
-  // since the title above it is still the one dominant element.
+  // activity.why -- real content, not filler. Muted rather than charcoal
+  // since the title above it is still the one dominant element. Truncated
+  // to one line in the JSX (numberOfLines={1}) -- flex:1 here is what
+  // lets it actually shrink/ellipsize instead of pushing duration off
+  // the row.
   featuredWhyText: {
     ...homeType.action,
     color: colors.textMuted,
+  },
+  featuredWhyTextFlex: {
+    flex: 1,
+  },
+  // why-text + duration share one row now instead of stacking -- two
+  // pieces of secondary info read as one compact group.
+  featuredMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
     marginTop: spacing.xs,
   },
   // A footer row rather than a floating pill — full-width and divided by
@@ -515,7 +539,9 @@ const styles = StyleSheet.create({
   moreIdeasRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    // Right side only, not space-between across the full row width.
+    justifyContent: "flex-end",
+    gap: 2,
     minHeight: 32,
     marginTop: spacing.xs,
     paddingTop: spacing.xs,
@@ -641,20 +667,17 @@ const styles = StyleSheet.create({
   featuredCardHeader: {
     flexDirection: "column",
   },
-  // Separates the duration from the title/why group above it -- a
-  // clearly bigger gap than the tight one between the title and its own
-  // why-text, since duration is a different, secondary kind of
-  // information (metadata, not content).
-  featuredDurationRow: {
-    marginTop: spacing.sm,
-  },
   duration: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
+  // 12px, not homeType.meta's 14 -- the smallest text on this card,
+  // secondary to the why-line it now shares a row with.
   durationText: {
     ...homeType.meta,
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.textMuted,
   },
   actionRow: {
