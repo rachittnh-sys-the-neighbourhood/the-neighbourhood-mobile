@@ -1,6 +1,6 @@
 import { Tabs, useRouter } from "expo-router";
 import { AvatarButton } from "../../components/AvatarButton";
-import { LogoMark } from "../../components/Logo";
+import { LogoLockup } from "../../components/Logo";
 import { AskTabIcon, ChildIcon, CommunityIcon, HomeIcon, YouIcon } from "../../components/TabIcons";
 import { useMode } from "../../lib/ModeProvider";
 import { colors, spacing, type } from "../../lib/theme";
@@ -79,7 +79,7 @@ export default function TabsLayout() {
           title: "Home",
           // The greeting below already says who this is for, so the header
           // carries the mark instead of a title that would repeat it.
-          headerTitle: () => <LogoMark size={26} />,
+          headerTitle: () => <LogoLockup />,
           tabBarIcon: ({ color, focused }) => <HomeIcon color={color} focused={focused} />,
         }}
       />

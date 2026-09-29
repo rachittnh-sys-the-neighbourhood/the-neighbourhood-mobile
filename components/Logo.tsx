@@ -59,6 +59,28 @@ export function Logotype({
   );
 }
 
+/**
+ * Mark plus wordmark, side by side. The header-bar counterpart to
+ * Logotype's stacked layout — a slim bar doesn't have the height to
+ * spare for a stacked lockup, so this sits the two inline instead.
+ */
+export function LogoLockup({
+  size = 30,
+  color = colors.warmTaupe,
+}: {
+  size?: number;
+  color?: string;
+}) {
+  return (
+    <View style={styles.row}>
+      <LogoMark size={size} color={color} />
+      <Text style={[styles.wordmark, styles.rowWordmark, { color: colors.charcoal }]}>
+        The Neighbourhood
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   stack: {
     gap: spacing.sm,
@@ -67,5 +89,13 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
     fontSize: 15,
     letterSpacing: 0.3,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  rowWordmark: {
+    fontSize: 17,
   },
 });
