@@ -4,7 +4,7 @@ import { Linking, Platform, Pressable, Share, StyleSheet, Text, View } from "rea
 import ViewShot from "react-native-view-shot";
 import * as dyk from "../lib/db/dyk";
 import type { DidYouKnowFact } from "../lib/db/types";
-import { colors, homeType, palettes, radius, spacing, type } from "../lib/theme";
+import { colors, fonts, homeType, palettes, radius, spacing, type } from "../lib/theme";
 import { LogoMark } from "./Logo";
 
 /** The one link every share carries — the app is a PWA hosted here (see
@@ -80,7 +80,9 @@ export function DidYouKnowTile({
 
   const sourceLine = dyk.sourceLineFor(fact);
   const heading = fact.header || "Did you know?";
-  const textMessage = `${heading}\n${fact.card_text}\n\nPowered by The Neighbourhood — ${SHARE_URL}`;
+  // Just the fact itself -- the heading ("Sound familiar?" etc.) is a
+  // label for the on-screen card, not part of the thing worth sharing.
+  const textMessage = `${fact.card_text}\n\nJoin us at ${SHARE_URL} to start your parenting journey with us.`;
 
   const share = async () => {
     // Neither react-native-view-shot's capture nor expo-sharing's image
@@ -177,7 +179,7 @@ export function DidYouKnowTile({
       {preparingShare && (
         <View style={styles.captureWrap} pointerEvents="none">
           <ViewShot ref={shotRef} options={{ format: "png", quality: 1 }}>
-            <ShareCardTemplate heading={heading} factText={fact.card_text} />
+            <ShareCardTemplate factText={fact.card_text} />
           </ViewShot>
         </View>
       )}
@@ -188,20 +190,22 @@ export function DidYouKnowTile({
 /**
  * The image a share actually produces — deliberately its own layout, not
  * a screenshot of the on-screen tile: no "Another one"/"Share"/"Source"
- * controls (meaningless in a static image), and The Neighbourhood's own
- * logo + website link permanently baked into the bottom, since that's
- * the whole point of sharing an image over plain text.
+ * controls (meaningless in a static image), and no heading either — just
+ * the fact itself, which is the one thing worth sharing. The Neighbourhood's
+ * own logo + a join-us line is permanently baked into the bottom, since
+ * that's the whole point of sharing an image over plain text.
  */
-function ShareCardTemplate({ heading, factText }: { heading: string; factText: string }) {
+function ShareCardTemplate({ factText }: { factText: string }) {
   return (
     <View style={styles.shareCard}>
-      <Text style={styles.shareEyebrow}>{heading.toUpperCase()}</Text>
       <View style={styles.shareInnerCard}>
         <Text style={styles.shareText}>{factText}</Text>
       </View>
       <View style={styles.shareFooter}>
         <LogoMark size={22} color={colors.warmTaupe} />
-        <Text style={styles.shareFooterText}>The Neighbourhood · {SHARE_URL_LABEL}</Text>
+        <Text style={styles.shareFooterText}>
+          Join us at {SHARE_URL_LABEL} to start your parenting journey with us.
+        </Text>
       </View>
     </View>
   );
@@ -231,10 +235,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   text: {
-    // homeType.bodyText (16/400) -- a descriptive sentence, not an
-    // entity name, so regular weight rather than the cardTitle role
-    // used for the meal/activity NAME below on Home.
+    // homeType.bodyText's size, but Medium (500) rather than Regular --
+    // no variable-weight font is loaded (only static 400/500/600/700
+    // Inter files, see app/_layout.tsx), so an exact 450 isn't available;
+    // Medium is the nearest weight up from the previous Regular.
     ...homeType.bodyText,
+    fontFamily: fonts.bodyMedium,
     color: colors.charcoal,
     marginTop: spacing.xs,
     paddingHorizontal: spacing.xs,
@@ -277,12 +283,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.sageLight,
   },
-  shareEyebrow: {
-    ...type.eyebrow,
-    color: colors.charcoal,
-  },
   shareInnerCard: {
-    marginTop: spacing.sm,
     padding: spacing.lg,
     borderRadius: radius.md,
     backgroundColor: colors.white,
@@ -300,5 +301,6 @@ const styles = StyleSheet.create({
   shareFooterText: {
     ...type.label,
     color: colors.warmTaupe,
+    flex: 1,
   },
 });
