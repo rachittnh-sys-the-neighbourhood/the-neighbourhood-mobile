@@ -7,7 +7,6 @@ import {
   FeatureGroupLabel,
   FeatureIcon,
   HubHeader,
-  MicroLearningCard,
   type FeatureIconName,
 } from "../../../components/FeatureHub";
 import { CheckInCard } from "../../../components/CheckInCard";
@@ -34,10 +33,15 @@ import {
 import { markFirstRunComplete, markHomeCoachComplete, rewindGuidedTourStep } from "../../../lib/firstRun";
 import { usePalette } from "../../../lib/ModeProvider";
 import {
+  MOTHER_MOOD_ROLE,
+  MOTHER_ROLE_LABEL,
+  todaysActivityForMotherRole,
+  type MotherRole,
+} from "../../../lib/motherRoles";
+import {
   deliveryPhrase,
   deriveProfile,
   elapsedPhrase,
-  recommendedTopicsForProfile,
   visibleCareAreas,
   type CareArea,
   type DeliveryType,
@@ -60,10 +64,16 @@ import { useTodaysMotherPlan } from "../../../lib/useTodaysMotherPlan";
  * genuinely different bodies below the shared Check-in, not just
  * role-gated blocks inside one shared layout:
  *
- * MOTHER (and prefer_not_to_say): Family Meals → For You Today (one quick
- * read) → Well Being (the browsable library) → Your Stage (a single
- * where-things-are-now line) → For You This Month (her recovery
- * activities). Unchanged from before.
+ * MOTHER (and prefer_not_to_say): Family Meals → FOR TODAY ("For me /
+ * With my child / Together" — see lib/motherRoles.ts, same role-tab
+ * shape as a father's own FOR TODAY below, over her actual
+ * mother_activities daily plan) → Well Being (the browsable library) →
+ * Your Stage (a single where-things-are-now line). FOR TODAY replaces
+ * two older sections: a static single "For You Today" reading
+ * recommendation that never varied with mood or day, and a flat "For You
+ * This Month" list showing all four of her plan's activities at once —
+ * both read as more of the same thing shown differently, not real
+ * variety.
  *
  * FATHER: reorganised around three roles instead — "Your child. Your
  * partnership. You." (see lib/fatherRoles.ts, and FatherYouBody below).
@@ -78,11 +88,16 @@ import { useTodaysMotherPlan } from "../../../lib/useTodaysMotherPlan";
  * only show once tapped, so the three read as a clean, equal-weight set
  * rather than a wall of text on first glance.
  *
- * The check-in itself is the meal planner workbook's two-question
- * Recovery Check-in (energy, and whether help is available today) —
- * replacing the old five-emoji mood picker, which was never actually
- * saved anywhere, and collapses to a tiny "✓ Checked in today" the
- * moment it's answered for the day — see components/CheckInCard.tsx.
+ * The check-in: a daily mood check-in (see components/MoodCheckInCard.tsx)
+ * now leads for BOTH roles, with its week-strip giving either parent a
+ * visible "you showed up" trail -- it used to be father-only, with a
+ * mother going straight to the second layer below and never getting the
+ * lightweight daily touchpoint at all. Underneath, the meal planner
+ * workbook's two-question Recovery Check-in (energy, and whether help is
+ * available today) — replacing the old five-emoji mood picker, which was
+ * never actually saved anywhere, and collapses to a tiny "✓ Checked in
+ * today" the moment it's answered for the day — see
+ * components/CheckInCard.tsx.
  */
 const CARE_ICONS: Record<CareArea, FeatureIconName> = {
   physical: "recovery",
@@ -92,6 +107,14 @@ const CARE_ICONS: Record<CareArea, FeatureIconName> = {
   feeding: "meal",
   nutrition: "meal",
   relationships: "relationships",
+};
+
+const MOTHER_ROLES: MotherRole[] = ["me", "child", "together"];
+
+const MOTHER_ROLE_ICON: Record<MotherRole, FeatureIconName> = {
+  me: "recovery",
+  child: "milestone",
+  together: "relationships",
 };
 
 const BIRTH_OPTIONS: { value: DeliveryType; label: string }[] = [
@@ -170,11 +193,17 @@ export default function YouHub() {
     (showsRecovery || showsFatherSupport) && authProfile?.birth_method == null;
 
   // The mood check-in's suggestion for which FOR TODAY role opens first
-  // today -- see MoodCheckInCard/FATHER_MOOD_ROLE. Lifted up here (rather
-  // than owned inside FatherYouBody) since MoodCheckInCard itself renders
-  // above the role split, both need it, and it's set at most once or
-  // twice a day either way.
+  // today -- see MoodCheckInCard/FATHER_MOOD_ROLE (father) and
+  // MOTHER_MOOD_ROLE (mother). Lifted up here (rather than owned inside
+  // FatherYouBody, or inline in the mother branch below) since
+  // MoodCheckInCard itself renders above the role split, both need it,
+  // and it's set at most once or twice a day either way. Two separate
+  // pieces of state, not a shared union type, since a father's and
+  // mother's role sets are genuinely different (dad/partner/you vs
+  // me/child/together) -- only one of the two is ever read, depending on
+  // `isFather` below.
   const [moodRole, setMoodRole] = useState<FatherRole | null>(null);
+  const [motherMoodRole, setMotherMoodRole] = useState<MotherRole | null>(null);
 
   const [savingBirth, setSavingBirth] = useState(false);
   const handleConfirmBirth = async (value: DeliveryType) => {
@@ -228,17 +257,14 @@ export default function YouHub() {
     return area.blurb;
   };
 
-  // The single most relevant read right now — same selection logic as
-  // Home's "For You" (see home.tsx). This used to run a second time for
-  // "Your Stage" too (a curated pair of more topics from the same pool) —
-  // that's gone now: between this one pick, the full Well Being library
-  // below it, and the actual activities in "For you this month", a second
-  // algorithmic topic-list was reading as more of the same, not more
-  // value. "Your Stage" below is the where-you-are framing instead.
-  const forYouToday = recommendedTopicsForProfile(profile, ageMonths, 1)[0] ?? null;
-  const forYouTodayArea = forYouToday
-    ? careAreas.find((a) => a.key === forYouToday.area) ?? null
-    : null;
+  // Which mother FOR TODAY role is open right now -- same rationale as
+  // FatherYouBody's own selectedToday: a manual tap always wins; absent
+  // one, the mood check-in's suggestion wins; absent that, the
+  // day-rotated default keeps this from always opening on the same role.
+  const [selectedMotherToday, setSelectedMotherToday] = useState<MotherRole | null>(null);
+  const dayIndex = Math.floor(Date.now() / 86_400_000);
+  const activeMotherToday =
+    selectedMotherToday ?? motherMoodRole ?? MOTHER_ROLES[dayIndex % MOTHER_ROLES.length];
 
   const recoveryLine =
     profile.stage === "fourth_trimester"
@@ -257,21 +283,24 @@ export default function YouHub() {
     >
       <HubHeader title="You" subtitle={subtitle} />
 
-      {/* A father gets the daily mood check-in instead of the weekly
-          recovery check-in below -- see MoodCheckInCard's own docblock.
-          A mother's flow is completely unchanged. */}
-      {isFather ? (
-        <MoodCheckInCard
-          profileId={session?.user?.id ?? null}
-          onMoodChange={(mood) => setMoodRole(FATHER_MOOD_ROLE[mood])}
-        />
-      ) : (
-        <CheckInCard
-          profileId={session?.user?.id ?? null}
-          role={profile.role}
-          weeksPostpartum={profile.weeksPostpartum}
-        />
-      )}
+      {/* The daily mood check-in now leads for BOTH roles -- it used to
+          be father-only, with a mother going straight to the weekly
+          recovery check-in below and never getting the lightweight daily
+          touchpoint (or its week-strip "you showed up" trail) at all.
+          CheckInCard's own weekly/twice-weekly cadence is unchanged --
+          it's just a second, deeper layer underneath this now, for both
+          roles, rather than the only check-in a mother ever saw. */}
+      <MoodCheckInCard
+        profileId={session?.user?.id ?? null}
+        onMoodChange={(mood) =>
+          isFather ? setMoodRole(FATHER_MOOD_ROLE[mood]) : setMotherMoodRole(MOTHER_MOOD_ROLE[mood])
+        }
+      />
+      <CheckInCard
+        profileId={session?.user?.id ?? null}
+        role={profile.role}
+        weeksPostpartum={profile.weeksPostpartum}
+      />
 
       {isFather ? (
         <FatherYouBody
@@ -306,19 +335,97 @@ export default function YouHub() {
             />
           </FeatureGrid>
 
-          {/* "Help me navigate being a parent," one recommendation at a
-              time — not a library to scan. */}
-          {forYouToday && (
-            <>
-              <FeatureGroupLabel>FOR YOU TODAY</FeatureGroupLabel>
-              <MicroLearningCard
-                eyebrow={forYouTodayArea?.label ?? "For you"}
-                title={forYouToday.title}
-                reason={forYouToday.blurb}
-                minutes={forYouToday.minutes}
-                onPress={() => router.push(`/care/${forYouToday.slug}`)}
-              />
-            </>
+          {/* FOR TODAY — "For me / With my child / Together", the same
+              three-bucket shape as a father's own FOR TODAY (see
+              FatherYouBody below and lib/motherRoles.ts): role tabs over
+              one always-expanded card, not the old single static "FOR YOU
+              TODAY" reading recommendation (that was a different, static
+              card every mother saw regardless of mood or day) and not the
+              old flat "FOR YOU THIS MONTH" list below it either (same
+              activities, just all four shown at once) — this replaces
+              both with one place that actually rotates with the day and
+              the mood check-in above. Gated the same way a father's own
+              FOR TODAY is: once the recovery window has passed there is
+              no daily mother_activities plan and nothing meaningful to
+              show here, so this disappears entirely rather than render
+              empty — Well Being below stays, since browsable content
+              isn't time-bound the way a daily plan is. */}
+          {showsRecovery && (
+            <View style={styles.block}>
+              <FeatureGroupLabel>FOR TODAY</FeatureGroupLabel>
+
+              {needsBirthConfirmation ? (
+                <BirthConfirmationCard
+                  title="What type of birth did you have?"
+                  body="So today's recovery activities actually fit your body."
+                  saving={savingBirth}
+                  onChoose={handleConfirmBirth}
+                />
+              ) : motherPlanLoading ? (
+                <ActivityIndicator style={{ marginTop: spacing.lg }} />
+              ) : (
+                <>
+                  <View style={styles.roleTabRow}>
+                    {MOTHER_ROLES.map((role) => {
+                      const active = activeMotherToday === role;
+                      return (
+                        <Pressable
+                          key={role}
+                          onPress={() => setSelectedMotherToday(role)}
+                          style={[
+                            styles.roleTab,
+                            { borderColor: p.border },
+                            active && { backgroundColor: p.primary, borderColor: p.primary },
+                          ]}
+                        >
+                          <FeatureIcon
+                            name={MOTHER_ROLE_ICON[role]}
+                            color={active ? p.surface : p.primary}
+                          />
+                          <Text style={[styles.roleTabLabel, { color: active ? p.surface : p.text }]}>
+                            {MOTHER_ROLE_LABEL[role]}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {(() => {
+                    const activity = todaysActivityForMotherRole(
+                      motherPlan?.activities ?? [],
+                      activeMotherToday,
+                      dayIndex
+                    );
+                    if (!activity) return null;
+                    return (
+                      <Card style={styles.activityCard}>
+                        <Text style={[styles.activityCategory, { color: p.primary }]}>
+                          {MOTHER_ACTIVITY_CATEGORY_LABEL[activity.category].toUpperCase()}
+                        </Text>
+                        <Text style={[styles.sectionTitle, { color: p.text }]}>{activity.title}</Text>
+                        <Text style={[styles.sectionBody, { color: p.textMuted }]}>
+                          {activity.description}
+                        </Text>
+                        <Text style={[styles.activityMeta, { color: p.textMuted }]}>
+                          {activity.duration_minutes > 0 ? `${activity.duration_minutes} min · ` : ""}
+                          {TIME_OF_DAY_LABEL[activity.time_of_day]}
+                          {activity.with_baby === "yes" ? " · With baby" : ""}
+                        </Text>
+                        <Pressable
+                          disabled={swapping === activity.category}
+                          onPress={() => swapMotherActivity(activity.category)}
+                          style={styles.swapButton}
+                        >
+                          <Text style={[styles.swapLabel, { color: p.primary }]}>
+                            {swapping === activity.category ? "Swapping…" : "Try something else"}
+                          </Text>
+                        </Pressable>
+                      </Card>
+                    );
+                  })()}
+                </>
+              )}
+            </View>
           )}
 
           {/* Zone: the reference library, organised by area — for browsing
@@ -350,50 +457,6 @@ export default function YouHub() {
                 </Text>
                 <Text style={[styles.recoveryTitle, { color: p.text }]}>{recoveryLine}</Text>
               </Card>
-            </View>
-          )}
-
-          {/* A mother's own Recovery activities. */}
-          {showsRecovery && (
-            <View style={styles.block}>
-              <FeatureGroupLabel>FOR YOU THIS MONTH</FeatureGroupLabel>
-
-              {needsBirthConfirmation ? (
-                <BirthConfirmationCard
-                  title="What type of birth did you have?"
-                  body="So today's recovery activities actually fit your body."
-                  saving={savingBirth}
-                  onChoose={handleConfirmBirth}
-                />
-              ) : motherPlanLoading ? (
-                <ActivityIndicator style={{ marginTop: spacing.lg }} />
-              ) : (
-                motherPlan?.activities.map((activity) => (
-                  <Card key={activity.id} style={styles.activityCard}>
-                    <Text style={[styles.activityCategory, { color: p.primary }]}>
-                      {MOTHER_ACTIVITY_CATEGORY_LABEL[activity.category].toUpperCase()}
-                    </Text>
-                    <Text style={[styles.sectionTitle, { color: p.text }]}>{activity.title}</Text>
-                    <Text style={[styles.sectionBody, { color: p.textMuted }]}>
-                      {activity.description}
-                    </Text>
-                    <Text style={[styles.activityMeta, { color: p.textMuted }]}>
-                      {activity.duration_minutes > 0 ? `${activity.duration_minutes} min · ` : ""}
-                      {TIME_OF_DAY_LABEL[activity.time_of_day]}
-                      {activity.with_baby === "yes" ? " · With baby" : ""}
-                    </Text>
-                    <Pressable
-                      disabled={swapping === activity.category}
-                      onPress={() => swapMotherActivity(activity.category)}
-                      style={styles.swapButton}
-                    >
-                      <Text style={[styles.swapLabel, { color: p.primary }]}>
-                        {swapping === activity.category ? "Swapping…" : "Try something else"}
-                      </Text>
-                    </Pressable>
-                  </Card>
-                ))
-              )}
             </View>
           )}
         </>
