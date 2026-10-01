@@ -79,10 +79,12 @@ export function CheckInCard({
   };
 
   if (!due) {
-    // The moment it's actually today's answer, this collapses to a tiny
-    // acknowledgement rather than the fuller "Checked in for now" card —
-    // that fuller card is for a later day that still isn't due yet, where
-    // there's more worth saying than a checkmark.
+    // The moment it's actually today's answer, a tiny acknowledgement --
+    // otherwise nothing at all. The fuller "Checked in for now." card
+    // used to render here the rest of the cadence window, but now that
+    // MoodCheckInCard's own daily check-in (and its week strip) always
+    // sits right above this, on both roles, that filler card was just
+    // repeating "you're checked in" a second time one row down.
     if (checkins.isCheckedInToday(latest)) {
       return (
         <View style={styles.collapsedRow}>
@@ -90,16 +92,7 @@ export function CheckInCard({
         </View>
       );
     }
-    return (
-      <Card style={styles.card}>
-        <Text style={[styles.title, { color: p.text }]}>Checked in for now.</Text>
-        <Text style={[styles.copy, { color: p.textMuted }]}>
-          {isFather
-            ? "We'll check in with you again soon."
-            : "We'll ask again in a few days. No need to do anything until then."}
-        </Text>
-      </Card>
-    );
+    return null;
   }
 
   return (
