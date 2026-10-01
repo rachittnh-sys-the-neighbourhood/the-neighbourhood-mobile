@@ -19,6 +19,30 @@
       content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
     />
     <title>%WEB_TITLE%</title>
+
+    <!--
+      Without this link, "Add to Home Screen" has no way to know the app
+      is installable (public/manifest.json already declares the right
+      "display": "standalone", icons, etc. -- it was just never linked
+      from here). Without it, iOS silently falls back to a plain
+      bookmark that reopens in regular Safari, full address bar and
+      toolbar included, which is exactly the "white bars" users keep
+      seeing: it's real Safari chrome, not anything our CSS can reach.
+    -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#E8DDD1" />
+
+    <!--
+      iOS Safari still relies on this older, Apple-specific flag to
+      launch truly chromeless from a Home Screen icon -- independent of
+      (and in addition to) the manifest's "display": "standalone".
+      black-translucent lets our own content draw under the status bar,
+      pairing with viewport-fit=cover above.
+    -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="The Neighbourhood" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       /* These styles make the body full-height */
