@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <!--
+      viewport-fit=cover is the actual fix for the white strips above the
+      header and below the tab bar in Safari/PWA: without it, Safari
+      reserves plain white bars for the status-bar/home-indicator safe
+      areas instead of letting the page draw there at all — no in-app
+      background color can ever reach a region the page isn't allowed to
+      extend into. The app's own screens already handle safe-area insets
+      (see SafeAreaProvider in app/_layout.tsx), so once the page can
+      extend full-bleed, those screens paint their own background in
+      that space instead of Safari's default.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
+    />
+    <title>%WEB_TITLE%</title>
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+        /* Fallback for the sliver that can still show during a screen
+           transition or before the app's JS has painted, once (above)
+           the page is actually allowed to extend under the safe areas —
+           was the browser's default white before, now the app's own
+           cream instead of a flash of white. */
+        background-color: #f3eee7;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>
