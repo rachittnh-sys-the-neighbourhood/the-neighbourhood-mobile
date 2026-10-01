@@ -1310,7 +1310,10 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   familyMealWrap: {
-    marginTop: spacing.md,
+    // Same rhythm as the other top-level tiles below (Ask, For you,
+    // What's next) -- was spacing.md, visibly tighter than the rest,
+    // which made the page feel uneven scrolling past it.
+    marginTop: spacing.lg,
   },
 
   // A quiet colored dot in front of each eyebrow, so the shift between
@@ -1445,9 +1448,9 @@ const styles = StyleSheet.create({
   // Carries a hint of Parent Mode's eucalyptus into Child Mode, so the card
   // looks like it belongs to somewhere else before you tap it.
   forYouCard: {
-    // Replaces the gap the removed outer "For you" SectionLabel used to
-    // provide -- this card no longer sits directly under one.
-    marginTop: spacing.xl,
+    // Same rhythm as the other top-level tiles (was spacing.xl, a
+    // visibly bigger gap than the one above it -- see familyMealWrap).
+    marginTop: spacing.lg,
     padding: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: "rgba(94, 115, 96, 0.08)",
@@ -1535,7 +1538,8 @@ const styles = StyleSheet.create({
   // to provide -- wraps just that one DiscoveryRow, not the "New stage"
   // one below it, which still has its own SectionLabel and spacing.
   whatsNextWrap: {
-    marginTop: spacing.xl,
+    // Same rhythm as the other top-level tiles -- see familyMealWrap.
+    marginTop: spacing.lg,
   },
   discoveryRow: {
     flexDirection: "row",
