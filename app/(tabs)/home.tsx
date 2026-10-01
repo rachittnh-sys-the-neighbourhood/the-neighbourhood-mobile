@@ -516,7 +516,10 @@ export default function Home() {
 
           <CopilotHomeCard onPress={(prompt) => router.push(prompt ? `/ask?prompt=${encodeURIComponent(prompt)}` : "/ask")} />
 
-          <SectionLabel accent="#5E7360">For you</SectionLabel>
+          {/* No outer "For you" section label anymore -- the card's own
+              internal icon+eyebrow (PersonIcon + "For dads"/area label,
+              see ForYouCard below) already says that, so the outer label
+              was just repeating it one row up. */}
           <ForYouCard
             childName={child.name}
             ageMonths={ageMonths}
@@ -530,33 +533,38 @@ export default function Home() {
               time-sensitive in a way the other two aren't); then an
               outstanding milestone for the current age; and finally the
               guaranteed transition note, so this section never just
-              disappears for a stretch with nothing due or unachieved. */}
-          <SectionLabel accent={colors.softSand}>What's next</SectionLabel>
-          {reminder ? (
-            <DiscoveryRow
-              icon={<FlagIcon size={14} color={colors.warmTaupe} />}
-              eyebrow="Vaccination"
-              title={reminder.title}
-              body={reminder.body}
-              onPress={reminder.onPress}
-            />
-          ) : milestoneRecommendation ? (
-            <DiscoveryRow
-              icon={<FlagIcon size={14} color={colors.warmTaupe} />}
-              eyebrow={milestoneRecommendation.eyebrow}
-              title={milestoneRecommendation.title}
-              body={milestoneRecommendation.body}
-              onPress={milestoneRecommendation.onPress}
-            />
-          ) : (
-            <DiscoveryRow
-              icon={<FlagIcon size={14} color={colors.warmTaupe} />}
-              eyebrow={transitionRecommendation.eyebrow}
-              title={transitionRecommendation.title}
-              body={transitionRecommendation.body}
-              onPress={transitionRecommendation.onPress}
-            />
-          )}
+              disappears for a stretch with nothing due or unachieved.
+              No outer "What's next" section label anymore -- same reason
+              as "For you" above, the row's own icon+eyebrow already
+              carries that. The wrapping View's marginTop replaces the
+              spacing the removed label used to provide. */}
+          <View style={styles.whatsNextWrap}>
+            {reminder ? (
+              <DiscoveryRow
+                icon={<FlagIcon size={14} color={colors.warmTaupe} />}
+                eyebrow="Vaccination"
+                title={reminder.title}
+                body={reminder.body}
+                onPress={reminder.onPress}
+              />
+            ) : milestoneRecommendation ? (
+              <DiscoveryRow
+                icon={<FlagIcon size={14} color={colors.warmTaupe} />}
+                eyebrow={milestoneRecommendation.eyebrow}
+                title={milestoneRecommendation.title}
+                body={milestoneRecommendation.body}
+                onPress={milestoneRecommendation.onPress}
+              />
+            ) : (
+              <DiscoveryRow
+                icon={<FlagIcon size={14} color={colors.warmTaupe} />}
+                eyebrow={transitionRecommendation.eyebrow}
+                title={transitionRecommendation.title}
+                body={transitionRecommendation.body}
+                onPress={transitionRecommendation.onPress}
+              />
+            )}
+          </View>
 
           {/* Shown at most once per developmental stage (see the effect
               above) -- never on every app open, and only when there's
@@ -1437,6 +1445,9 @@ const styles = StyleSheet.create({
   // Carries a hint of Parent Mode's eucalyptus into Child Mode, so the card
   // looks like it belongs to somewhere else before you tap it.
   forYouCard: {
+    // Replaces the gap the removed outer "For you" SectionLabel used to
+    // provide -- this card no longer sits directly under one.
+    marginTop: spacing.xl,
     padding: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: "rgba(94, 115, 96, 0.08)",
@@ -1519,6 +1530,12 @@ const styles = StyleSheet.create({
   copilotAskText: {
     ...type.label,
     color: colors.white,
+  },
+  // Replaces the gap the removed outer "What's next" SectionLabel used
+  // to provide -- wraps just that one DiscoveryRow, not the "New stage"
+  // one below it, which still has its own SectionLabel and spacing.
+  whatsNextWrap: {
+    marginTop: spacing.xl,
   },
   discoveryRow: {
     flexDirection: "row",
