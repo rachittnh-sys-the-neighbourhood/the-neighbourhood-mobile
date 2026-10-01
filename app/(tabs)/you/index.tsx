@@ -306,6 +306,7 @@ export default function YouHub() {
         <FatherYouBody
           router={router}
           profile={profile}
+          familyMealsDescription={familyMealsDescription}
           recoveryChildName={recoveryChild?.name ?? null}
           showsStageContent={showsFatherSupport}
           needsBirthConfirmation={needsBirthConfirmation}
@@ -547,6 +548,7 @@ const FATHER_ROLE_ICON: Record<FatherRole, FeatureIconName> = {
 function FatherYouBody({
   router,
   profile,
+  familyMealsDescription,
   recoveryChildName,
   showsStageContent,
   needsBirthConfirmation,
@@ -560,6 +562,10 @@ function FatherYouBody({
 }: {
   router: ReturnType<typeof useRouter>;
   profile: ParentProfile;
+  /** Same copy YouHub computes for mother's own Family Meals tile --
+   *  shared so his EXPLORE tile (below) says "support her recovery"
+   *  rather than duplicating that logic. */
+  familyMealsDescription: string;
   recoveryChildName: string | null;
   /** Whether the postpartum/recovery window still applies to this father's
    *  youngest child — see lib/recoveryRelevance.ts. Once it doesn't, there
@@ -795,7 +801,19 @@ function FatherYouBody({
           title={FATHER_ROLE_HUB_LABEL.you}
           description={FATHER_ROLE_HUB_BLURB.you}
           onPress={() => router.push("/you/care?hub=you")}
-          wide
+        />
+        {/* A flat EXPLORE tile, not the richer FAMILY MEALS section
+            mother's landing has above her own FOR TODAY -- Family Meals
+            still deliberately isn't a first-class section on his page
+            (it stays reachable from Home same as before), this just
+            closes the one gap where a father had literally no path to
+            it from You at all, consistent with the other three tiles
+            here rather than duplicating mother's own treatment. */}
+        <FeatureCard
+          icon={<FeatureIcon name="meal" color={p.primary} />}
+          title="Family Meals"
+          description={familyMealsDescription}
+          onPress={() => router.push("/you/nutrition")}
         />
       </FeatureGrid>
     </>
