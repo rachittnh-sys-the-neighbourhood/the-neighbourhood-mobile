@@ -59,9 +59,14 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: isParent ? palette.bg : colors.cream,
           borderTopColor: isParent ? palette.border : colors.border,
-          paddingTop: spacing.xs,
-          paddingBottom: spacing.sm,
-          height: 76,
+          // Was 76 tall with xs/sm padding -- noticeably more vertical
+          // space than the bar needs, especially on web/PWA where there's
+          // no extra safe-area inset baked in underneath it already.
+          // AskTabIcon's circle still pokes up above the row via its own
+          // negative marginTop, so it doesn't need the bar itself to be tall.
+          paddingTop: 2,
+          paddingBottom: spacing.xs,
+          height: 58,
         },
         // On the scale, and SemiBold rather than Medium — the tab bar was
         // the last place Medium survived, and 10px sat below every other
