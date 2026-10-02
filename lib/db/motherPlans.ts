@@ -25,7 +25,7 @@ const ACTIVITY_ID_COLUMN: Record<MotherActivityCategory, keyof MotherDailyPlanRo
 };
 
 const MOTHER_ACTIVITY_COLUMNS =
-  "id, category, month_postpartum, applies_to, title, description, duration_minutes, time_of_day, with_baby, effort_level, progression_notes, short_description, steps, why_this, requires_doctor_clearance, clearance_copy";
+  "id, category, month_postpartum, applies_to, title, description, duration_minutes, time_of_day, with_baby, effort_level, progression_notes, short_description, steps, why_this, requires_doctor_clearance, clearance_copy, repeat_sets, repeat_reps, repeat_times_per_day, repeat_note, weekly_target_sessions, weekly_target_note";
 
 /** Resolves a plan row's four activity ids into full activity records. */
 async function hydrate(row: MotherDailyPlanRow): Promise<MotherDailyPlan> {
