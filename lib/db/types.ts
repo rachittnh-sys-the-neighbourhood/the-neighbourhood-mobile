@@ -469,6 +469,16 @@ export type FatherActivity = {
    *  ILO maternity and paternity protection guidance; FOGSI". Null for
    *  older content rows that predate this field. */
   source: string | null;
+  /** One-sentence card teaser, from the 20261002100000 structured-content
+   *  migration. Null only if that migration somehow didn't reach a row —
+   *  callers fall back to `description`. No doctor-clearance fields here,
+   *  unlike MotherActivity: nothing in this table involves his own
+   *  postpartum body. */
+  short_description: string | null;
+  /** Ordered "how to do it" steps. */
+  steps: string[] | null;
+  /** The rationale, written to the father directly. */
+  why_this: string | null;
 };
 
 export type FatherDailyPlanRow = {

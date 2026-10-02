@@ -720,21 +720,29 @@ function FatherYouBody({
                   </Text>
                   <Text style={[styles.sectionTitle, { color: p.text }]}>{activity.title}</Text>
                   <Text style={[styles.sectionBody, { color: p.textMuted }]}>
-                    {activity.description}
+                    {activity.short_description ?? activity.description}
                   </Text>
                   <Text style={[styles.activityMeta, { color: p.textMuted }]}>
                     {activity.duration_label}
                     {activity.with_baby === "yes" ? " · With baby" : ""}
                   </Text>
-                  <Pressable
-                    disabled={fatherSwapping === activity.category}
-                    onPress={() => onSwapFatherActivity(activity.category)}
-                    style={styles.swapButton}
-                  >
-                    <Text style={[styles.swapLabel, { color: p.primary }]}>
-                      {fatherSwapping === activity.category ? "Swapping…" : "Try something else"}
-                    </Text>
-                  </Pressable>
+                  <View style={styles.activityActionRow}>
+                    <Pressable
+                      onPress={() => router.push(`/you/father-activity/${activity.id}`)}
+                      style={[styles.seeHowChip, { backgroundColor: p.primary }]}
+                    >
+                      <Text style={[styles.seeHowChipText, { color: p.surface }]}>See how</Text>
+                    </Pressable>
+                    <Pressable
+                      disabled={fatherSwapping === activity.category}
+                      onPress={() => onSwapFatherActivity(activity.category)}
+                      style={styles.swapButton}
+                    >
+                      <Text style={[styles.swapLabel, { color: p.primary }]}>
+                        {fatherSwapping === activity.category ? "Swapping…" : "Something else"}
+                      </Text>
+                    </Pressable>
+                  </View>
                 </Card>
               );
             })()}
