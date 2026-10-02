@@ -55,6 +55,9 @@ export default function YouLayout() {
       {/* One mother_activities row, in full -- reached from a FOR TODAY
           card's "See how" or wellbeing's featured activity. */}
       <Stack.Screen name="activity/[id]" options={{ title: "" }} />
+      {/* One father_activities row, in full -- the father-side mirror of
+          activity/[id] above. */}
+      <Stack.Screen name="father-activity/[id]" options={{ title: "" }} />
       <Stack.Screen name="checkins" options={{ title: "Past check-ins" }} />
     </Stack>
   );

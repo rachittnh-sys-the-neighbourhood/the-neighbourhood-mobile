@@ -25,6 +25,9 @@ const ACTIVITY_ID_COLUMN: Record<FatherActivityCategory, keyof FatherDailyPlanRo
   practical_load: "practical_load_activity_id",
 };
 
+const FATHER_ACTIVITY_COLUMNS =
+  "id, category, month_postpartum, applies_to, title, description, duration_minutes, duration_label, time_of_day, with_baby, effort_level, next_step, source, short_description, steps, why_this";
+
 /** Resolves a plan row's six activity ids into full activity records. */
 async function hydrate(row: FatherDailyPlanRow): Promise<FatherDailyPlan> {
   const ids = FATHER_ACTIVITY_CATEGORIES.map(
@@ -36,9 +39,7 @@ async function hydrate(row: FatherDailyPlanRow): Promise<FatherDailyPlan> {
         "fatherPlans.hydrate",
         await supabase
           .from("father_activities")
-          .select(
-            "id, category, month_postpartum, applies_to, title, description, duration_minutes, duration_label, time_of_day, with_baby, effort_level, next_step, source"
-          )
+          .select(FATHER_ACTIVITY_COLUMNS)
           .in("id", ids)
       )
     : [];
@@ -62,6 +63,16 @@ export async function getTodaysFatherPlan(profileId: string): Promise<FatherDail
     await supabase.rpc("get_or_create_father_daily_plan", { p_profile_id: profileId })
   );
   return hydrate(row);
+}
+
+/** A single activity by id — for the activity detail screen, reached by
+ *  tapping a FOR TODAY card's "See how". Mirrors motherPlans.getMotherActivity. */
+export async function getFatherActivity(id: string): Promise<FatherActivity | null> {
+  const rows = unwrap<FatherActivity[]>(
+    "fatherPlans.getFatherActivity",
+    await supabase.from("father_activities").select(FATHER_ACTIVITY_COLUMNS).eq("id", id)
+  );
+  return rows[0] ?? null;
 }
 
 /** Rotates one category to its next activity, staying inside the current month. */
