@@ -304,6 +304,25 @@ export default function YouHub() {
         }
       />
 
+      {/* "Your wellbeing" now sits right here, just below the mood
+          check-in -- its own section rather than a tile buried inside
+          mother's "Explore your space" grid further down (see
+          you/wellbeing.tsx for the hub this opens into). Mother-only, same
+          as before; not gated to the recovery window since the hub itself
+          (physical/mental/sleep/feeding) stays relevant after it ends. */}
+      {!isFather && (
+        <View style={styles.block}>
+          <SectionTitle>Your wellbeing</SectionTitle>
+          <FeatureCard
+            icon={<FeatureIcon name="recovery" color={p.primary} />}
+            title="Your wellbeing"
+            description={`Finding a moment to pause, at ${elapsedPhrase(profile.weeksPostpartum)}.`}
+            wide
+            onPress={() => router.push("/you/wellbeing")}
+          />
+        </View>
+      )}
+
       {/* A father's birth-method question now sits right here, just after
           the mood check-in -- not buried inside "One idea for today"
           (where it used to live, gating that section's own content). It's
@@ -446,14 +465,15 @@ export default function YouHub() {
           {/* "Explore your space" — replaces the old six-area WELL BEING
               grid with Family Meals (moved in from its own standalone
               section above FOR TODAY — same flat-tile treatment father's
-              EXPLORE already gives it, see FatherYouBody below), the
-              personal-wellbeing hub (physical/mental/sleep/feeding,
-              consolidated — see you/wellbeing.tsx), relationships, and
-              (once it has real content) identity/body-image/return-to-
-              work, "Who I am now" -- see lib/parentCare.ts and the
-              content audit. "Your Stage"'s old single line is gone too —
-              the hero card above already says exactly this now, so
-              repeating it here read as the same message twice. */}
+              EXPLORE already gives it, see FatherYouBody below),
+              relationships, and (once it has real content) identity/body-
+              image/return-to-work, "Who I am now" -- see lib/parentCare.ts
+              and the content audit. The personal-wellbeing hub
+              (physical/mental/sleep/feeding, see you/wellbeing.tsx) has its
+              own section now, right under the mood check-in above, rather
+              than living here as a tile. "Your Stage"'s old single line is
+              gone too — the hero card above already says exactly this now,
+              so repeating it here read as the same message twice. */}
           <View style={styles.block}>
             <SectionTitle>Explore your space</SectionTitle>
             <FeatureGrid>
@@ -463,13 +483,6 @@ export default function YouHub() {
                 description={familyMealsDescription}
                 wide
                 onPress={() => router.push("/you/nutrition")}
-              />
-              <FeatureCard
-                icon={<FeatureIcon name="recovery" color={p.primary} />}
-                title="Your wellbeing"
-                description={`Finding a moment to pause, at ${elapsedPhrase(profile.weeksPostpartum)}.`}
-                wide
-                onPress={() => router.push("/you/wellbeing")}
               />
               <FeatureCard
                 icon={<FeatureIcon name="relationships" color={p.primary} />}
@@ -889,11 +902,17 @@ function FatherYouBody({
 const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    // Matches Home's own top padding (app/(tabs)/home.tsx) -- was
+    // spacing.md, a visibly bigger gap above the hero than Home leaves
+    // above its own greeting.
+    paddingTop: spacing.sm,
     paddingBottom: spacing.xxl,
   },
   block: {
-    marginTop: spacing.xl,
+    // Matches the rhythm Home uses between its own top-level sections
+    // (familyMealWrap/forYouCard/whatsNextWrap, all spacing.lg) -- was
+    // spacing.xl, a visibly bigger gap between sections here than on Home.
+    marginTop: spacing.lg,
   },
   heroCard: {
     padding: spacing.lg,
@@ -1055,7 +1074,7 @@ const styles = StyleSheet.create({
   },
   featuredCard: {
     padding: spacing.lg,
-    marginTop: spacing.xl,
+    marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
 });
