@@ -11,7 +11,7 @@ import {
 } from "../../../components/FeatureHub";
 import { CheckInCard } from "../../../components/CheckInCard";
 import { MoodCheckInCard } from "../../../components/MoodCheckInCard";
-import { Card } from "../../../components/parentUI";
+import { Card, SectionTitle } from "../../../components/parentUI";
 import { GuidedTourDialog } from "../../../components/GuidedTourDialog";
 import { useAuth } from "../../../lib/AuthProvider";
 import { computeAge, youngestChild } from "../../../lib/childAge";
@@ -39,11 +39,8 @@ import {
   type MotherRole,
 } from "../../../lib/motherRoles";
 import {
-  deliveryPhrase,
   deriveProfile,
   elapsedPhrase,
-  visibleCareAreas,
-  type CareArea,
   type DeliveryType,
   type ParentProfile,
 } from "../../../lib/parentCare";
@@ -99,15 +96,14 @@ import { useTodaysMotherPlan } from "../../../lib/useTodaysMotherPlan";
  * today" the moment it's answered for the day — see
  * components/CheckInCard.tsx.
  */
-const CARE_ICONS: Record<CareArea, FeatureIconName> = {
-  physical: "recovery",
-  fathering: "dads",
-  mental: "mental",
-  sleep: "sleep",
-  feeding: "meal",
-  nutrition: "meal",
-  relationships: "relationships",
-};
+// Same wording as Home's and Ask's greeting -- kept in sync by hand
+// rather than shared, matching the existing pattern of a small per-screen
+// copy rather than a shared util for a 3-line function.
+function greetingWord(hour: number): string {
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
 
 const MOTHER_ROLES: MotherRole[] = ["me", "child", "together"];
 
@@ -166,11 +162,6 @@ export default function YouHub() {
     () => deriveProfile(ageMonths, authProfile),
     [ageMonths, authProfile],
   );
-  const careAreas = useMemo(
-    () => visibleCareAreas(profile.role, ageMonths, profile.delivery),
-    [profile.role, profile.delivery, ageMonths],
-  );
-
   const firstName = parentName?.trim().split(" ")[0];
   const partnerFirstName = authProfile?.partner_name?.trim().split(" ")[0];
 
@@ -247,16 +238,6 @@ export default function YouHub() {
         ? "Meals built around your recovery, for the whole family."
         : "What the family's eating today.";
 
-  const careAreaDescription = (area: (typeof careAreas)[number]): string => {
-    if (area.key === "physical") {
-      return `Healing at ${elapsedPhrase(profile.weeksPostpartum)}, after ${deliveryPhrase(profile.delivery)}.`;
-    }
-    if (area.key === "fathering") {
-      return `Your part in this, ${elapsedPhrase(profile.weeksPostpartum)} in.`;
-    }
-    return area.blurb;
-  };
-
   // Which mother FOR TODAY role is open right now -- same rationale as
   // FatherYouBody's own selectedToday: a manual tap always wins; absent
   // one, the mood check-in's suggestion wins; absent that, the
@@ -275,13 +256,31 @@ export default function YouHub() {
 
   const isFather = profile.role === "father";
 
+  // "Week 13 with Rudr" when the child's name is known, "Week 13 · Day 91"
+  // otherwise -- the mother hero card's eyebrow. Day count is a plain
+  // elapsed-days figure off the same date_of_birth the week figure
+  // already derives from (see lib/parentCare.ts deriveProfile).
+  const dayCount = recoveryChild
+    ? Math.floor((Date.now() - new Date(recoveryChild.date_of_birth).getTime()) / 86_400_000) + 1
+    : null;
+
   return (
     <ScrollView
       style={{ backgroundColor: p.bg }}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <HubHeader title="You" subtitle={subtitle} />
+      {showsRecovery ? (
+        <MotherHeroCard
+          weeksPostpartum={profile.weeksPostpartum}
+          dayCount={dayCount}
+          childName={recoveryChild?.name ?? null}
+          firstName={firstName ?? null}
+          recoveryLine={recoveryLine}
+        />
+      ) : (
+        <HubHeader title="You" subtitle={subtitle} />
+      )}
 
       {/* The daily mood check-in now leads for BOTH roles -- it used to
           be father-only, with a mother going straight to the weekly
@@ -405,22 +404,30 @@ export default function YouHub() {
                         </Text>
                         <Text style={[styles.sectionTitle, { color: p.text }]}>{activity.title}</Text>
                         <Text style={[styles.sectionBody, { color: p.textMuted }]}>
-                          {activity.description}
+                          {activity.short_description ?? activity.description}
                         </Text>
                         <Text style={[styles.activityMeta, { color: p.textMuted }]}>
                           {activity.duration_minutes > 0 ? `${activity.duration_minutes} min · ` : ""}
                           {TIME_OF_DAY_LABEL[activity.time_of_day]}
                           {activity.with_baby === "yes" ? " · With baby" : ""}
                         </Text>
-                        <Pressable
-                          disabled={swapping === activity.category}
-                          onPress={() => swapMotherActivity(activity.category)}
-                          style={styles.swapButton}
-                        >
-                          <Text style={[styles.swapLabel, { color: p.primary }]}>
-                            {swapping === activity.category ? "Swapping…" : "Try something else"}
-                          </Text>
-                        </Pressable>
+                        <View style={styles.activityActionRow}>
+                          <Pressable
+                            onPress={() => router.push(`/you/activity/${activity.id}`)}
+                            style={[styles.seeHowChip, { backgroundColor: p.primary }]}
+                          >
+                            <Text style={[styles.seeHowChipText, { color: p.surface }]}>See how</Text>
+                          </Pressable>
+                          <Pressable
+                            disabled={swapping === activity.category}
+                            onPress={() => swapMotherActivity(activity.category)}
+                            style={styles.swapButton}
+                          >
+                            <Text style={[styles.swapLabel, { color: p.primary }]}>
+                              {swapping === activity.category ? "Swapping…" : "Something else"}
+                            </Text>
+                          </Pressable>
+                        </View>
                       </Card>
                     );
                   })()}
@@ -429,37 +436,34 @@ export default function YouHub() {
             </View>
           )}
 
-          {/* Zone: the reference library, organised by area — for browsing
-              over time rather than today's one recommendation. */}
-          <FeatureGroupLabel>WELL BEING</FeatureGroupLabel>
-          <FeatureGrid>
-            {careAreas.map((area) => (
+          {/* "Explore your space" — replaces the old six-area WELL BEING
+              grid with three (or two, if "Who I am now" has no real
+              content yet -- see lib/parentCare.ts and the content audit)
+              destinations: the personal-wellbeing hub (physical/mental/
+              sleep/feeding, consolidated — see you/wellbeing.tsx),
+              relationships, and (once it has real content) identity/
+              body-image/return-to-work. "Your Stage"'s old single line is
+              gone too — the hero card above already says exactly this now,
+              so repeating it here read as the same message twice. */}
+          <View style={styles.block}>
+            <SectionTitle>Explore your space</SectionTitle>
+            <FeatureGrid>
               <FeatureCard
-                key={area.key}
-                icon={<FeatureIcon name={CARE_ICONS[area.key]} color={p.primary} />}
-                title={area.label}
-                description={careAreaDescription(area)}
-                status={`${area.topicCount} ${area.topicCount === 1 ? "topic" : "topics"}`}
-                onPress={() => router.push(`/you/care?area=${area.key}`)}
+                icon={<FeatureIcon name="recovery" color={p.primary} />}
+                title="Your wellbeing"
+                description={`Finding a moment to pause, at ${elapsedPhrase(profile.weeksPostpartum)}.`}
+                wide
+                onPress={() => router.push("/you/wellbeing")}
               />
-            ))}
-          </FeatureGrid>
-
-          {/* "Your Stage" — where things actually are right now, in one
-              line, not another picked-topic list (that was the same
-              recommendation engine as "For you today" above, reading as a
-              repeat of it). */}
-          {recoveryFramingApplies && (
-            <View style={styles.block}>
-              <FeatureGroupLabel>YOUR STAGE</FeatureGroupLabel>
-              <Card style={styles.recoveryCard}>
-                <Text style={[styles.recoveryStage, { color: p.primary }]}>
-                  Week {profile.weeksPostpartum} postpartum
-                </Text>
-                <Text style={[styles.recoveryTitle, { color: p.text }]}>{recoveryLine}</Text>
-              </Card>
-            </View>
-          )}
+              <FeatureCard
+                icon={<FeatureIcon name="relationships" color={p.primary} />}
+                title="Relationships and support"
+                description="Share the load, talk together."
+                wide
+                onPress={() => router.push("/you/care?area=relationships")}
+              />
+            </FeatureGrid>
+          </View>
         </>
       )}
 
@@ -481,6 +485,44 @@ export default function YouHub() {
         />
       )}
     </ScrollView>
+  );
+}
+
+/**
+ * The mother home hub's own hero card, replacing the plain HubHeader
+ * while the postpartum framing applies -- "Week N with {child}" (or
+ * "Week N · Day D" once the child's name isn't known), a time-of-day
+ * greeting, and the same recoveryLine YOUR STAGE used to show below
+ * (removed from there now that it's said here first).
+ */
+function MotherHeroCard({
+  weeksPostpartum,
+  dayCount,
+  childName,
+  firstName,
+  recoveryLine,
+}: {
+  weeksPostpartum: number;
+  dayCount: number | null;
+  childName: string | null;
+  firstName: string | null;
+  recoveryLine: string;
+}) {
+  const p = usePalette();
+  const eyebrow = childName
+    ? `Week ${weeksPostpartum} with ${childName}`
+    : dayCount != null
+      ? `Week ${weeksPostpartum} · Day ${dayCount}`
+      : `Week ${weeksPostpartum} postpartum`;
+
+  return (
+    <View style={[styles.heroCard, { backgroundColor: p.primary }]}>
+      <Text style={styles.heroEyebrow}>{eyebrow.toUpperCase()}</Text>
+      <Text style={styles.heroGreeting}>
+        {greetingWord(new Date().getHours())}, {firstName ?? "there"}
+      </Text>
+      <Text style={styles.heroBody}>{recoveryLine}</Text>
+    </View>
   );
 }
 
@@ -829,19 +871,45 @@ const styles = StyleSheet.create({
   block: {
     marginTop: spacing.xl,
   },
-  recoveryCard: {
+  heroCard: {
     padding: spacing.lg,
     borderRadius: radius.lg,
+    marginBottom: spacing.lg,
   },
-  recoveryStage: {
-    fontFamily: fonts.serifItalic,
-    fontSize: typeScale.body,
+  heroEyebrow: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.caption,
+    letterSpacing: 1.2,
+    color: "rgba(255,255,255,0.85)",
     marginBottom: spacing.sm,
   },
-  recoveryTitle: {
+  heroGreeting: {
+    fontFamily: fonts.serifItalic,
+    fontSize: typeScale.h1,
+    lineHeight: typeScale.h1 * 1.2,
+    color: "#FFFFFF",
+    marginBottom: spacing.sm,
+  },
+  heroBody: {
     fontFamily: fonts.body,
-    fontSize: typeScale.body,
-    lineHeight: typeScale.body * 1.6,
+    fontSize: typeScale.bodySmall,
+    lineHeight: typeScale.bodySmall * 1.55,
+    color: "rgba(255,255,255,0.92)",
+  },
+  activityActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.lg,
+    marginTop: spacing.md,
+  },
+  seeHowChip: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+  },
+  seeHowChipText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.bodySmall,
   },
   activityCard: {
     padding: spacing.lg,

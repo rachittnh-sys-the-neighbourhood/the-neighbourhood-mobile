@@ -63,6 +63,15 @@ export function Card({
   );
 }
 
+/** A bold, sentence-case heading for a screen section — "Find what helps",
+ *  "One idea for today", "Explore your space". Distinct from SectionLabel
+ *  below, which is a small uppercase eyebrow; this is the section's own
+ *  voice, same weight as a card title. */
+export function SectionTitle({ children }: { children: React.ReactNode }) {
+  const p = usePalette();
+  return <Text style={[styles.sectionTitle, { color: p.text }]}>{children}</Text>;
+}
+
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   const p = usePalette();
   return (
@@ -215,6 +224,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
     fontSize: typeScale.caption,
     letterSpacing: 1.4,
+    marginBottom: spacing.sm,
+  },
+  sectionTitle: {
+    fontFamily: fonts.bodyBold,
+    fontSize: typeScale.h2,
+    lineHeight: typeScale.h2 * 1.25,
     marginBottom: spacing.sm,
   },
   track: {

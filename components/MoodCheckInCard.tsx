@@ -1,14 +1,25 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import * as moodCheckins from "../lib/db/moodCheckins";
-import type { MoodCheckin, MoodValue } from "../lib/db/types";
+import type { MoodValue } from "../lib/db/types";
 import { usePalette } from "../lib/ModeProvider";
-import { fonts, spacing, typeScale } from "../lib/theme";
+import { fonts, radius, spacing, typeScale } from "../lib/theme";
 import { Card } from "./parentUI";
 import { MoodIcon } from "./MoodIcon";
 
 const MOOD_ORDER: MoodValue[] = ["rough", "meh", "okay", "good", "great"];
-const DAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
+
+/** "Low / Worn / Okay / Good / Great" — mother-facing labels for the same
+ *  five MoodValue rows the rest of the app already stores and reads
+ *  (rough/meh/okay/good/great). A relabel only, not a new scale. */
+const MOOD_LABEL: Record<MoodValue, string> = {
+  rough: "Low",
+  meh: "Worn",
+  okay: "Okay",
+  good: "Good",
+  great: "Great",
+};
 
 function dateKey(date: Date): string {
   const y = date.getFullYear();
@@ -19,16 +30,15 @@ function dateKey(date: Date): string {
 
 /**
  * You hub's daily mood check-in -- "How's today treating you?", one tap,
- * five options, always the same single tone (never a red-to-green ramp,
- * see MoodIcon). Distinct from and additional to CheckInCard's weekly
- * recovery check-in: this one has no cadence gate and is meant to be
- * answered every day.
+ * five labelled options, always the same single tone (never a
+ * red-to-green ramp, see MoodIcon). Distinct from and additional to
+ * CheckInCard's weekly recovery check-in: this one has no cadence gate
+ * and is meant to be answered every day.
  *
- * Below the row, a Monday-Sunday strip of this week's answers so far --
- * always the full calendar week regardless of when the parent first
- * started using the app; a day before their first check-in (or today,
- * before it's answered) just renders as an empty slot, not a shifted
- * window (see lib/db/moodCheckins.ts weekBounds).
+ * "Past check-ins" replaces the inline this-week strip this card used to
+ * render directly -- the full history now lives on its own screen (see
+ * app/(tabs)/you/checkins.tsx), reached from the link below, so this card
+ * stays to the single "how are you right now" question.
  *
  * `onMoodChange` fires whenever today's mood is known -- on first load if
  * already answered today, and again on every tap -- so the caller can use
@@ -45,7 +55,8 @@ export function MoodCheckInCard({
   onMoodChange?: (mood: MoodValue) => void;
 }) {
   const p = usePalette();
-  const [week, setWeek] = useState<MoodCheckin[] | null>(null);
+  const router = useRouter();
+  const [todaysMood, setTodaysMood] = useState<MoodValue | null>(null);
 
   useEffect(() => {
     if (!profileId) return;
@@ -55,13 +66,13 @@ export function MoodCheckInCard({
       .getCheckinsForWeek(profileId, start, end)
       .then((rows) => {
         if (!alive) return;
-        setWeek(rows);
         const todayRow = rows.find((r) => r.checkin_date === dateKey(new Date()));
-        if (todayRow) onMoodChange?.(todayRow.mood);
+        if (todayRow) {
+          setTodaysMood(todayRow.mood);
+          onMoodChange?.(todayRow.mood);
+        }
       })
-      .catch(() => {
-        if (alive) setWeek([]);
-      });
+      .catch(() => {});
     return () => {
       alive = false;
     };
@@ -70,25 +81,10 @@ export function MoodCheckInCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileId]);
 
-  const weekDays = useMemo(() => {
-    const { start } = moodCheckins.weekBounds(new Date());
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(start);
-      d.setDate(d.getDate() + i);
-      return d;
-    });
-  }, []);
-
-  const todayKey = dateKey(new Date());
-  const todaysMood = week?.find((r) => r.checkin_date === todayKey)?.mood ?? null;
-
   if (!profileId) return null;
 
   const choose = async (mood: MoodValue) => {
-    setWeek((prev) => {
-      const rest = (prev ?? []).filter((r) => r.checkin_date !== todayKey);
-      return [...rest, { id: "optimistic", profile_id: profileId, checkin_date: todayKey, mood, created_at: new Date().toISOString() }];
-    });
+    setTodaysMood(mood);
     onMoodChange?.(mood);
     try {
       await moodCheckins.submitMoodCheckin(profileId, mood);
@@ -100,8 +96,8 @@ export function MoodCheckInCard({
 
   return (
     <Card style={styles.card}>
-      <Text style={[styles.eyebrow, { color: p.primary }]}>TODAY</Text>
       <Text style={[styles.title, { color: p.text }]}>How's today treating you?</Text>
+      <Text style={[styles.subtitle, { color: p.textMuted }]}>A little space for you, every day.</Text>
       <View style={styles.moodRow}>
         {MOOD_ORDER.map((mood) => {
           const selected = todaysMood === mood;
@@ -109,44 +105,29 @@ export function MoodCheckInCard({
             <Pressable
               key={mood}
               onPress={() => choose(mood)}
-              hitSlop={6}
+              hitSlop={4}
               style={[
                 styles.moodButton,
-                selected && { backgroundColor: p.surfaceAlt },
+                { borderColor: p.border },
+                selected && { backgroundColor: p.primary, borderColor: p.primary },
               ]}
             >
-              <MoodIcon mood={mood} color={selected ? p.text : p.primary} size={26} />
+              <MoodIcon mood={mood} color={selected ? p.surface : p.primary} size={22} />
+              <Text style={[styles.moodLabel, { color: selected ? p.surface : p.text }]}>
+                {MOOD_LABEL[mood]}
+              </Text>
             </Pressable>
           );
         })}
       </View>
 
-      <View style={[styles.weekSection, { borderTopColor: p.border }]}>
-        <Text style={[styles.eyebrow, { color: p.primary }]}>THIS WEEK</Text>
-        <View style={styles.weekRow}>
-          {weekDays.map((day, index) => {
-            const key = dateKey(day);
-            const row = week?.find((r) => r.checkin_date === key);
-            const isToday = key === todayKey;
-            return (
-              <View key={key} style={styles.weekDay}>
-                {row ? (
-                  <MoodIcon mood={row.mood} color={p.primary} size={16} />
-                ) : (
-                  <View
-                    style={[
-                      styles.emptyDot,
-                      { borderColor: isToday ? p.primary : p.border },
-                    ]}
-                  />
-                )}
-                <Text style={[styles.dayLetter, { color: isToday ? p.primary : p.textMuted }]}>
-                  {DAY_LETTERS[index]}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
+      <View style={styles.linkRow}>
+        <Pressable onPress={() => router.push("/you/checkins?note=1")} hitSlop={6}>
+          <Text style={[styles.linkText, { color: p.primary }]}>Add a note</Text>
+        </Pressable>
+        <Pressable onPress={() => router.push("/you/checkins")} hitSlop={6}>
+          <Text style={[styles.linkText, { color: p.primary }]}>Past check-ins</Text>
+        </Pressable>
       </View>
     </Card>
   );
@@ -157,47 +138,41 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     marginBottom: spacing.lg,
   },
-  eyebrow: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.caption,
-    letterSpacing: 1.2,
-  },
   title: {
     fontFamily: fonts.bodySemiBold,
     fontSize: typeScale.h3,
+  },
+  subtitle: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.bodySmall,
     marginTop: spacing.xs,
     marginBottom: spacing.md,
   },
   moodRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: spacing.xs,
   },
   moodButton: {
-    padding: spacing.xs,
-    borderRadius: 999,
-  },
-  weekSection: {
-    marginTop: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  weekRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: spacing.sm,
-  },
-  weekDay: {
+    flex: 1,
     alignItems: "center",
     gap: 4,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  emptyDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 1,
+  moodLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 10,
   },
-  dayLetter: {
-    fontFamily: fonts.body,
-    fontSize: typeScale.caption,
+  linkRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: spacing.lg,
+  },
+  linkText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.bodySmall,
+    textDecorationLine: "underline",
   },
 });

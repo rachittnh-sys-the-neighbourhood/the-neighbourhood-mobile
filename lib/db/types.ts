@@ -379,6 +379,18 @@ export type MotherActivity = {
   effort_level: MotherActivityEffort;
   /** What changes about this activity in later months, when given. */
   progression_notes: string | null;
+  /** One-sentence card teaser. Null for the ~28 NICU/preterm-module rows
+   *  not yet covered by the structured-content migration — callers fall
+   *  back to `description` when this is null. */
+  short_description: string | null;
+  /** Ordered "how to do it" steps. Same null-for-preterm-rows caveat as
+   *  short_description. */
+  steps: string[] | null;
+  /** The rationale, written to the mother directly. Same caveat. */
+  why_this: string | null;
+  requires_doctor_clearance: boolean;
+  /** Set only when requires_doctor_clearance is true. */
+  clearance_copy: string | null;
 };
 
 export type MotherDailyPlanRow = {
@@ -601,4 +613,6 @@ export type MoodCheckin = {
   checkin_date: string;
   mood: MoodValue;
   created_at: string;
+  /** Free-text, optional — "Add a note" on the daily check-in card. */
+  note: string | null;
 };
