@@ -271,12 +271,20 @@ export default function YouHub() {
       showsVerticalScrollIndicator={false}
     >
       {showsRecovery ? (
-        <MotherHeroCard
+        <ParentHeroCard
           weeksPostpartum={profile.weeksPostpartum}
           dayCount={dayCount}
           childName={recoveryChild?.name ?? null}
           firstName={firstName ?? null}
-          recoveryLine={recoveryLine}
+          bodyLine={recoveryLine}
+        />
+      ) : showsFatherSupport ? (
+        <ParentHeroCard
+          weeksPostpartum={profile.weeksPostpartum}
+          dayCount={dayCount}
+          childName={recoveryChild?.name ?? null}
+          firstName={firstName ?? null}
+          bodyLine="She's healing from things that don't fully show. Your part right now is steady, practical support. And finding your own footing matters too."
         />
       ) : (
         <HubHeader title="You" subtitle={subtitle} />
@@ -352,7 +360,7 @@ export default function YouHub() {
               isn't time-bound the way a daily plan is. */}
           {showsRecovery && (
             <View style={styles.block}>
-              <FeatureGroupLabel>FOR TODAY</FeatureGroupLabel>
+              <SectionTitle>One idea for today</SectionTitle>
 
               {needsBirthConfirmation ? (
                 <BirthConfirmationCard
@@ -489,24 +497,30 @@ export default function YouHub() {
 }
 
 /**
- * The mother home hub's own hero card, replacing the plain HubHeader
- * while the postpartum framing applies -- "Week N with {child}" (or
- * "Week N · Day D" once the child's name isn't known), a time-of-day
- * greeting, and the same recoveryLine YOUR STAGE used to show below
- * (removed from there now that it's said here first).
+ * The You home hub's own hero card, replacing the plain HubHeader while
+ * the postpartum framing applies -- "Week N with {child}" (or "Week N ·
+ * Day D" once the child's name isn't known), a time-of-day greeting, and
+ * a role-appropriate body line. Shared by both roles: a mother's own
+ * recoveryLine (3 stage-branching variants, see YouHub) and a father's
+ * fixed reassurance line (the same text care.tsx's fatherReassurance
+ * shows) both just pass through `bodyLine`. For mother this also
+ * replaces what her old YOUR STAGE section used to say below; father
+ * keeps his own YOUR STAGE section (3 role-specific context chips) as a
+ * separate, non-redundant block further down, since it carries real
+ * distinct content this single line doesn't.
  */
-function MotherHeroCard({
+function ParentHeroCard({
   weeksPostpartum,
   dayCount,
   childName,
   firstName,
-  recoveryLine,
+  bodyLine,
 }: {
   weeksPostpartum: number;
   dayCount: number | null;
   childName: string | null;
   firstName: string | null;
-  recoveryLine: string;
+  bodyLine: string;
 }) {
   const p = usePalette();
   const eyebrow = childName
@@ -521,7 +535,7 @@ function MotherHeroCard({
       <Text style={styles.heroGreeting}>
         {greetingWord(new Date().getHours())}, {firstName ?? "there"}
       </Text>
-      <Text style={styles.heroBody}>{recoveryLine}</Text>
+      <Text style={styles.heroBody}>{bodyLine}</Text>
     </View>
   );
 }
@@ -670,7 +684,7 @@ function FatherYouBody({
       {showsStageContent && (
         <>
       <View style={styles.block}>
-        <FeatureGroupLabel>FOR TODAY</FeatureGroupLabel>
+        <SectionTitle>One idea for today</SectionTitle>
 
         {needsBirthConfirmation ? (
           <BirthConfirmationCard
@@ -832,7 +846,7 @@ function FatherYouBody({
         );
       })()}
 
-      <FeatureGroupLabel>EXPLORE</FeatureGroupLabel>
+      <SectionTitle>Explore your space</SectionTitle>
       <FeatureGrid>
         <FeatureCard
           icon={<FeatureIcon name="dads" color={p.primary} />}
