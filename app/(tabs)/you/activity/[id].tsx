@@ -37,9 +37,10 @@ const ROLE_EYEBROW: Record<MotherRole, string> = {
 };
 
 /**
- * One mother_activities row, in full -- reached from a FOR TODAY card's
- * "See how" or the wellbeing hub's featured "START HERE" card. Renders
- * the new structured content (short_description/steps/why_this/
+ * One mother_activities row, in full -- reached from the companion
+ * thread's "Do it now" (a weekly-shape physical_recovery activity) or an
+ * Explore tile's "today" pick. Renders the new structured content
+ * (short_description/steps/why_this/
  * requires_doctor_clearance) added by the 20261002090000 migration, with
  * a fallback to the original single-paragraph `description` for the ~28
  * NICU/preterm rows that migration didn't cover (see lib/db/types.ts).
@@ -109,7 +110,16 @@ export default function ActivityDetail() {
     if (!profileId) return;
     setSwapping(true);
     try {
-      await motherPlans.swapMotherCategory(profileId, activity.category);
+      // physical_recovery goes through the constrained swap -- same
+      // effort_level, same dosing shape -- even reached from here (the
+      // companion thread's weekly-shape "See how" link lands on this
+      // screen), not just from the companion thread card itself. See
+      // 20261002130000_mother_physical_recovery_constrained_swap.sql.
+      if (activity.category === "physical_recovery") {
+        await motherPlans.swapPhysicalRecoveryActivity(profileId);
+      } else {
+        await motherPlans.swapMotherCategory(profileId, activity.category);
+      }
       router.back();
     } finally {
       setSwapping(false);

@@ -391,6 +391,24 @@ export type MotherActivity = {
   requires_doctor_clearance: boolean;
   /** Set only when requires_doctor_clearance is true. */
   clearance_copy: string | null;
+  /** The You hub's "companion thread" dosing -- a spread-through-the-day
+   *  rep set (pelvic floor / core reconnection work), surfaced as a quiet
+   *  nudge under the mood check-in rather than its own card. Set only for
+   *  a focused subset of physical_recovery rows (see
+   *  20261002120000_mother_physical_recovery_dosing.sql) -- null for
+   *  everything else, including every row in months 1-3. Mutually
+   *  exclusive with weekly_target_* by construction: a row never has
+   *  both, and a swap should never cross from one shape to the other. */
+  repeat_sets: number | null;
+  repeat_reps: number | null;
+  repeat_times_per_day: number | null;
+  repeat_note: string | null;
+  /** The companion thread's other dosing shape -- a weekly cadence for
+   *  longer, cleared, fitness-building sessions (walks, strength
+   *  workouts) rather than a daily rep set. Same null-by-default,
+   *  mutually-exclusive-with-repeat_* rules as above. */
+  weekly_target_sessions: number | null;
+  weekly_target_note: string | null;
 };
 
 export type MotherDailyPlanRow = {

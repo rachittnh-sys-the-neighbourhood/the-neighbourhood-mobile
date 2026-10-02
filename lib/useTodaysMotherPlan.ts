@@ -16,6 +16,12 @@ export type TodaysMotherPlanState = {
   error: string | null;
   swapping: MotherActivityCategory | null;
   swap: (category: MotherActivityCategory) => Promise<void>;
+  /** The companion thread's own "Something else" -- goes through
+   *  swap_mother_physical_recovery_activity rather than the generic
+   *  per-category swap, so it never crosses effort_level or dosing shape.
+   *  See motherPlans.swapPhysicalRecoveryActivity. */
+  swappingPhysicalRecovery: boolean;
+  swapPhysicalRecovery: () => Promise<void>;
 };
 
 /**
@@ -32,6 +38,7 @@ export function useTodaysMotherPlan(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [swapping, setSwapping] = useState<MotherActivityCategory | null>(null);
+  const [swappingPhysicalRecovery, setSwappingPhysicalRecovery] = useState(false);
 
   const alive = useRef(true);
   useEffect(() => {
@@ -82,5 +89,18 @@ export function useTodaysMotherPlan(
     [profileId]
   );
 
-  return { plan, loading, error, swapping, swap };
+  const swapPhysicalRecovery = useCallback(async () => {
+    if (!profileId) return;
+    setSwappingPhysicalRecovery(true);
+    try {
+      const updated = await motherPlans.swapPhysicalRecoveryActivity(profileId);
+      if (alive.current) setPlan(updated);
+    } catch {
+      // Keep the current activity on screen rather than showing an error.
+    } finally {
+      if (alive.current) setSwappingPhysicalRecovery(false);
+    }
+  }, [profileId]);
+
+  return { plan, loading, error, swapping, swap, swappingPhysicalRecovery, swapPhysicalRecovery };
 }

@@ -846,6 +846,171 @@ export const CARE_TOPICS: CareTopic[] = [
       "A hard, red, painful area on the breast with flu-like symptoms",
     ],
   },
+  {
+    slug: "comfortable-latch",
+    area: "feeding",
+    title: "Getting a latch that doesn't hurt",
+    blurb: "Pain isn't a tax you pay for feeding. It's almost always fixable.",
+    minutes: 5,
+    sections: [
+      {
+        heading: "What a good latch actually feels like",
+        body: "A strong tug at first, easing within the first minute, not a sharp pinch that lasts the whole feed. Baby's mouth should cover a wide mouthful of breast, not just the nipple, lips flanged outward, chin pressed in close.",
+      },
+      {
+        heading: "Positions worth trying",
+        body: "Cradle hold works for many, but isn't the only option. The football hold, baby tucked under your arm facing you, keeps weight off a caesarean incision and gives you a clear view of the latch. Side-lying lets you rest while feeding, useful for night feeds.",
+      },
+      {
+        heading: "When it's a latch problem, not a you problem",
+        body: "Ongoing pain is information, not something to push through. A shallow latch, tongue-tie, or an awkward position are all fixable with the right eyes on it. A lactation consultant can usually solve in one session what weeks of gritting your teeth can't.",
+      },
+    ],
+    seekHelp: [
+      "Pain that doesn't ease within the first minute of a feed",
+      "Cracked, bleeding, or blistered nipples",
+      "Baby seems constantly unsettled at the breast despite frequent feeds",
+    ],
+  },
+  {
+    slug: "formula-and-combination-feeding",
+    area: "feeding",
+    title: "Formula and combination feeding, without the guilt",
+    blurb: "However your baby is fed, that's feeding. Full stop.",
+    minutes: 4,
+    sections: [
+      {
+        heading: "There's no one right way",
+        body: "Breast milk, formula, or both, a fed and thriving baby is the actual goal, not the specific route there. Plenty of mothers combination feed by choice, by necessity, or because it's what lets them stay sane, and all three are good enough reasons.",
+      },
+      {
+        heading: "Making the switch, or adding formula",
+        body: "Introducing formula alongside breastfeeding doesn't have to mean stopping altogether. Offering it after a feed rather than instead of one, and spacing any change out over a few days, tends to go more smoothly for both of you.",
+      },
+      {
+        heading: "The guilt is loud, the evidence is quieter",
+        body: "The research gap between fed-on-breast-milk and fed-on-formula outcomes is far smaller than the conversation around it suggests. A calm, present parent feeding however actually works matters more than the label on the method.",
+      },
+    ],
+  },
+  {
+    slug: "cluster-feeding-growth-spurts",
+    area: "feeding",
+    title: "Cluster feeding and growth spurts",
+    blurb: "A sudden feeding frenzy usually means growth, not a supply problem.",
+    minutes: 4,
+    sections: [
+      {
+        heading: "Why it happens",
+        body: "Babies often feed almost constantly for a day or two around 2-3 weeks, 6 weeks, and 3 months, common growth-spurt windows. This isn't your supply failing; it's your baby's way of telling your body to make more, and it usually settles within 48 to 72 hours.",
+      },
+      {
+        heading: "Getting through the stretch",
+        body: "Clear your evening of anything non-essential, keep snacks and water within reach, and let someone else handle dinner if you can. This is a short, intense phase, not the new normal.",
+      },
+      {
+        heading: "How to tell it apart from something else",
+        body: "Cluster feeding comes with a baby who's otherwise content between bursts, still producing wet nappies, and settles once the spurt passes. Ongoing fussiness with poor weight gain is a different conversation, worth raising with your doctor.",
+      },
+    ],
+    seekHelp: [
+      "Poor weight gain alongside constant fussing",
+      "No improvement after three to four days",
+    ],
+  },
+  {
+    slug: "pumping-and-expressing-milk",
+    area: "feeding",
+    title: "Pumping and expressing milk",
+    blurb: "Building a stash, feeding while apart, or just buying yourself an hour.",
+    minutes: 5,
+    sections: [
+      {
+        heading: "When to start",
+        body: "If breastfeeding is going well, there's rarely a rush to start pumping before 3-4 weeks, early pumping can sometimes oversupply or confuse a still-learning latch. If you're returning to work or baby is in NICU, expressing from day one is its own different, earlier timeline.",
+      },
+      {
+        heading: "Building a stash without stressing about it",
+        body: "Expressing once a day, often an hour or so after a morning feed when supply tends to be highest, slowly builds a freezer stash without disrupting feeding. There's no need to pump after every feed unless you're specifically trying to boost supply.",
+      },
+      {
+        heading: "Bottle feeding without confusing the latch",
+        body: "Paced bottle feeding, baby upright, bottle horizontal, pausing every so often, mimics the effort of breastfeeding and makes it easier to go back and forth between breast and bottle without baby developing a strong preference for one.",
+      },
+    ],
+  },
+  {
+    slug: "starting-solids",
+    area: "feeding",
+    title: "Starting solids, around 6 months",
+    blurb: "Milk is still the main meal for a while yet. Solids are practice, not replacement.",
+    minutes: 5,
+    sections: [
+      {
+        heading: "Signs baby is ready",
+        body: "Sitting with support, good head control, and genuine interest in what's on your plate, reaching, opening their mouth, are better guides than the calendar alone. Most babies show these signs around the 6-month mark, not before.",
+      },
+      {
+        heading: "Milk still leads",
+        body: "Breast milk or formula stays the main source of nutrition through the first year. Early solids are about taste, texture, and the skill of eating, not about replacing feeds yet. Offer milk first, then food, for the first few weeks.",
+      },
+      {
+        heading: "Starting simple",
+        body: "A single soft, mashed food, a ripe banana, cooked dal, well-mashed khichdi, once a day, is plenty to begin with. There's no need for a strict order of foods; follow your family's usual tastes rather than imported rules.",
+      },
+    ],
+    seekHelp: [
+      "Persistent gagging or choking rather than normal exploring",
+      "A rash, swelling, or vomiting after trying a new food",
+    ],
+  },
+  {
+    slug: "mastitis-and-blocked-ducts",
+    area: "feeding",
+    title: "Blocked ducts and mastitis",
+    blurb: "A sore lump is common. Fever and flu-like aches mean it's time to act.",
+    minutes: 4,
+    sections: [
+      {
+        heading: "A blocked duct, on its own",
+        body: "A tender, sometimes red lump, usually without fever, often from a missed feed or a bra that presses too tight. Frequent feeding on that side, warm compresses before feeding, and gentle massage toward the nipple usually clear it within a day or two.",
+      },
+      {
+        heading: "When it becomes mastitis",
+        body: "Fever, chills, and a flu-like ache alongside the sore area mean the blockage has turned into an infection. Keep feeding or expressing from that side, it won't harm your baby, and it genuinely helps clear it.",
+      },
+      {
+        heading: "Don't wait it out",
+        body: "Mastitis can move quickly. A day of fever with no improvement, or symptoms that are getting worse rather than better, is worth a same-day call to your doctor rather than a wait-and-see approach.",
+      },
+    ],
+    seekHelp: [
+      "Fever over 38.5°C alongside a sore, red area on the breast",
+      "Red streaking on the breast, or symptoms worsening within a few hours",
+      "No improvement after 24 hours of home care",
+    ],
+  },
+  {
+    slug: "night-feeds-and-feeding-to-sleep",
+    area: "feeding",
+    title: "Night feeds, and feeding to sleep",
+    blurb: "Feeding your baby to sleep isn't a habit you're ruining. It's how babies this age work.",
+    minutes: 4,
+    sections: [
+      {
+        heading: "It's not a bad habit, yet",
+        body: "In the early months, babies aren't developmentally able to self-soothe the way the advice often implies. Feeding to sleep is a normal, biologically expected way for a young baby to settle, not a shortcut you'll regret.",
+      },
+      {
+        heading: "Making night feeds easier",
+        body: "Keep the room dim and your voice low, skip the nappy change unless it's genuinely needed, and keep interaction minimal. The goal is a feed that stays sleepy on both sides, not a mini wake-up call.",
+      },
+      {
+        heading: "When it's worth rethinking",
+        body: "Somewhere past 6 months, for some families, feeding-to-sleep can be worth gently adjusting if it's no longer working for anyone. That's a much later, much more optional conversation, not something to worry about now.",
+      },
+    ],
+  },
   /* ---- Relationships ---- */
   {
     slug: "reconnecting-after-birth",
