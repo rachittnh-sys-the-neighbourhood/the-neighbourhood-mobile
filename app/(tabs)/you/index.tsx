@@ -303,6 +303,23 @@ export default function YouHub() {
           isFather ? setMoodRole(FATHER_MOOD_ROLE[mood]) : setMotherMoodRole(MOTHER_MOOD_ROLE[mood])
         }
       />
+
+      {/* A father's birth-method question now sits right here, just after
+          the mood check-in -- not buried inside "One idea for today"
+          (where it used to live, gating that section's own content). It's
+          its own standalone prompt, same as the mood check-in above it,
+          not a precondition styled like part of FOR TODAY. Mother's own
+          equivalent question ("What type of birth did you have?") is
+          unchanged, still inside her own "One idea for today" below. */}
+      {isFather && needsBirthConfirmation && (
+        <BirthConfirmationCard
+          title="How did your partner give birth?"
+          body="So today's suggestions actually fit where you both are."
+          saving={savingBirth}
+          onChoose={handleConfirmBirth}
+        />
+      )}
+
       <CheckInCard
         profileId={session?.user?.id ?? null}
         role={profile.role}
@@ -317,8 +334,6 @@ export default function YouHub() {
           recoveryChildName={recoveryChild?.name ?? null}
           showsStageContent={showsFatherSupport}
           needsBirthConfirmation={needsBirthConfirmation}
-          savingBirth={savingBirth}
-          onChooseBirth={handleConfirmBirth}
           fatherPlanActivities={fatherPlan?.activities ?? null}
           fatherPlanLoading={fatherPlanLoading}
           fatherSwapping={fatherSwapping}
@@ -327,22 +342,6 @@ export default function YouHub() {
         />
       ) : (
         <>
-          {/* Family Meals — the one door into the meal planner now; the old
-              "Nutrition" card and the redundant "Today" card it sat beside
-              are both gone. The full day's timeline, the expert-review
-              banner and the mother's own diet-specific boost live on the
-              screen this opens. Right after the check-in — food is as much
-              a daily, practical concern as how you're doing. */}
-          <FeatureGroupLabel>FAMILY MEALS</FeatureGroupLabel>
-          <FeatureGrid>
-            <FeatureCard
-              icon={<FeatureIcon name="meal" color={p.primary} />}
-              title="Family Meals"
-              description={familyMealsDescription}
-              onPress={() => router.push("/you/nutrition")}
-            />
-          </FeatureGrid>
-
           {/* FOR TODAY — "For me / With my child / Together", the same
               three-bucket shape as a father's own FOR TODAY (see
               FatherYouBody below and lib/motherRoles.ts): role tabs over
@@ -445,17 +444,26 @@ export default function YouHub() {
           )}
 
           {/* "Explore your space" — replaces the old six-area WELL BEING
-              grid with three (or two, if "Who I am now" has no real
-              content yet -- see lib/parentCare.ts and the content audit)
-              destinations: the personal-wellbeing hub (physical/mental/
-              sleep/feeding, consolidated — see you/wellbeing.tsx),
-              relationships, and (once it has real content) identity/
-              body-image/return-to-work. "Your Stage"'s old single line is
-              gone too — the hero card above already says exactly this now,
-              so repeating it here read as the same message twice. */}
+              grid with Family Meals (moved in from its own standalone
+              section above FOR TODAY — same flat-tile treatment father's
+              EXPLORE already gives it, see FatherYouBody below), the
+              personal-wellbeing hub (physical/mental/sleep/feeding,
+              consolidated — see you/wellbeing.tsx), relationships, and
+              (once it has real content) identity/body-image/return-to-
+              work, "Who I am now" -- see lib/parentCare.ts and the
+              content audit. "Your Stage"'s old single line is gone too —
+              the hero card above already says exactly this now, so
+              repeating it here read as the same message twice. */}
           <View style={styles.block}>
             <SectionTitle>Explore your space</SectionTitle>
             <FeatureGrid>
+              <FeatureCard
+                icon={<FeatureIcon name="meal" color={p.primary} />}
+                title="Family Meals"
+                description={familyMealsDescription}
+                wide
+                onPress={() => router.push("/you/nutrition")}
+              />
               <FeatureCard
                 icon={<FeatureIcon name="recovery" color={p.primary} />}
                 title="Your wellbeing"
@@ -608,8 +616,6 @@ function FatherYouBody({
   recoveryChildName,
   showsStageContent,
   needsBirthConfirmation,
-  savingBirth,
-  onChooseBirth,
   fatherPlanActivities,
   fatherPlanLoading,
   fatherSwapping,
@@ -631,8 +637,6 @@ function FatherYouBody({
    *  "104 weeks in"). EXPLORE stays — browsable content isn't time-bound. */
   showsStageContent: boolean;
   needsBirthConfirmation: boolean;
-  savingBirth: boolean;
-  onChooseBirth: (value: DeliveryType) => void;
   fatherPlanActivities: FatherActivity[] | null;
   fatherPlanLoading: boolean;
   fatherSwapping: FatherActivity["category"] | null;
@@ -683,17 +687,14 @@ function FatherYouBody({
     <>
       {showsStageContent && (
         <>
+      {/* Hidden entirely until the birth-method question (now asked right
+          after the mood check-in, see YouHub above) is answered -- no
+          point showing role tabs with nothing underneath them. */}
+      {!needsBirthConfirmation && (
       <View style={styles.block}>
         <SectionTitle>One idea for today</SectionTitle>
 
-        {needsBirthConfirmation ? (
-          <BirthConfirmationCard
-            title="How did your partner give birth?"
-            body="So today's suggestions actually fit where you both are."
-            saving={savingBirth}
-            onChoose={onChooseBirth}
-          />
-        ) : fatherPlanLoading ? (
+        {fatherPlanLoading ? (
           <ActivityIndicator style={{ marginTop: spacing.lg }} />
         ) : (
           <>
@@ -763,12 +764,13 @@ function FatherYouBody({
           </>
         )}
 
-        {!needsBirthConfirmation && !fatherPlanLoading && (
+        {!fatherPlanLoading && (
           <Pressable onPress={() => router.push("/you/for-today")} style={styles.seeMoreRow}>
             <Text style={[styles.seeMoreText, { color: p.primary }]}>See more for today →</Text>
           </Pressable>
         )}
       </View>
+      )}
 
       {/* Context, not tasks: one card, three tap-to-read chips, rather
           than three stacked accordion tiles — collapsing this section to
