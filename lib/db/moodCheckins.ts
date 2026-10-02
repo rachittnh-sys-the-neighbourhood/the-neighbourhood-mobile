@@ -56,6 +56,26 @@ export async function getCheckinsForWeek(
   );
 }
 
+/** The most recent `days` calendar days of check-ins (today inclusive),
+ *  most recent first — for the "Past check-ins" screen, which replaced
+ *  the mood card's inline this-week strip. */
+export async function getRecentCheckins(profileId: string, days: number): Promise<MoodCheckin[]> {
+  const end = new Date();
+  const start = new Date(end);
+  start.setDate(start.getDate() - (days - 1));
+  const rows = await unwrap<MoodCheckin[]>(
+    "moodCheckins.getRecentCheckins",
+    await supabase
+      .from("mood_checkins")
+      .select("*")
+      .eq("profile_id", profileId)
+      .gte("checkin_date", toDateKey(start))
+      .lte("checkin_date", toDateKey(end))
+      .order("checkin_date", { ascending: false })
+  );
+  return rows;
+}
+
 /** Submits (or updates) today's mood -- upsert on the (profile_id,
  *  checkin_date) unique constraint, so tapping a different face later the
  *  same day corrects today's answer rather than adding a second row. */
@@ -71,6 +91,23 @@ export async function submitMoodCheckin(
         { profile_id: profileId, checkin_date: toDateKey(new Date()), mood },
         { onConflict: "profile_id,checkin_date" }
       )
+      .select()
+      .single()
+  );
+}
+
+/** Sets today's note -- requires today's mood to already be checked in
+ *  (the row the note attaches to), same upsert-by-day shape as the mood
+ *  itself. An empty string clears the note rather than leaving a blank
+ *  one saved. */
+export async function submitMoodNote(profileId: string, note: string): Promise<MoodCheckin> {
+  return unwrap<MoodCheckin>(
+    "moodCheckins.submitMoodNote",
+    await supabase
+      .from("mood_checkins")
+      .update({ note: note.trim() || null })
+      .eq("profile_id", profileId)
+      .eq("checkin_date", toDateKey(new Date()))
       .select()
       .single()
   );

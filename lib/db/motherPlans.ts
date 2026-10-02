@@ -24,6 +24,9 @@ const ACTIVITY_ID_COLUMN: Record<MotherActivityCategory, keyof MotherDailyPlanRo
   couple_connection: "couple_connection_activity_id",
 };
 
+const MOTHER_ACTIVITY_COLUMNS =
+  "id, category, month_postpartum, applies_to, title, description, duration_minutes, time_of_day, with_baby, effort_level, progression_notes, short_description, steps, why_this, requires_doctor_clearance, clearance_copy";
+
 /** Resolves a plan row's four activity ids into full activity records. */
 async function hydrate(row: MotherDailyPlanRow): Promise<MotherDailyPlan> {
   const ids = MOTHER_ACTIVITY_CATEGORIES.map(
@@ -35,9 +38,7 @@ async function hydrate(row: MotherDailyPlanRow): Promise<MotherDailyPlan> {
         "motherPlans.hydrate",
         await supabase
           .from("mother_activities")
-          .select(
-            "id, category, month_postpartum, applies_to, title, description, duration_minutes, time_of_day, with_baby, effort_level, progression_notes"
-          )
+          .select(MOTHER_ACTIVITY_COLUMNS)
           .in("id", ids)
       )
     : [];
@@ -61,6 +62,18 @@ export async function getTodaysMotherPlan(profileId: string): Promise<MotherDail
     await supabase.rpc("get_or_create_mother_daily_plan", { p_profile_id: profileId })
   );
   return hydrate(row);
+}
+
+/** A single activity by id — for the activity detail screen, reached by
+ *  tapping a FOR TODAY card or the wellbeing hub's featured activity.
+ *  Returns null if the id doesn't exist (e.g. a stale deep link after a
+ *  content refresh removed it). */
+export async function getMotherActivity(id: string): Promise<MotherActivity | null> {
+  const rows = unwrap<MotherActivity[]>(
+    "motherPlans.getMotherActivity",
+    await supabase.from("mother_activities").select(MOTHER_ACTIVITY_COLUMNS).eq("id", id)
+  );
+  return rows[0] ?? null;
 }
 
 /** Rotates one category to its next activity, staying inside the current month. */
