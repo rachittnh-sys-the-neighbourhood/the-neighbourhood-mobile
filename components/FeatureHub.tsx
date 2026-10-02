@@ -281,6 +281,14 @@ export function FeatureIcon({ name, color }: { name: FeatureIconName; color: str
           <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth={1.8} />
         </Svg>
       );
+    case "bottle":
+      return (
+        <Svg {...props}>
+          <Path d="M8 3h8l-.6 3H8.6L8 3Z" stroke={color} strokeWidth={1.6} strokeLinejoin="round" />
+          <Path d="M8.6 6h6.8l.9 12.5a2 2 0 0 1-2 2.5H9.7a2 2 0 0 1-2-2.5L8.6 6Z" stroke={color} strokeWidth={1.6} strokeLinejoin="round" />
+          <Path d="M9 11h6M9.3 15h5.4" stroke={color} strokeWidth={1.4} strokeLinecap="round" />
+        </Svg>
+      );
   }
 }
 
@@ -299,7 +307,8 @@ export type FeatureIconName =
   | "relationships"
   | "dads"
   | "story"
-  | "notice";
+  | "notice"
+  | "bottle";
 
 const styles = StyleSheet.create({
   header: {

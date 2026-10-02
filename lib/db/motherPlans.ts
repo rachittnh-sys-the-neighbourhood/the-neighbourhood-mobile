@@ -90,3 +90,18 @@ export async function swapMotherCategory(
   );
   return hydrate(row);
 }
+
+/**
+ * The companion thread's own "Something else" -- unlike swapMotherCategory
+ * above, this never crosses effort_level or dosing shape (a gentle rep set
+ * never swaps into a moderate weekly walk), via
+ * swap_mother_physical_recovery_activity rather than the generic RPC. See
+ * 20261002130000_mother_physical_recovery_constrained_swap.sql.
+ */
+export async function swapPhysicalRecoveryActivity(profileId: string): Promise<MotherDailyPlan> {
+  const row = unwrap<MotherDailyPlanRow>(
+    "motherPlans.swapPhysicalRecoveryActivity",
+    await supabase.rpc("swap_mother_physical_recovery_activity", { p_profile_id: profileId })
+  );
+  return hydrate(row);
+}

@@ -48,12 +48,9 @@ export default function YouLayout() {
           still in your own space", not name a screen concept the parent
           never chose to open. */}
       <Stack.Screen name="care" options={{ title: "You" }} />
-      {/* Mother-only -- "Your wellbeing", the hub above the four personal
-          wellbeing areas (physical/mental/sleep/feeding). See
-          you/wellbeing.tsx. */}
-      <Stack.Screen name="wellbeing" options={{ title: "Your wellbeing" }} />
-      {/* One mother_activities row, in full -- reached from a FOR TODAY
-          card's "See how" or wellbeing's featured activity. */}
+      {/* One mother_activities row, in full -- reached from the
+          companion thread's "Do it now" or an Explore tile's "today"
+          pick. */}
       <Stack.Screen name="activity/[id]" options={{ title: "" }} />
       {/* One father_activities row, in full -- the father-side mirror of
           activity/[id] above. */}
