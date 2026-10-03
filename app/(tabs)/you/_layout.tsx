@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { AvatarButton } from "../../../components/AvatarButton";
+import { HeaderTitleWithMark } from "../../../components/Logo";
 import { usePalette } from "../../../lib/ModeProvider";
 import { fonts } from "../../../lib/theme";
 
@@ -26,6 +27,7 @@ export default function YouLayout() {
         headerStyle: { backgroundColor: p.bg },
         headerShadowVisible: false,
         headerTintColor: p.primary,
+        headerTitleAlign: "left",
         headerTitleStyle: {
           fontFamily: fonts.bodySemiBold,
           fontSize: 17,
@@ -33,7 +35,16 @@ export default function YouLayout() {
         },
       }}
     >
-      <Stack.Screen name="index" options={{ title: "You", headerRight: () => <AvatarButton /> }} />
+      <Stack.Screen
+        name="index"
+        options={{
+          title: "You",
+          headerTitle: () => (
+            <HeaderTitleWithMark title="You" textColor={p.text} markColor={p.primary} weight="semiBold" />
+          ),
+          headerRight: () => <AvatarButton />,
+        }}
+      />
       <Stack.Screen name="nutrition" options={{ title: "Family Meal Planner" }} />
       {/* Own custom header (see you/meal.tsx) -- back arrow + slot name,
           matching the agreed layout exactly rather than the Stack's

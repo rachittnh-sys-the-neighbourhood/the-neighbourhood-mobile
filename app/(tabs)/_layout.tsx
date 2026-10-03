@@ -1,6 +1,6 @@
 import { Tabs, useRouter } from "expo-router";
 import { AvatarButton } from "../../components/AvatarButton";
-import { LogoLockup } from "../../components/Logo";
+import { HeaderTitleWithMark, LogoLockup } from "../../components/Logo";
 import { AskTabIcon, ChildIcon, CommunityIcon, HomeIcon, YouIcon } from "../../components/TabIcons";
 import { useMode } from "../../lib/ModeProvider";
 import { colors, spacing, type } from "../../lib/theme";
@@ -45,6 +45,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.cream },
         headerShadowVisible: false,
+        headerTitleAlign: "left",
         headerTitleStyle: {
           ...type.title,
           color: colors.charcoal,
@@ -92,6 +93,7 @@ export default function TabsLayout() {
         name="community"
         options={{
           title: "Community",
+          headerTitle: () => <HeaderTitleWithMark title="Community" textColor={colors.charcoal} />,
           tabBarIcon: ({ color, focused }) => <CommunityIcon color={color} focused={focused} />,
         }}
       />
@@ -99,6 +101,7 @@ export default function TabsLayout() {
         name="ask"
         options={{
           title: "Ask",
+          headerTitle: () => <HeaderTitleWithMark title="Ask" textColor={colors.charcoal} />,
           tabBarIcon: () => <AskTabIcon />,
         }}
       />

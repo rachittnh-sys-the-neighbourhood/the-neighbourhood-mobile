@@ -81,6 +81,39 @@ export function LogoLockup({
   );
 }
 
+/**
+ * Mark plus a plain screen title, side by side -- the header-bar treatment
+ * for every tab that isn't Home. Home keeps the full lockup (LogoLockup)
+ * as its own distinct "arrival" moment; everywhere else just needs the
+ * mark present, at a size clearly subordinate to Home's, so the brand
+ * reads consistently without repeating the wordmark on every screen.
+ */
+export function HeaderTitleWithMark({
+  title,
+  textColor,
+  markColor = colors.warmTaupe,
+  weight = "bold",
+}: {
+  title: string;
+  textColor: string;
+  markColor?: string;
+  weight?: "bold" | "semiBold";
+}) {
+  return (
+    <View style={styles.titleRow}>
+      <LogoMark size={19} color={markColor} />
+      <Text
+        style={[
+          styles.titleText,
+          { color: textColor, fontFamily: weight === "bold" ? fonts.bodyBold : fonts.bodySemiBold },
+        ]}
+      >
+        {title}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   stack: {
     gap: spacing.sm,
@@ -96,6 +129,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   rowWordmark: {
+    fontSize: 17,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  titleText: {
     fontSize: 17,
   },
 });

@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { AvatarButton } from "../../../components/AvatarButton";
+import { HeaderTitleWithMark } from "../../../components/Logo";
 import { useAuth } from "../../../lib/AuthProvider";
 import { CHILD_SECTIONS } from "../../../lib/childSections";
 import { colors, fonts } from "../../../lib/theme";
@@ -30,6 +31,7 @@ export default function ChildLayout() {
         headerStyle: { backgroundColor: colors.cream },
         headerShadowVisible: false,
         headerTintColor: colors.warmTaupe,
+        headerTitleAlign: "left",
         headerTitleStyle: {
           fontFamily: fonts.bodySemiBold,
           fontSize: 17,
@@ -39,7 +41,13 @@ export default function ChildLayout() {
     >
       <Stack.Screen
         name="index"
-        options={{ title, headerRight: () => <AvatarButton /> }}
+        options={{
+          title,
+          headerTitle: () => (
+            <HeaderTitleWithMark title={title} textColor={colors.charcoal} weight="semiBold" />
+          ),
+          headerRight: () => <AvatarButton />,
+        }}
       />
       {CHILD_SECTIONS.map((section) => (
         <Stack.Screen
