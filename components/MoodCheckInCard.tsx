@@ -50,9 +50,15 @@ function dateKey(date: Date): string {
 export function MoodCheckInCard({
   profileId,
   onMoodChange,
+  children,
 }: {
   profileId: string | null;
   onMoodChange?: (mood: MoodValue) => void;
+  /** The You hub's companion thread (see CompanionThreadCard) renders
+   *  here, inside this same card, below the mood row and above "Add a
+   *  note" -- it's meant to read as a continuation of this check-in, not
+   *  a second card competing for attention right underneath it. */
+  children?: React.ReactNode;
 }) {
   const p = usePalette();
   const router = useRouter();
@@ -120,6 +126,8 @@ export function MoodCheckInCard({
           );
         })}
       </View>
+
+      {children}
 
       <View style={styles.linkRow}>
         <Pressable onPress={() => router.push("/you/checkins?note=1")} hitSlop={6}>
