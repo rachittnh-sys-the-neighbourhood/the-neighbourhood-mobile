@@ -329,11 +329,11 @@ export default function YouHub() {
             onPress={() => router.push("/you/nutrition")}
             style={({ pressed }) => [
               styles.familyMealsCard,
-              { backgroundColor: p.surface, borderColor: p.border },
+              { backgroundColor: p.surfaceAltStrong, borderColor: p.border },
               pressed && styles.pressed,
             ]}
           >
-            <View style={[styles.familyMealsIcon, { backgroundColor: p.surfaceAlt }]}>
+            <View style={[styles.familyMealsIcon, { backgroundColor: p.surface }]}>
               <FeatureIcon name="meal" color={p.primary} />
             </View>
             <View style={styles.familyMealsText}>
@@ -602,11 +602,11 @@ function FatherYouBody({
         onPress={() => router.push("/you/nutrition")}
         style={({ pressed }) => [
           styles.familyMealsCard,
-          { backgroundColor: p.surface, borderColor: p.border },
+          { backgroundColor: p.surfaceAltStrong, borderColor: p.border },
           pressed && styles.pressed,
         ]}
       >
-        <View style={[styles.familyMealsIcon, { backgroundColor: p.surfaceAlt }]}>
+        <View style={[styles.familyMealsIcon, { backgroundColor: p.surface }]}>
           <FeatureIcon name="meal" color={p.primary} />
         </View>
         <View style={styles.familyMealsText}>

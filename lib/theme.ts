@@ -63,6 +63,10 @@ export type Palette = {
   surface: string;
   /** Recessed fills — progress tracks, quiet chips. */
   surfaceAlt: string;
+  /** A stronger tint of the same color as surfaceAlt -- for a fill that
+   *  needs to read clearly as a distinct card against bg, not just a
+   *  recessed chip within one (see Family Meals' card). */
+  surfaceAltStrong: string;
   /** Primary brand action and eyebrow text. */
   primary: string;
   /** Secondary accents. */
@@ -83,6 +87,7 @@ export const palettes: Record<Mode, Palette> = {
     bg: "#F3EEE7",
     surface: "#FFFDFC",
     surfaceAlt: "rgba(137, 116, 91, 0.07)",
+    surfaceAltStrong: "rgba(137, 116, 91, 0.18)",
     primary: "#89745B",
     secondary: "#C9A58E",
     text: "#2C2C2C",
@@ -96,6 +101,7 @@ export const palettes: Record<Mode, Palette> = {
     bg: "#EBF0EB",
     surface: "#FBFDFB",
     surfaceAlt: "rgba(94, 115, 96, 0.07)",
+    surfaceAltStrong: "rgba(94, 115, 96, 0.18)",
     primary: "#5E7360",
     secondary: "#9DB0A0",
     // Cooled a touch, never blue-black.
