@@ -682,7 +682,7 @@ function FatherExploreTile({
         </View>
       </Pressable>
       {activity && (
-        <Pressable onPress={onPressToday} style={[styles.todayStrip, { backgroundColor: p.surfaceAltStrong }]}>
+        <Pressable onPress={onPressToday} style={[styles.todayStrip, { backgroundColor: p.surfaceAlt }]}>
           <View style={styles.todayMain}>
             <Text style={[styles.todayEyebrow, { color: p.primary }]}>Today</Text>
             <Text style={[styles.todayTitle, { color: p.text }]} numberOfLines={1}>
