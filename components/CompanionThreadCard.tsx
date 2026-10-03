@@ -4,23 +4,27 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { MotherActivity } from "../lib/db/types";
 import { getTodaysCompletionCount, recordCompanionThreadCompletion } from "../lib/companionThread";
 import { usePalette } from "../lib/ModeProvider";
+import { Card } from "./parentUI";
 import { fonts, radius, spacing, typeScale } from "../lib/theme";
 
 /**
- * The You hub's "companion thread" -- a quiet nudge that offers today's
- * physical_recovery activity, rather than a separate browsable card the
- * way the other three categories still work. Deliberately the ONLY place
- * physical recovery surfaces on the hub now -- see
- * app/(tabs)/you/index.tsx's own notes on why "One idea for today" was
- * retired.
+ * A quiet nudge that offers today's pick for one mother_activities
+ * category as something to actually DO, not just read about. Two call
+ * sites, two layouts:
  *
- * Renders INSIDE MoodCheckInCard (passed as its `children`), not as its
- * own card underneath it -- the whole point of "while you're here" is
- * that it reads as a continuation of the check-in she's already
- * answering, not a second ask competing for attention right below it.
- * This component renders no outer Card/border of its own; it's a plain
- * section with a top divider, matching whatever's already inside that
- * card.
+ * - The You hub's physical_recovery nudge: renders INSIDE MoodCheckInCard
+ *   (passed as its `children`), not as its own card underneath it -- the
+ *   whole point of "while you're here" is that it reads as a
+ *   continuation of the check-in she's already answering. Default
+ *   layout (`standalone` false/omitted): no outer Card/border of its
+ *   own, a plain section with a top divider matching whatever's already
+ *   inside that card.
+ * - The care/Explore screens' emotional_wellness and couple_connection
+ *   nudge (`standalone` true): no enclosing card to borrow chrome from,
+ *   so this renders its own Card instead of a top-divider section. Same
+ *   component, same dosing-shape logic -- these two categories just
+ *   never carry repeat/weekly dosing fields, so they always take the
+ *   plain "offer once today" path below, never the weekly branch.
  *
  * Two shapes, picked by which dosing fields the activity carries (see
  * 20261002120000_mother_physical_recovery_dosing.sql -- a row never has
@@ -49,10 +53,15 @@ export function CompanionThreadCard({
   activity,
   onSwap,
   swapping,
+  standalone = false,
 }: {
   activity: MotherActivity | null;
   onSwap: () => void;
   swapping: boolean;
+  /** True on the care/Explore screens, where this card has no enclosing
+   *  Card to borrow chrome from and needs its own. False (default)
+   *  inside MoodCheckInCard, which already provides one. */
+  standalone?: boolean;
 }) {
   const p = usePalette();
   const router = useRouter();
@@ -87,9 +96,12 @@ export function CompanionThreadCard({
   // visible for the rest of THIS visit, not forever.
   if (!isWeekly && count >= cap && phase !== "logged") return null;
 
+  const Wrap = standalone ? Card : View;
+  const wrapStyle = standalone ? styles.standaloneWrap : [styles.wrap, { borderTopColor: p.border }];
+
   if (isWeekly) {
     return (
-      <View style={[styles.wrap, { borderTopColor: p.border }]}>
+      <Wrap style={wrapStyle}>
         <Text style={[styles.offerText, { color: p.textMuted }]}>Today's pick</Text>
         <Text style={[styles.title, { color: p.text }]}>{activity.title}</Text>
         <Text style={[styles.body, { color: p.textMuted }]}>
@@ -111,7 +123,7 @@ export function CompanionThreadCard({
             </Text>
           </Pressable>
         </View>
-      </View>
+      </Wrap>
     );
   }
 
@@ -122,7 +134,7 @@ export function CompanionThreadCard({
   };
 
   return (
-    <View style={[styles.wrap, { borderTopColor: p.border }]}>
+    <Wrap style={wrapStyle}>
       {phase === "offer" && (
         <>
           <Text style={[styles.whileYoureHere, { color: p.text }]}>While you're here</Text>
@@ -193,7 +205,7 @@ export function CompanionThreadCard({
           No problem. It'll be here later today.
         </Text>
       )}
-    </View>
+    </Wrap>
   );
 }
 
@@ -202,6 +214,10 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  standaloneWrap: {
+    padding: spacing.lg,
+    marginTop: spacing.lg,
   },
   whileYoureHere: {
     fontFamily: fonts.bodySemiBold,

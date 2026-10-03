@@ -2,8 +2,10 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Card, CareNote, Chevron, PageHeading, SectionLabel } from "../../../components/parentUI";
+import { CompanionThreadCard } from "../../../components/CompanionThreadCard";
 import { useAuth } from "../../../lib/AuthProvider";
 import { computeAge, youngestChild } from "../../../lib/childAge";
+import type { MotherActivityCategory } from "../../../lib/db/types";
 import {
   FATHER_ROLE_HUB_BLURB,
   FATHER_ROLE_HUB_LABEL,
@@ -22,6 +24,20 @@ import {
   type DeliveryType,
 } from "../../../lib/parentCare";
 import { fonts, spacing, typeScale } from "../../../lib/theme";
+import { useTodaysMotherPlan } from "../../../lib/useTodaysMotherPlan";
+
+/** Which single-area screens get a "while you're here" activity above the
+ *  article list, and which mother_activities category feeds it. Only the
+ *  two categories with no clinical dosing concerns -- unlike physical
+ *  recovery, there's no reason to cap or constrain "do a breathing
+ *  exercise" or "answer a connection prompt", so this is always a plain,
+ *  once-a-day CompanionThreadCard, never the weekly/repeat shapes.
+ *  Sleep and Feeding support have no matching mother_activities category
+ *  yet, so they stay article-list-only. */
+const EXPLORE_ACTIVITY_CATEGORY: Partial<Record<CareArea, MotherActivityCategory>> = {
+  mental: "emotional_wellness",
+  relationships: "couple_connection",
+};
 
 /**
  * Postpartum Care — personalized.
@@ -96,7 +112,7 @@ function fatherReassurance(weeksPostpartum: number): { eyebrow: string; body: st
 export default function Recovery() {
   const router = useRouter();
   const p = usePalette();
-  const { children, profile: authProfile } = useAuth();
+  const { children, profile: authProfile, session } = useAuth();
   /**
    * When opened from a specific card on You's hub (e.g. "Sleep"), `area`
    * narrows the library to just that one area instead of the full list —
@@ -125,6 +141,18 @@ export default function Recovery() {
   const { eyebrow, body: stageBody } = isFather
     ? fatherReassurance(profile.weeksPostpartum)
     : stageReassurance(profile.delivery, profile.weeksPostpartum);
+
+  // Only set for a single-area view of mental health or relationships, and
+  // never for a father (this whole screen is mother-facing content there's
+  // no father equivalent of yet). See EXPLORE_ACTIVITY_CATEGORY above.
+  const exploreActivityCategory =
+    !isFather && !hub && areaFilter ? EXPLORE_ACTIVITY_CATEGORY[areaFilter] : undefined;
+  const motherPlanProfileId = exploreActivityCategory ? session?.user?.id ?? null : null;
+  const { plan: motherPlan, swapping: swappingCategory, swap: swapExploreActivity } =
+    useTodaysMotherPlan(motherPlanProfileId);
+  const exploreActivity = exploreActivityCategory
+    ? motherPlan?.activities.find((a) => a.category === exploreActivityCategory) ?? null
+    : null;
 
   // Two filters stack here: isCareAreaVisible decides whether an area
   // belongs on this parent's screen at all (role, and — for physical
@@ -211,6 +239,15 @@ export default function Recovery() {
             The meal plan for the whole family, and her recovery-specific additions.
           </Text>
         </Card>
+      )}
+
+      {exploreActivity && exploreActivityCategory && (
+        <CompanionThreadCard
+          standalone
+          activity={exploreActivity}
+          onSwap={() => swapExploreActivity(exploreActivityCategory)}
+          swapping={swappingCategory === exploreActivityCategory}
+        />
       )}
 
       {areaTopics.map(({ key, label, blurb, topics }) => (
