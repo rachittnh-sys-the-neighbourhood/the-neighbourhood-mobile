@@ -682,7 +682,7 @@ function FatherExploreTile({
         </View>
       </Pressable>
       {activity && (
-        <Pressable onPress={onPressToday} style={[styles.todayStrip, { backgroundColor: p.surfaceAlt }]}>
+        <Pressable onPress={onPressToday} style={[styles.todayStrip, { backgroundColor: p.surfaceAltStrong }]}>
           <View style={styles.todayMain}>
             <Text style={[styles.todayEyebrow, { color: p.primary }]}>Today</Text>
             <Text style={[styles.todayTitle, { color: p.text }]} numberOfLines={1}>
@@ -842,13 +842,12 @@ const styles = StyleSheet.create({
   fatherTile: {
     borderRadius: radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    overflow: "hidden",
+    padding: spacing.md,
   },
   fatherTileTop: {
     flexDirection: "row",
     gap: spacing.md,
     alignItems: "flex-start",
-    padding: spacing.md,
   },
   fatherTileIcon: {
     width: 36,
@@ -884,6 +883,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    marginTop: spacing.md,
   },
   todayMain: {
     flex: 1,
