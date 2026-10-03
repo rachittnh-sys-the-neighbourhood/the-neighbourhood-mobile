@@ -329,11 +329,11 @@ export default function YouHub() {
             onPress={() => router.push("/you/nutrition")}
             style={({ pressed }) => [
               styles.familyMealsCard,
-              { backgroundColor: p.surface, borderColor: p.border },
+              { backgroundColor: p.surfaceAltStrong, borderColor: p.border },
               pressed && styles.pressed,
             ]}
           >
-            <View style={[styles.familyMealsIcon, { backgroundColor: p.surfaceAlt }]}>
+            <View style={[styles.familyMealsIcon, { backgroundColor: p.surface }]}>
               <FeatureIcon name="meal" color={p.primary} />
             </View>
             <View style={styles.familyMealsText}>
@@ -602,11 +602,11 @@ function FatherYouBody({
         onPress={() => router.push("/you/nutrition")}
         style={({ pressed }) => [
           styles.familyMealsCard,
-          { backgroundColor: p.surface, borderColor: p.border },
+          { backgroundColor: p.surfaceAltStrong, borderColor: p.border },
           pressed && styles.pressed,
         ]}
       >
-        <View style={[styles.familyMealsIcon, { backgroundColor: p.surfaceAlt }]}>
+        <View style={[styles.familyMealsIcon, { backgroundColor: p.surface }]}>
           <FeatureIcon name="meal" color={p.primary} />
         </View>
         <View style={styles.familyMealsText}>
@@ -842,13 +842,12 @@ const styles = StyleSheet.create({
   fatherTile: {
     borderRadius: radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    overflow: "hidden",
+    padding: spacing.md,
   },
   fatherTileTop: {
     flexDirection: "row",
     gap: spacing.md,
     alignItems: "flex-start",
-    padding: spacing.md,
   },
   fatherTileIcon: {
     width: 36,
@@ -884,6 +883,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    marginTop: spacing.md,
   },
   todayMain: {
     flex: 1,
