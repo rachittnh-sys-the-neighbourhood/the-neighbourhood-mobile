@@ -1,14 +1,7 @@
 import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import {
-  FeatureCard,
-  FeatureGrid,
-  FeatureGroupLabel,
-  FeatureIcon,
-  HubHeader,
-  type FeatureIconName,
-} from "../../../components/FeatureHub";
+import { FeatureIcon, HubHeader, type FeatureIconName } from "../../../components/FeatureHub";
 import { CheckInCard } from "../../../components/CheckInCard";
 import { CompanionThreadCard } from "../../../components/CompanionThreadCard";
 import { MoodCheckInCard } from "../../../components/MoodCheckInCard";
@@ -19,10 +12,8 @@ import { computeAge, youngestChild } from "../../../lib/childAge";
 import * as family from "../../../lib/db/family";
 import { type FatherActivity } from "../../../lib/db/types";
 import {
-  FATHER_MOOD_ROLE,
   FATHER_ROLE_HUB_BLURB,
   FATHER_ROLE_HUB_LABEL,
-  FATHER_ROLE_LABEL,
   todaysActivityForRole,
   topicsForFatherRole,
   type FatherRole,
@@ -159,12 +150,6 @@ export default function YouHub() {
   const needsBirthConfirmation =
     (showsRecovery || showsFatherSupport) && authProfile?.birth_method == null;
 
-  // The mood check-in's suggestion for which FOR TODAY role opens first
-  // today -- see MoodCheckInCard/FATHER_MOOD_ROLE. Father-only now --
-  // mother no longer has a role-tab FOR TODAY to suggest into (see the
-  // companion thread below), so there's nothing for her own mood mapping
-  // to drive any more.
-  const [moodRole, setMoodRole] = useState<FatherRole | null>(null);
   // Whether today's mood has been answered yet -- gates the companion
   // thread below, which deliberately only appears once she's already
   // taken an action on this screen (see CompanionThreadCard's own notes).
@@ -194,12 +179,7 @@ export default function YouHub() {
 
   const fatherPlanProfileId =
     showsFatherSupport && !needsBirthConfirmation ? session?.user?.id ?? null : null;
-  const {
-    plan: fatherPlan,
-    loading: fatherPlanLoading,
-    swapping: fatherSwapping,
-    swap: swapFatherActivity,
-  } = useTodaysFatherPlan(fatherPlanProfileId);
+  const { plan: fatherPlan, loading: fatherPlanLoading } = useTodaysFatherPlan(fatherPlanProfileId);
 
   /**
    * A father's nutrition/recovery card used to say "Food to support
@@ -279,10 +259,7 @@ export default function YouHub() {
           roles, rather than the only check-in a mother ever saw. */}
       <MoodCheckInCard
         profileId={session?.user?.id ?? null}
-        onMoodChange={(mood) => {
-          setMoodLoggedToday(true);
-          if (isFather) setMoodRole(FATHER_MOOD_ROLE[mood]);
-        }}
+        onMoodChange={() => setMoodLoggedToday(true)}
       >
         {/* The companion thread -- the one place physical recovery
             surfaces on her hub now (see CompanionThreadCard's own notes
@@ -335,14 +312,10 @@ export default function YouHub() {
           router={router}
           profile={profile}
           familyMealsDescription={familyMealsDescription}
-          recoveryChildName={recoveryChild?.name ?? null}
           showsStageContent={showsFatherSupport}
           needsBirthConfirmation={needsBirthConfirmation}
           fatherPlanActivities={fatherPlan?.activities ?? null}
           fatherPlanLoading={fatherPlanLoading}
-          fatherSwapping={fatherSwapping}
-          onSwapFatherActivity={swapFatherActivity}
-          moodRole={moodRole}
         />
       ) : (
         <>
@@ -566,10 +539,10 @@ function ExploreTile({
   );
 }
 
-const STAGE_TILE_LABEL: Record<FatherRole, string> = {
-  dad: "With your baby",
-  partner: "With your partner",
-  you: "For yourself",
+const FATHER_ROLE_ICON: Record<FatherRole, FeatureIconName> = {
+  dad: "dads",
+  partner: "relationships",
+  you: "mental",
 };
 
 /**
@@ -578,296 +551,151 @@ const STAGE_TILE_LABEL: Record<FatherRole, string> = {
  * layout above. See lib/fatherRoles.ts for the category/area mapping this
  * all draws from.
  *
- * FOR TODAY: exactly three cards, collapsed to just a role label and
- * title until tapped (never the full monthly inventory either way —
- * that's "See more for today →", see you/for-today.tsx). YOUR STAGE:
- * three short, tap-to-expand context tiles, not another picked-topic
- * list — each one's expanded state offers a way into the fuller Explore
- * hub for whoever wants more than a paragraph. EXPLORE: exactly three
- * hubs, replacing the generic per-area Well Being grid. Family Meals is
- * deliberately NOT here — it lives inside the Partnership hub now (see
- * you/care.tsx).
+ * Family Meals is its own first-class card here now, same placement as
+ * mother's -- directly under the check-in, not folded into the Explore
+ * grid as a fourth tile (see c30b23d for why it moved there in the first
+ * place; this undoes that specifically because every Explore tile below
+ * now needs room to be about ONE hub, not shared with an unrelated
+ * planner link).
+ *
+ * EXPLORE replaces FOR TODAY, YOUR STAGE and the old featured-topic card
+ * all at once: each of the three hubs is one tile that carries BOTH its
+ * library (icon, blurb, how many articles) AND today's one doable pick,
+ * as a distinct strip underneath -- tapping the tile opens the hub,
+ * tapping the strip jumps straight to today's activity. No role pills,
+ * no separate "three months in" chips, no second "new in X" card
+ * repeating a signal the tile already gives -- see the design discussion
+ * this carries forward (mother's Explore tiles already do half of this
+ * with their own "today" teaser; this is the same idea taken further).
  */
-const FATHER_ROLE_ICON: Record<FatherRole, FeatureIconName> = {
-  dad: "dads",
-  partner: "relationships",
-  you: "mental",
-};
-
 function FatherYouBody({
   router,
   profile,
   familyMealsDescription,
-  recoveryChildName,
   showsStageContent,
   needsBirthConfirmation,
   fatherPlanActivities,
   fatherPlanLoading,
-  fatherSwapping,
-  onSwapFatherActivity,
-  moodRole,
 }: {
   router: ReturnType<typeof useRouter>;
   profile: ParentProfile;
-  /** Same copy YouHub computes for mother's own Family Meals tile --
-   *  shared so his EXPLORE tile (below) says "support her recovery"
-   *  rather than duplicating that logic. */
+  /** Same copy YouHub computes for mother's own Family Meals card. */
   familyMealsDescription: string;
-  recoveryChildName: string | null;
   /** Whether the postpartum/recovery window still applies to this father's
    *  youngest child — see lib/recoveryRelevance.ts. Once it doesn't, there
-   *  is no daily father_activities plan and no meaningful "weeks in" stage
-   *  line, so FOR TODAY and YOUR STAGE are skipped entirely rather than
-   *  rendering empty or nonsensical (a three-year-old's father seeing
-   *  "104 weeks in"). EXPLORE stays — browsable content isn't time-bound. */
+   *  is no daily father_activities plan, so every tile's today-strip is
+   *  skipped rather than rendering stale or empty. The tiles themselves
+   *  stay -- browsable content isn't time-bound. */
   showsStageContent: boolean;
   needsBirthConfirmation: boolean;
   fatherPlanActivities: FatherActivity[] | null;
   fatherPlanLoading: boolean;
-  fatherSwapping: FatherActivity["category"] | null;
-  onSwapFatherActivity: (category: FatherActivity["category"]) => void;
-  /** The mood check-in's suggestion for today, if any — see
-   *  MoodCheckInCard/FATHER_MOOD_ROLE. A manual tab tap always wins over
-   *  this once one happens (selectedRole below), so this only ever sets
-   *  which tab opens first. */
-  moodRole: FatherRole | null;
 }) {
   const p = usePalette();
-  // Which of the three roles is open right now, for BOTH FOR TODAY's
-  // pills and YOUR STAGE's chips independently. A manual tap always wins;
-  // absent one, the mood check-in's suggestion wins; absent that, the
-  // day-rotated default keeps FOR TODAY from always opening on the same
-  // role forever.
-  const [selectedToday, setSelectedToday] = useState<FatherRole | null>(null);
-  const [selectedStage, setSelectedStage] = useState<FatherRole | null>(null);
   const dayIndex = Math.floor(Date.now() / 86_400_000);
   const roles: FatherRole[] = ["dad", "partner", "you"];
-  const activeToday = selectedToday ?? moodRole ?? roles[dayIndex % roles.length];
-
-  // Same profile.stage buckets the mother's "Your Stage" recoveryLine
-  // uses above — just three role-specific lines instead of one.
-  const stageCopy: Record<FatherRole, string> =
-    profile.stage === "fourth_trimester"
-      ? {
-          dad: `Right now, ${recoveryChildName ?? "your baby"} is learning your voice, your smell, your face. There's no wrong way to bond yet — just being present is doing it.`,
-          partner:
-            "She's healing from things that don't fully show, and running on very little sleep. Practical support matters more than getting it exactly right.",
-          you: "You're allowed to be finding this hard too. Sleep, identity, and how your own life has changed are real adjustments, not side issues.",
-        }
-      : profile.stage === "recovering"
-        ? {
-            dad: `${recoveryChildName ?? "Your baby"} is starting to respond to you directly now — smiling, reaching, settling to your voice. The relationship is becoming a two-way thing.`,
-            partner:
-              "The acute stage has passed, but recovery and adjustment are still ongoing underneath. Checking in on her, not just the baby, still matters.",
-            you: "As things steady, it's worth noticing how you're actually doing — not just how the baby and your partner are doing.",
-          }
-        : {
-            dad: `${recoveryChildName ?? "Your baby"} increasingly knows you as one of their two steady people. What you do together now is shaping how they see fathers.`,
-            partner:
-              "The baby stage has settled into a rhythm. This is often when a couple relationship needs deliberate attention again, not less.",
-            you: "Fatherhood has become your new normal. Worth checking in on what you've let go of, and what you want back.",
-          };
+  const showsToday = showsStageContent && !needsBirthConfirmation && !fatherPlanLoading;
 
   return (
     <>
-      {showsStageContent && (
-        <>
-      {/* Hidden entirely until the birth-method question (now asked right
-          after the mood check-in, see YouHub above) is answered -- no
-          point showing role tabs with nothing underneath them. */}
-      {!needsBirthConfirmation && (
-      <View style={styles.block}>
-        <SectionTitle>One idea for today</SectionTitle>
-
-        {fatherPlanLoading ? (
-          <ActivityIndicator style={{ marginTop: spacing.lg }} />
-        ) : (
-          <>
-            {/* Pills pick which role's activity is open below — a single
-                always-expanded card, not three equal-weight accordions.
-                Whichever the mood check-in suggested (or the day-rotated
-                default) opens first; tapping a pill is a manual override
-                that sticks until tapped again. */}
-            <View style={styles.roleTabRow}>
-              {roles.map((role) => {
-                const active = activeToday === role;
-                return (
-                  <Pressable
-                    key={role}
-                    onPress={() => setSelectedToday(role)}
-                    style={[
-                      styles.roleTab,
-                      { borderColor: p.border },
-                      active && { backgroundColor: p.primary, borderColor: p.primary },
-                    ]}
-                  >
-                    <FeatureIcon name={FATHER_ROLE_ICON[role]} color={active ? p.surface : p.primary} />
-                    <Text style={[styles.roleTabLabel, { color: active ? p.surface : p.text }]}>
-                      {FATHER_ROLE_LABEL[role].replace(/^As a |^For /, "")}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {(() => {
-              const activity = todaysActivityForRole(fatherPlanActivities ?? [], activeToday, dayIndex);
-              if (!activity) return null;
-              return (
-                <Card style={styles.activityCard}>
-                  <Text style={[styles.activityCategory, { color: p.primary }]}>
-                    {FATHER_ROLE_LABEL[activeToday].toUpperCase()}
-                  </Text>
-                  <Text style={[styles.sectionTitle, { color: p.text }]}>{activity.title}</Text>
-                  <Text style={[styles.sectionBody, { color: p.textMuted }]}>
-                    {activity.short_description ?? activity.description}
-                  </Text>
-                  <Text style={[styles.activityMeta, { color: p.textMuted }]}>
-                    {activity.duration_label}
-                    {activity.with_baby === "yes" ? " · With baby" : ""}
-                  </Text>
-                  <View style={styles.activityActionRow}>
-                    <Pressable
-                      onPress={() => router.push(`/you/father-activity/${activity.id}`)}
-                      style={[styles.seeHowChip, { backgroundColor: p.primary }]}
-                    >
-                      <Text style={[styles.seeHowChipText, { color: p.surface }]}>See how</Text>
-                    </Pressable>
-                    <Pressable
-                      disabled={fatherSwapping === activity.category}
-                      onPress={() => onSwapFatherActivity(activity.category)}
-                      style={styles.swapButton}
-                    >
-                      <Text style={[styles.swapLabel, { color: p.primary }]}>
-                        {fatherSwapping === activity.category ? "Swapping…" : "Something else"}
-                      </Text>
-                    </Pressable>
-                  </View>
-                </Card>
-              );
-            })()}
-          </>
-        )}
-
-        {!fatherPlanLoading && (
-          <Pressable onPress={() => router.push("/you/for-today")} style={styles.seeMoreRow}>
-            <Text style={[styles.seeMoreText, { color: p.primary }]}>See more for today →</Text>
-          </Pressable>
-        )}
-      </View>
-      )}
-
-      {/* Context, not tasks: one card, three tap-to-read chips, rather
-          than three stacked accordion tiles — collapsing this section to
-          almost no vertical space until someone actually wants to read
-          more. Whichever chip is open offers a way into the fuller
-          Explore hub for whoever wants more than a paragraph. */}
-      <View style={styles.block}>
-        <FeatureGroupLabel>{`${elapsedPhrase(profile.weeksPostpartum)} in`}</FeatureGroupLabel>
-        <Card style={styles.stageCard}>
-          <Text style={[styles.stageSubtext, { color: p.textMuted }]}>
-            A little context for where things are now — nothing to do here.
+      <Pressable
+        onPress={() => router.push("/you/nutrition")}
+        style={({ pressed }) => [
+          styles.familyMealsCard,
+          { backgroundColor: p.surface, borderColor: p.border },
+          pressed && styles.pressed,
+        ]}
+      >
+        <View style={[styles.familyMealsIcon, { backgroundColor: p.surfaceAlt }]}>
+          <FeatureIcon name="meal" color={p.primary} />
+        </View>
+        <View style={styles.familyMealsText}>
+          <Text style={[styles.familyMealsTitle, { color: p.text }]}>Family Meals</Text>
+          <Text style={[styles.familyMealsBody, { color: p.textMuted }]} numberOfLines={2}>
+            {familyMealsDescription}
           </Text>
-          <View style={styles.stageChipRow}>
-            {roles.map((role) => {
-              const selected = selectedStage === role;
-              return (
-                <Pressable
-                  key={role}
-                  onPress={() => setSelectedStage(selected ? null : role)}
-                  style={[
-                    styles.stageChip,
-                    { borderColor: p.border },
-                    selected && { backgroundColor: p.surfaceAlt, borderColor: p.primary },
-                  ]}
-                >
-                  <FeatureIcon name={FATHER_ROLE_ICON[role]} color={p.primary} />
-                  <Text style={[styles.stageChipLabel, { color: p.text }]}>
-                    {STAGE_TILE_LABEL[role]}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          <Text style={[styles.sectionBody, { color: p.textMuted, marginTop: spacing.md }]}>
-            {selectedStage ? stageCopy[selectedStage] : "Tap a card to read more."}
-          </Text>
-          {selectedStage && (
-            <Pressable onPress={() => router.push(`/you/care?hub=${selectedStage}`)}>
-              <Text style={[styles.stageTileLink, { color: p.primary }]}>
-                Read more in {FATHER_ROLE_HUB_LABEL[selectedStage]} →
-              </Text>
-            </Pressable>
-          )}
-        </Card>
+        </View>
+      </Pressable>
+
+      <View style={styles.block}>
+        <SectionTitle>Explore</SectionTitle>
+        <View style={{ gap: spacing.sm }}>
+          {roles.map((role) => {
+            const activity = showsToday
+              ? todaysActivityForRole(fatherPlanActivities ?? [], role, dayIndex)
+              : null;
+            return (
+              <FatherExploreTile
+                key={role}
+                icon={<FeatureIcon name={FATHER_ROLE_ICON[role]} color={p.primary} />}
+                title={FATHER_ROLE_HUB_LABEL[role]}
+                description={FATHER_ROLE_HUB_BLURB[role]}
+                articleCount={topicsForFatherRole(profile.delivery, role).length}
+                activity={activity}
+                onPressHub={() => router.push(`/you/care?hub=${role}`)}
+                onPressToday={() => activity && router.push(`/you/father-activity/${activity.id}`)}
+              />
+            );
+          })}
+        </View>
       </View>
-        </>
-      )}
-
-      {/* Exactly three hubs — everything that used to be a per-area Well
-          Being grid, or a "fathering"-tagged article, now buckets into
-          one of these (see lib/fatherRoles.ts topicsForFatherRole). Always
-          shown, unlike FOR TODAY/YOUR STAGE above — browsable content
-          isn't time-bound the way a postpartum daily plan is. The
-          featured line above the grid is the one thing that changes here
-          day to day, so Explore isn't the same static wallpaper on every
-          visit. */}
-      {(() => {
-        const pool = roles.flatMap((role) =>
-          topicsForFatherRole(profile.delivery, role).map((topic) => ({ role, topic }))
-        );
-        if (pool.length === 0) return null;
-        const featured = pool[dayIndex % pool.length];
-        return (
-          <Card style={styles.featuredCard} onPress={() => router.push(`/care/${featured.topic.slug}`)}>
-            <Text style={[styles.activityCategory, { color: p.primary }]}>
-              NEW IN {FATHER_ROLE_HUB_LABEL[featured.role].toUpperCase()}
-            </Text>
-            <View style={styles.rowBetween}>
-              <Text style={[styles.sectionTitle, { color: p.text, flex: 1 }]}>
-                {featured.topic.title}
-              </Text>
-              <Text style={{ color: p.primary }}>→</Text>
-            </View>
-          </Card>
-        );
-      })()}
-
-      <SectionTitle>Explore your space</SectionTitle>
-      <FeatureGrid>
-        <FeatureCard
-          icon={<FeatureIcon name="dads" color={p.primary} />}
-          title={FATHER_ROLE_HUB_LABEL.dad}
-          description={FATHER_ROLE_HUB_BLURB.dad}
-          onPress={() => router.push("/you/care?hub=dad")}
-        />
-        <FeatureCard
-          icon={<FeatureIcon name="relationships" color={p.primary} />}
-          title={FATHER_ROLE_HUB_LABEL.partner}
-          description={FATHER_ROLE_HUB_BLURB.partner}
-          onPress={() => router.push("/you/care?hub=partner")}
-        />
-        <FeatureCard
-          icon={<FeatureIcon name="mental" color={p.primary} />}
-          title={FATHER_ROLE_HUB_LABEL.you}
-          description={FATHER_ROLE_HUB_BLURB.you}
-          onPress={() => router.push("/you/care?hub=you")}
-        />
-        {/* A flat EXPLORE tile, not the richer FAMILY MEALS section
-            mother's landing has above her own FOR TODAY -- Family Meals
-            still deliberately isn't a first-class section on his page
-            (it stays reachable from Home same as before), this just
-            closes the one gap where a father had literally no path to
-            it from You at all, consistent with the other three tiles
-            here rather than duplicating mother's own treatment. */}
-        <FeatureCard
-          icon={<FeatureIcon name="meal" color={p.primary} />}
-          title="Family Meals"
-          description={familyMealsDescription}
-          onPress={() => router.push("/you/nutrition")}
-        />
-      </FeatureGrid>
     </>
+  );
+}
+
+/**
+ * One Explore tile for father -- a hub's library (icon, title, blurb,
+ * article count) with today's one doable pick as a distinct, separately
+ * tappable strip underneath when there is one. Two tap targets by
+ * design: the body opens the hub itself (its full article list), the
+ * strip jumps straight into today's activity -- see FatherYouBody's own
+ * notes on why this replaced FOR TODAY/YOUR STAGE/the featured card.
+ */
+function FatherExploreTile({
+  icon,
+  title,
+  description,
+  articleCount,
+  activity,
+  onPressHub,
+  onPressToday,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  articleCount: number;
+  activity: FatherActivity | null;
+  onPressHub: () => void;
+  onPressToday: () => void;
+}) {
+  const p = usePalette();
+  return (
+    <View style={[styles.fatherTile, { backgroundColor: p.surface, borderColor: p.border }]}>
+      <Pressable onPress={onPressHub} style={styles.fatherTileTop}>
+        <View style={[styles.fatherTileIcon, { backgroundColor: p.surfaceAlt }]}>{icon}</View>
+        <View style={styles.fatherTileMain}>
+          <Text style={[styles.fatherTileTitle, { color: p.text }]}>{title}</Text>
+          <Text style={[styles.fatherTileBody, { color: p.textMuted }]}>{description}</Text>
+          <Text style={[styles.fatherTileCount, { color: p.secondary }]}>
+            {articleCount} {articleCount === 1 ? "article" : "articles"}
+          </Text>
+        </View>
+      </Pressable>
+      {activity && (
+        <Pressable onPress={onPressToday} style={[styles.todayStrip, { backgroundColor: p.surfaceAlt }]}>
+          <View style={styles.todayMain}>
+            <Text style={[styles.todayEyebrow, { color: p.primary }]}>Today</Text>
+            <Text style={[styles.todayTitle, { color: p.text }]} numberOfLines={1}>
+              {activity.title}
+            </Text>
+          </View>
+          <View style={styles.todaySide}>
+            <Text style={[styles.todayMeta, { color: p.textMuted }]}>{activity.duration_label}</Text>
+            <Text style={{ color: p.primary }}>›</Text>
+          </View>
+        </Pressable>
+      )}
+    </View>
   );
 }
 
@@ -911,21 +739,6 @@ const styles = StyleSheet.create({
     lineHeight: typeScale.bodySmall * 1.55,
     color: "rgba(255,255,255,0.92)",
   },
-  activityActionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.lg,
-    marginTop: spacing.md,
-  },
-  seeHowChip: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-  },
-  seeHowChipText: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.bodySmall,
-  },
   activityCard: {
     padding: spacing.lg,
     marginTop: spacing.md,
@@ -940,26 +753,6 @@ const styles = StyleSheet.create({
     fontSize: typeScale.bodySmall,
     lineHeight: typeScale.bodySmall * 1.55,
     marginTop: spacing.xs,
-  },
-  activityCategory: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.caption,
-    letterSpacing: 1.2,
-    marginBottom: spacing.xs,
-  },
-  activityMeta: {
-    fontFamily: fonts.body,
-    fontSize: typeScale.caption,
-    lineHeight: typeScale.caption * 1.45,
-    marginTop: spacing.sm,
-  },
-  swapButton: {
-    marginTop: spacing.md,
-    alignSelf: "flex-start",
-  },
-  swapLabel: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.bodySmall,
   },
   birthOptionRow: {
     flexDirection: "row",
@@ -976,78 +769,6 @@ const styles = StyleSheet.create({
   birthOptionLabel: {
     fontFamily: fonts.bodyMedium,
     fontSize: typeScale.bodySmall,
-  },
-  rowBetween: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-  },
-  seeMoreRow: {
-    marginTop: spacing.md,
-    alignSelf: "flex-start",
-  },
-  seeMoreText: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.bodySmall,
-  },
-  stageSubtext: {
-    fontFamily: fonts.body,
-    fontSize: typeScale.bodySmall,
-    lineHeight: typeScale.bodySmall * 1.5,
-  },
-  stageTileLink: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.bodySmall,
-    marginTop: spacing.md,
-  },
-  roleTabRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  roleTab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  roleTabLabel: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.caption,
-  },
-  stageCard: {
-    padding: spacing.lg,
-    marginTop: spacing.sm,
-  },
-  stageChipRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  stageChip: {
-    flex: 1,
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xs,
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderStyle: "dashed",
-  },
-  stageChipLabel: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: typeScale.caption,
-    textAlign: "center",
-  },
-  featuredCard: {
-    padding: spacing.lg,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
   },
   pressed: {
     opacity: 0.7,
@@ -1117,5 +838,76 @@ const styles = StyleSheet.create({
     fontSize: typeScale.caption,
     lineHeight: typeScale.caption * 1.4,
     marginTop: spacing.sm,
+  },
+  fatherTile: {
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
+  },
+  fatherTileTop: {
+    flexDirection: "row",
+    gap: spacing.md,
+    alignItems: "flex-start",
+    padding: spacing.md,
+  },
+  fatherTileIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  fatherTileMain: {
+    flex: 1,
+  },
+  fatherTileTitle: {
+    fontFamily: fonts.bodyBold,
+    fontSize: typeScale.h3,
+    lineHeight: typeScale.h3 * 1.2,
+  },
+  fatherTileBody: {
+    fontFamily: fonts.body,
+    fontSize: typeScale.caption,
+    lineHeight: typeScale.caption * 1.5,
+    marginTop: 2,
+  },
+  fatherTileCount: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.caption,
+    marginTop: spacing.xs,
+  },
+  todayStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  todayMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  todayEyebrow: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  todayTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.bodySmall,
+    marginTop: 2,
+  },
+  todaySide: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    flexShrink: 0,
+  },
+  todayMeta: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.caption,
   },
 });
