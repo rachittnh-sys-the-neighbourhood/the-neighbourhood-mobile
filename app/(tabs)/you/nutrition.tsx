@@ -14,7 +14,7 @@ import type { FamilyMeal } from "../../../lib/db/types";
 import { usePalette } from "../../../lib/ModeProvider";
 import { deriveProfile, type DietaryPreference } from "../../../lib/parentCare";
 import { isRecoveryRelevant } from "../../../lib/recoveryRelevance";
-import { fonts, radius, spacing, typeScale } from "../../../lib/theme";
+import { fonts, radius, spacing, type, typeScale } from "../../../lib/theme";
 
 /**
  * Family Meals -- one whole-family meal plan, sourced from the v11 Meal
@@ -493,9 +493,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   slotLabel: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: typeScale.caption,
-    letterSpacing: 1.2,
+    ...type.eyebrow,
     marginBottom: spacing.xs,
   },
   mealRow: {
