@@ -27,7 +27,7 @@ import {
   type ParentProfile,
 } from "../../../lib/parentCare";
 import { isRecoveryRelevant } from "../../../lib/recoveryRelevance";
-import { fonts, radius, spacing, typeScale } from "../../../lib/theme";
+import { fonts, radius, spacing, type, typeScale } from "../../../lib/theme";
 import { useGuidedTourStep } from "../../../lib/useGuidedTourStep";
 import { useScreenFocus } from "../../../lib/useScreenFocus";
 import { useTodaysFatherPlan } from "../../../lib/useTodaysFatherPlan";
@@ -891,10 +891,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   todayEyebrow: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
+    ...type.eyebrow,
   },
   todayTitle: {
     fontFamily: fonts.bodySemiBold,

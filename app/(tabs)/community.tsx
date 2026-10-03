@@ -19,7 +19,7 @@ import { computeAge, stageLabel } from "../../lib/childAge";
 import * as communityDb from "../../lib/db/community";
 import { COMMUNITY_TOPICS, CommunityTopic, Discussion, TOPIC_LABEL } from "../../lib/db/communityTypes";
 import { markFirstRunComplete, markHomeCoachComplete, rewindGuidedTourStep } from "../../lib/firstRun";
-import { colors, fonts, radius, spacing, typeScale } from "../../lib/theme";
+import { colors, fonts, radius, spacing, type, typeScale } from "../../lib/theme";
 import { useGuidedTourStep } from "../../lib/useGuidedTourStep";
 import { useScreenFocus } from "../../lib/useScreenFocus";
 
@@ -691,14 +691,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cardTopic: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 9,
-    letterSpacing: 1.2,
+    ...type.eyebrow,
     color: colors.warmTaupe,
   },
   cardAgeTag: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 9,
+    fontSize: typeScale.caption,
     color: colors.textMuted,
     backgroundColor: "rgba(0, 0, 0, 0.04)",
     paddingHorizontal: 6,
@@ -712,9 +710,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   resolvedPillText: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 9,
-    letterSpacing: 0.4,
+    ...type.eyebrow,
     color: "#5E7360",
   },
   cardTitle: {

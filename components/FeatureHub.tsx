@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
   },
   cardStatus: {
     fontFamily: fonts.bodySemiBold,
-    fontSize: 10,
+    fontSize: typeScale.caption,
     marginTop: spacing.sm,
   },
 });

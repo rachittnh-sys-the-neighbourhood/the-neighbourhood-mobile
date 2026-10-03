@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   },
   moodLabel: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 10,
+    fontSize: typeScale.caption,
   },
   linkRow: {
     flexDirection: "row",

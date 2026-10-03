@@ -1335,7 +1335,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   sectionLabel: {
-    ...homeType.eyebrow,
+    ...type.eyebrow,
     color: colors.warmTaupe,
   },
 
@@ -1466,7 +1466,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   forYouEyebrow: {
-    ...homeType.eyebrow,
+    ...type.eyebrow,
     color: "#5E7360",
   },
   forYouTitle: {
@@ -1496,7 +1496,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   copilotEyebrow: {
-    ...homeType.eyebrow,
+    ...type.eyebrow,
     color: colors.warmTaupe,
   },
   copilotQuestion: {
@@ -1559,7 +1559,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   discoveryEyebrow: {
-    ...homeType.eyebrow,
+    ...type.eyebrow,
     color: colors.warmTaupe,
   },
   discoveryRowTitle: {

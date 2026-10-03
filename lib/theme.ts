@@ -229,17 +229,10 @@ export const homeType = {
   action: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18 },
   /** Metadata, duration, disclaimers, safety copy. */
   meta: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
-  /** Sentence case, not uppercase -- the source strings (DYK headers,
-   *  DOMAIN_LABEL, etc.) already carry their own natural casing; this
-   *  role no longer forces its own on top of them. */
-  eyebrow: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 12,
-    lineHeight: 16,
-    // Wide 1.4 tracking read fine on all-caps text; on sentence case it
-    // just looks loose, so this drops to the same 0.2 the bottom nav's
-    // own sentence-case labels already use (type.eyebrow's own
-    // tabBarLabelStyle override in app/(tabs)/_layout.tsx).
-    letterSpacing: 0.2,
-  },
+  // No `eyebrow` role here -- `type.eyebrow` is the one eyebrow spec for
+  // the whole app (11px SemiBold, 1.4px tracking, uppercase). This scale
+  // used to carry its own sentence-case Medium variant, which meant the
+  // same conceptual role (a small label above a title) rendered two
+  // different ways depending which screen you were on. Every former
+  // Home usage now points at `type.eyebrow` directly.
 } as const;

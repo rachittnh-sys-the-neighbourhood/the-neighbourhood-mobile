@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
   // Shared by the featured, collapsed and expanded headers -- same
   // eyebrow role everywhere this domain tag appears.
   domainLabel: {
-    ...homeType.eyebrow,
+    ...type.eyebrow,
     color: colors.warmTaupe,
     marginBottom: 3,
   },

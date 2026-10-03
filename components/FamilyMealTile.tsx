@@ -4,7 +4,7 @@ import * as familyMeals from "../lib/db/familyMeals";
 import type { DietaryPreference } from "../lib/parentCare";
 import type { FamilyMeal } from "../lib/db/types";
 import { BowlIcon } from "./HomeTileIcons";
-import { colors, homeType, radius, spacing } from "../lib/theme";
+import { colors, homeType, radius, spacing, type } from "../lib/theme";
 
 function slotForHour(hour: number): familyMeals.FamilyMealSlot {
   if (hour < 10) return "breakfast";
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   eyebrow: {
-    ...homeType.eyebrow,
+    ...type.eyebrow,
     color: colors.warmTaupe,
   },
   eyebrowRow: {
