@@ -1236,6 +1236,132 @@ export const CARE_TOPICS: CareTopic[] = [
       },
     ],
   },
+  {
+    slug: "building-hands-on-confidence",
+    area: "fathering",
+    title: "Building confidence with your own hands",
+    blurb: "You don't need her technique. You need your own, built through reps.",
+    minutes: 4,
+    sections: [
+      {
+        heading: "Competence comes from doing it, not watching it",
+        body: "The first nappy change, the first time settling a 2am cry alone, the first bath, all feel clumsy because they're new, not because you're bad at this. Confidence here is built exactly the way it's built anywhere else: repetition, not talent.",
+      },
+      {
+        heading: "Find your own way, not a copy of hers",
+        body: "A baby doesn't need to be held, rocked or soothed in exactly the way their mother does it. Your own hold, your own rhythm, your own voice are all legitimate versions of the same thing, not a lesser substitute waiting to be corrected.",
+      },
+      {
+        heading: "Let her step back, even when it's slower at first",
+        body: "If she corrects or takes over every attempt, neither of you gets the chance to find out you're capable. Worth naming out loud, gently, that you want the repetitions, even the clumsy ones, more than you want it done perfectly the first time.",
+      },
+    ],
+  },
+  {
+    slug: "claiming-a-routine",
+    area: "fathering",
+    title: "Claiming one routine as genuinely yours",
+    blurb: "Not helping with bedtime. Owning it, start to finish.",
+    minutes: 4,
+    sections: [
+      {
+        heading: "Helping and owning are different things",
+        body: "Helping means waiting to be asked. Owning a routine, bathtime, the morning nappy change, the bedtime wind-down, means you notice it needs doing and you do it, without being managed through each step.",
+      },
+      {
+        heading: "Pick one, not all of them",
+        body: "Trying to co-own everything usually means genuinely owning nothing. One routine, done consistently enough that you're the one who knows the details (which song, which order, which stuffed toy), builds a real bond and real relief for her at once.",
+      },
+      {
+        heading: "Expect to be bad at it for a while",
+        body: "The mess of the first few weaning meals, the fumbled bath sequence, the baby who cries through your bedtime attempt before they trust it, are all part of actually taking it over rather than borrowing it for an evening.",
+      },
+    ],
+  },
+  {
+    slug: "doing-it-solo",
+    area: "fathering",
+    title: "Taking the baby out without her",
+    blurb: "No backup, no handoff if it gets hard. That's the point.",
+    minutes: 4,
+    sections: [
+      {
+        heading: "Why a solo outing matters more than it looks",
+        body: "A short outing with no one to hand the baby to if they cry forces a different kind of competence than caregiving with her in the next room. It's a small, low-stakes way to prove to yourself you can handle whatever comes up.",
+      },
+      {
+        heading: "Start smaller than feels necessary",
+        body: "A 20-minute walk to the shop and back is enough the first time. The goal isn't endurance, it's doing the whole loop, start to finish, as the only adult responsible.",
+      },
+      {
+        heading: "Separation anxiety isn't a sign you're doing it wrong",
+        body: "A baby who protests when she leaves and settles for you, or the other way around, is just forming normal, separate attachments to each of you. Short, calm, consistent goodbyes help more than a longer, more anxious one.",
+      },
+    ],
+  },
+  {
+    slug: "talking-to-your-own-father",
+    area: "fathering",
+    title: "Talking to your own father about this",
+    blurb: "He did this too, with a different script. Worth asking him about it.",
+    minutes: 5,
+    sections: [
+      {
+        heading: "A conversation most fathers never have",
+        body: "Asking your own father what fatherhood actually felt like for him, not what he did, but how he felt doing it, is a conversation very few men have ever had with their own fathers. It's worth being the one to start it.",
+      },
+      {
+        heading: "You're allowed to keep what worked and leave what didn't",
+        body: "Inheriting a template doesn't mean inheriting all of it. Deciding deliberately what you want to repeat from how you were fathered, and what you want to do differently, is not a rejection of him, it's an ordinary part of becoming your own version.",
+      },
+      {
+        heading: "The conversation can be short",
+        body: "This doesn't need to be a single big heart-to-heart. A few honest questions over time, asked when it feels natural, usually gets further than one planned, weighty conversation either of you feels pressure to get right.",
+      },
+    ],
+  },
+  {
+    slug: "showing-up-for-the-attempt",
+    area: "fathering",
+    title: "Showing up for the attempt, not just the milestone",
+    blurb: "The wobbly tenth try matters more than the moment they finally walk.",
+    minutes: 4,
+    sections: [
+      {
+        heading: "The milestone is a single moment. The attempts are the relationship",
+        body: "Being present for the dozens of wobbly, failed attempts before a baby walks, stacks a block, or says a word, teaches them persistence has an audience who cares. The single successful moment is almost incidental by comparison.",
+      },
+      {
+        heading: "Play the same game past the point it's interesting to you",
+        body: "Chasing them on all fours for the fifth time, or repeating the same silly anticipation game long after it stopped being novel for you, is often exactly when it's becoming genuinely meaningful for them.",
+      },
+      {
+        heading: "You don't need to document it to be present for it",
+        body: "Reaching for your phone to film the attempt is a smaller version of not quite being there for it. The moment is usually better remembered by both of you for having actually been in it.",
+      },
+    ],
+  },
+  {
+    slug: "marking-the-big-moments",
+    area: "fathering",
+    title: "Marking the big moments properly",
+    blurb: "A first birthday is for the adults as much as the child. Plan it that way.",
+    minutes: 4,
+    sections: [
+      {
+        heading: "They won't remember it. You will",
+        body: "A first birthday, the end of the first year, isn't really for a one-year-old. It's a marker for the adults who got through it, worth treating as a genuine milestone for yourselves, not just a party for a baby who won't recall any of it.",
+      },
+      {
+        heading: "Write something down while it's fresh",
+        body: "A letter to your child about this first year, sealed and put away, or even a few honest paragraphs saved somewhere, captures something that fades fast: what this year actually felt like to live through, not just what happened in it.",
+      },
+      {
+        heading: "Tell them the story later, in your own words",
+        body: "Going through the year's photos with them once they're old enough to sit through it, narrating it in your own voice, turns a folder of images into a story they heard from you specifically.",
+      },
+    ],
+  },
 ];
 
 export function topicsForArea(area: CareArea): CareTopic[] {

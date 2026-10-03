@@ -5,15 +5,22 @@ import type { MotherActivity } from "../lib/db/types";
 import { getTodaysCompletionCount, recordCompanionThreadCompletion } from "../lib/companionThread";
 import { usePalette } from "../lib/ModeProvider";
 import { fonts, radius, spacing, typeScale } from "../lib/theme";
-import { Card } from "./parentUI";
 
 /**
- * The You hub's "companion thread" -- a quiet nudge under the mood
- * check-in that offers today's physical_recovery activity, rather than a
- * separate browsable card the way the other three categories still work.
- * Deliberately the ONLY place physical recovery surfaces on the hub now
- * -- see app/(tabs)/you/index.tsx's own notes on why "One idea for today"
- * was retired.
+ * The You hub's "companion thread" -- a quiet nudge that offers today's
+ * physical_recovery activity, rather than a separate browsable card the
+ * way the other three categories still work. Deliberately the ONLY place
+ * physical recovery surfaces on the hub now -- see
+ * app/(tabs)/you/index.tsx's own notes on why "One idea for today" was
+ * retired.
+ *
+ * Renders INSIDE MoodCheckInCard (passed as its `children`), not as its
+ * own card underneath it -- the whole point of "while you're here" is
+ * that it reads as a continuation of the check-in she's already
+ * answering, not a second ask competing for attention right below it.
+ * This component renders no outer Card/border of its own; it's a plain
+ * section with a top divider, matching whatever's already inside that
+ * card.
  *
  * Two shapes, picked by which dosing fields the activity carries (see
  * 20261002120000_mother_physical_recovery_dosing.sql -- a row never has
@@ -82,7 +89,7 @@ export function CompanionThreadCard({
 
   if (isWeekly) {
     return (
-      <Card style={styles.card}>
+      <View style={[styles.wrap, { borderTopColor: p.border }]}>
         <Text style={[styles.offerText, { color: p.textMuted }]}>Today's pick</Text>
         <Text style={[styles.title, { color: p.text }]}>{activity.title}</Text>
         <Text style={[styles.body, { color: p.textMuted }]}>
@@ -104,7 +111,7 @@ export function CompanionThreadCard({
             </Text>
           </Pressable>
         </View>
-      </Card>
+      </View>
     );
   }
 
@@ -115,12 +122,12 @@ export function CompanionThreadCard({
   };
 
   return (
-    <Card style={styles.card}>
+    <View style={[styles.wrap, { borderTopColor: p.border }]}>
       {phase === "offer" && (
         <>
-          <Text style={[styles.offerText, { color: p.text }]}>
-            <Text style={{ fontFamily: fonts.bodySemiBold }}>While you're here</Text> —{" "}
-            {(activity.short_description ?? activity.description).replace(/\.$/, "")}?
+          <Text style={[styles.whileYoureHere, { color: p.text }]}>While you're here</Text>
+          <Text style={[styles.offerText, { color: p.textMuted }]}>
+            {activity.short_description ?? activity.description}
           </Text>
           <View style={styles.actionRow}>
             <Pressable
@@ -129,17 +136,15 @@ export function CompanionThreadCard({
             >
               <Text style={[styles.primaryButtonText, { color: p.surface }]}>Do it now</Text>
             </Pressable>
-            <Pressable onPress={() => setPhase("later")} style={styles.secondaryButton}>
-              <Text style={[styles.secondaryButtonText, { color: p.textMuted, borderColor: p.border }]}>
-                Maybe later
+            <Pressable onPress={() => setPhase("later")} style={[styles.secondaryButton, { borderColor: p.border }]}>
+              <Text style={[styles.secondaryButtonText, { color: p.textMuted }]}>Maybe later</Text>
+            </Pressable>
+            <Pressable disabled={swapping} onPress={onSwap} style={styles.somethingElseInRow}>
+              <Text style={[styles.linkText, { color: p.primary }]}>
+                {swapping ? "Swapping…" : "Something else"}
               </Text>
             </Pressable>
           </View>
-          <Pressable disabled={swapping} onPress={onSwap} style={styles.somethingElseRow}>
-            <Text style={[styles.linkText, { color: p.primary }]}>
-              {swapping ? "Swapping…" : "Something else"}
-            </Text>
-          </Pressable>
         </>
       )}
 
@@ -177,28 +182,37 @@ export function CompanionThreadCard({
           <View style={[styles.checkCircle, { backgroundColor: p.surfaceAlt }]}>
             <Text style={[styles.checkMark, { color: p.primary }]}>✓</Text>
           </View>
-          <Text style={[styles.loggedText, { color: p.text }]}>Logged.</Text>
+          <Text style={[styles.loggedText, { color: p.text }]}>
+            {cap > 1 ? "Nice. Come back for more later today." : "Good. That's enough for today."}
+          </Text>
         </View>
       )}
 
       {phase === "later" && (
         <Text style={[styles.laterText, { color: p.textMuted }]}>
-          No problem — it'll be here later today.
+          No problem. It'll be here later today.
         </Text>
       )}
-    </Card>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    padding: spacing.lg,
-    marginTop: spacing.lg,
+  wrap: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  whileYoureHere: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.body,
+    lineHeight: typeScale.body * 1.3,
   },
   offerText: {
     fontFamily: fonts.body,
-    fontSize: typeScale.body,
-    lineHeight: typeScale.body * 1.5,
+    fontSize: typeScale.bodySmall,
+    lineHeight: typeScale.bodySmall * 1.5,
+    marginTop: 2,
   },
   title: {
     fontFamily: fonts.bodyBold,
@@ -218,13 +232,14 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing.xs + 2,
     marginTop: spacing.md,
   },
   primaryButton: {
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.pill,
   },
   fullWidthButton: {
@@ -238,7 +253,7 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
   },
@@ -246,8 +261,8 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
     fontSize: typeScale.bodySmall,
   },
-  somethingElseRow: {
-    marginTop: spacing.sm,
+  somethingElseInRow: {
+    paddingVertical: spacing.sm,
   },
   linkText: {
     fontFamily: fonts.bodySemiBold,

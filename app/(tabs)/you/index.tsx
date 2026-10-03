@@ -283,22 +283,25 @@ export default function YouHub() {
           setMoodLoggedToday(true);
           if (isFather) setMoodRole(FATHER_MOOD_ROLE[mood]);
         }}
-      />
-
-      {/* The companion thread -- the one place physical recovery surfaces
-          on her hub now (see CompanionThreadCard's own notes for why
-          "One idea for today" was retired in its favour). Gated on
-          moodLoggedToday so it only ever appears once she's already taken
-          an action here, never cold; naturally renders nothing while
-          needsBirthConfirmation is true, since there's no plan yet to
-          pull an activity from. */}
-      {!isFather && showsRecovery && moodLoggedToday && (
-        <CompanionThreadCard
-          activity={physicalRecoveryActivity}
-          onSwap={swapPhysicalRecovery}
-          swapping={swappingPhysicalRecovery}
-        />
-      )}
+      >
+        {/* The companion thread -- the one place physical recovery
+            surfaces on her hub now (see CompanionThreadCard's own notes
+            for why "One idea for today" was retired in its favour).
+            Rendered INSIDE the mood check-in card, not underneath it --
+            "while you're here" means here, in the card she's already
+            answering, not a second card right after it. Gated on
+            moodLoggedToday so it only ever appears once she's already
+            taken an action here, never cold; naturally renders nothing
+            while needsBirthConfirmation is true, since there's no plan
+            yet to pull an activity from. */}
+        {!isFather && showsRecovery && moodLoggedToday && (
+          <CompanionThreadCard
+            activity={physicalRecoveryActivity}
+            onSwap={swapPhysicalRecovery}
+            swapping={swappingPhysicalRecovery}
+          />
+        )}
+      </MoodCheckInCard>
 
       {/* Both parents' birth-method questions now sit right here, just
           after the mood check-in -- not buried inside a FOR TODAY section
