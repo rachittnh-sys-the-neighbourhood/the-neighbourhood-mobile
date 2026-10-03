@@ -125,9 +125,9 @@ export function CompanionThreadCard({
     <View style={[styles.wrap, { borderTopColor: p.border }]}>
       {phase === "offer" && (
         <>
-          <Text style={[styles.offerText, { color: p.text }]}>
-            <Text style={{ fontFamily: fonts.bodySemiBold }}>While you're here</Text> —{" "}
-            {(activity.short_description ?? activity.description).replace(/\.$/, "")}?
+          <Text style={[styles.whileYoureHere, { color: p.text }]}>While you're here</Text>
+          <Text style={[styles.offerText, { color: p.textMuted }]}>
+            {activity.short_description ?? activity.description}
           </Text>
           <View style={styles.actionRow}>
             <Pressable
@@ -136,17 +136,15 @@ export function CompanionThreadCard({
             >
               <Text style={[styles.primaryButtonText, { color: p.surface }]}>Do it now</Text>
             </Pressable>
-            <Pressable onPress={() => setPhase("later")} style={styles.secondaryButton}>
-              <Text style={[styles.secondaryButtonText, { color: p.textMuted, borderColor: p.border }]}>
-                Maybe later
+            <Pressable onPress={() => setPhase("later")} style={[styles.secondaryButton, { borderColor: p.border }]}>
+              <Text style={[styles.secondaryButtonText, { color: p.textMuted }]}>Maybe later</Text>
+            </Pressable>
+            <Pressable disabled={swapping} onPress={onSwap} style={styles.somethingElseInRow}>
+              <Text style={[styles.linkText, { color: p.primary }]}>
+                {swapping ? "Swapping…" : "Something else"}
               </Text>
             </Pressable>
           </View>
-          <Pressable disabled={swapping} onPress={onSwap} style={styles.somethingElseRow}>
-            <Text style={[styles.linkText, { color: p.primary }]}>
-              {swapping ? "Swapping…" : "Something else"}
-            </Text>
-          </Pressable>
         </>
       )}
 
@@ -203,10 +201,16 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
+  whileYoureHere: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: typeScale.body,
+    lineHeight: typeScale.body * 1.3,
+  },
   offerText: {
     fontFamily: fonts.body,
-    fontSize: typeScale.body,
-    lineHeight: typeScale.body * 1.5,
+    fontSize: typeScale.bodySmall,
+    lineHeight: typeScale.bodySmall * 1.5,
+    marginTop: 2,
   },
   title: {
     fontFamily: fonts.bodyBold,
@@ -226,13 +230,14 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing.xs + 2,
     marginTop: spacing.md,
   },
   primaryButton: {
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.pill,
   },
   fullWidthButton: {
@@ -246,7 +251,7 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
   },
@@ -254,8 +259,8 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
     fontSize: typeScale.bodySmall,
   },
-  somethingElseRow: {
-    marginTop: spacing.sm,
+  somethingElseInRow: {
+    paddingVertical: spacing.sm,
   },
   linkText: {
     fontFamily: fonts.bodySemiBold,
