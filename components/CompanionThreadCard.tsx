@@ -182,13 +182,15 @@ export function CompanionThreadCard({
           <View style={[styles.checkCircle, { backgroundColor: p.surfaceAlt }]}>
             <Text style={[styles.checkMark, { color: p.primary }]}>✓</Text>
           </View>
-          <Text style={[styles.loggedText, { color: p.text }]}>Logged.</Text>
+          <Text style={[styles.loggedText, { color: p.text }]}>
+            {cap > 1 ? "Nice. Come back for more later today." : "Good. That's enough for today."}
+          </Text>
         </View>
       )}
 
       {phase === "later" && (
         <Text style={[styles.laterText, { color: p.textMuted }]}>
-          No problem — it'll be here later today.
+          No problem. It'll be here later today.
         </Text>
       )}
     </View>

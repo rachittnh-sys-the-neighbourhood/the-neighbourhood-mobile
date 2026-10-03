@@ -55,9 +55,10 @@ export function MoodCheckInCard({
   profileId: string | null;
   onMoodChange?: (mood: MoodValue) => void;
   /** The You hub's companion thread (see CompanionThreadCard) renders
-   *  here, inside this same card, below the mood row and above "Add a
-   *  note" -- it's meant to read as a continuation of this check-in, not
-   *  a second card competing for attention right underneath it. */
+   *  here, inside this same card, below "Add a note" / "Past check-ins"
+   *  -- those two links are about the mood tap itself, so they stay
+   *  grouped with it; the companion thread gets its own divider below
+   *  them rather than being sandwiched in between. */
   children?: React.ReactNode;
 }) {
   const p = usePalette();
@@ -127,8 +128,6 @@ export function MoodCheckInCard({
         })}
       </View>
 
-      {children}
-
       <View style={styles.linkRow}>
         <Pressable onPress={() => router.push("/you/checkins?note=1")} hitSlop={6}>
           <Text style={[styles.linkText, { color: p.primary }]}>Add a note</Text>
@@ -137,6 +136,8 @@ export function MoodCheckInCard({
           <Text style={[styles.linkText, { color: p.primary }]}>Past check-ins</Text>
         </Pressable>
       </View>
+
+      {children}
     </Card>
   );
 }
