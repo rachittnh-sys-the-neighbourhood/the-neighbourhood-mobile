@@ -2,7 +2,6 @@ import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { FeatureIcon, HubHeader, type FeatureIconName } from "../../../components/FeatureHub";
-import { CheckInCard } from "../../../components/CheckInCard";
 import { CompanionThreadCard } from "../../../components/CompanionThreadCard";
 import { MoodCheckInCard } from "../../../components/MoodCheckInCard";
 import { Card, SectionTitle } from "../../../components/parentUI";
@@ -70,13 +69,11 @@ import { useTodaysMotherPlan } from "../../../lib/useTodaysMotherPlan";
  * The check-in: a daily mood check-in (see components/MoodCheckInCard.tsx)
  * now leads for BOTH roles, with its week-strip giving either parent a
  * visible "you showed up" trail -- it used to be father-only, with a
- * mother going straight to the second layer below and never getting the
- * lightweight daily touchpoint at all. Underneath, the meal planner
- * workbook's two-question Recovery Check-in (energy, and whether help is
- * available today) — replacing the old five-emoji mood picker, which was
- * never actually saved anywhere, and collapses to a tiny "✓ Checked in
- * today" the moment it's answered for the day — see
- * components/CheckInCard.tsx.
+ * mother going straight to the weekly Recovery Check-in below and never
+ * getting the lightweight daily touchpoint at all. The weekly Recovery
+ * Check-in (energy, and whether help is available today) has since been
+ * retired -- it only ever repeated "you're checked in" a second time
+ * right under this one, with no distinct utility of its own.
  */
 // Same wording as Home's and Ask's greeting -- kept in sync by hand
 // rather than shared, matching the existing pattern of a small per-screen
@@ -252,11 +249,9 @@ export default function YouHub() {
 
       {/* The daily mood check-in now leads for BOTH roles -- it used to
           be father-only, with a mother going straight to the weekly
-          recovery check-in below and never getting the lightweight daily
-          touchpoint (or its week-strip "you showed up" trail) at all.
-          CheckInCard's own weekly/twice-weekly cadence is unchanged --
-          it's just a second, deeper layer underneath this now, for both
-          roles, rather than the only check-in a mother ever saw. */}
+          recovery check-in (since retired) and never getting the
+          lightweight daily touchpoint (or its week-strip "you showed up"
+          trail) at all. This is now the only check-in either role sees. */}
       <MoodCheckInCard
         profileId={session?.user?.id ?? null}
         onMoodChange={() => setMoodLoggedToday(true)}
@@ -300,12 +295,6 @@ export default function YouHub() {
           onChoose={handleConfirmBirth}
         />
       )}
-
-      <CheckInCard
-        profileId={session?.user?.id ?? null}
-        role={profile.role}
-        weeksPostpartum={profile.weeksPostpartum}
-      />
 
       {isFather ? (
         <FatherYouBody

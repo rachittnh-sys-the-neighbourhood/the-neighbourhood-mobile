@@ -31,9 +31,9 @@ function dateKey(date: Date): string {
 /**
  * You hub's daily mood check-in -- "How's today treating you?", one tap,
  * five labelled options, always the same single tone (never a
- * red-to-green ramp, see MoodIcon). Distinct from and additional to
- * CheckInCard's weekly recovery check-in: this one has no cadence gate
- * and is meant to be answered every day.
+ * red-to-green ramp, see MoodIcon). This one has no cadence gate and is
+ * meant to be answered every day. (The weekly recovery check-in that
+ * used to sit underneath this -- CheckInCard -- has been retired.)
  *
  * "Past check-ins" replaces the inline this-week strip this card used to
  * render directly -- the full history now lives on its own screen (see

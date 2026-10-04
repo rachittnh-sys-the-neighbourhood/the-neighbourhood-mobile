@@ -615,26 +615,11 @@ export type FamilyMeal = {
   source: string;
 };
 
-export type ParentCheckinEnergy = "good" | "okay" | "running_on_empty";
-export type ParentCheckinHelp = "yes" | "maybe" | "not_really";
-
-/** The weekly recovery check-in -- see lib/db/checkins.ts. */
-export type ParentCheckin = {
-  id: string;
-  profile_id: string;
-  checkin_date: string;
-  energy: ParentCheckinEnergy;
-  help_available: ParentCheckinHelp;
-  created_at: string;
-};
-
 /** Rough -> great, always in this order -- the five options on the daily
  *  mood check-in. See lib/db/moodCheckins.ts. */
 export type MoodValue = "rough" | "meh" | "okay" | "good" | "great";
 
-/** One day's mood check-in -- distinct from ParentCheckin above (the
- *  weekly energy/help-available recovery check-in). One row per profile
- *  per checkin_date. */
+/** One day's mood check-in. One row per profile per checkin_date. */
 export type MoodCheckin = {
   id: string;
   profile_id: string;
