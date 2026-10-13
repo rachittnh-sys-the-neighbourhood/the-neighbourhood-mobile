@@ -243,7 +243,6 @@ export default function Recovery() {
 
       {exploreActivity && exploreActivityCategory && (
         <CompanionThreadCard
-          standalone
           activity={exploreActivity}
           onSwap={() => swapExploreActivity(exploreActivityCategory)}
           swapping={swappingCategory === exploreActivityCategory}

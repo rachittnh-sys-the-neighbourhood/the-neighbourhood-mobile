@@ -50,16 +50,9 @@ function dateKey(date: Date): string {
 export function MoodCheckInCard({
   profileId,
   onMoodChange,
-  children,
 }: {
   profileId: string | null;
   onMoodChange?: (mood: MoodValue) => void;
-  /** The You hub's companion thread (see CompanionThreadCard) renders
-   *  here, inside this same card, below "Add a note" / "Past check-ins"
-   *  -- those two links are about the mood tap itself, so they stay
-   *  grouped with it; the companion thread gets its own divider below
-   *  them rather than being sandwiched in between. */
-  children?: React.ReactNode;
 }) {
   const p = usePalette();
   const router = useRouter();
@@ -136,8 +129,6 @@ export function MoodCheckInCard({
           <Text style={[styles.linkText, { color: p.primary }]}>Past check-ins</Text>
         </Pressable>
       </View>
-
-      {children}
     </Card>
   );
 }

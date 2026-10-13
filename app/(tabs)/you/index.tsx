@@ -74,6 +74,14 @@ import { useTodaysMotherPlan } from "../../../lib/useTodaysMotherPlan";
  * Check-in (energy, and whether help is available today) has since been
  * retired -- it only ever repeated "you're checked in" a second time
  * right under this one, with no distinct utility of its own.
+ *
+ * Her physical-recovery pick ("For your recovery", see
+ * components/CompanionThreadCard.tsx) is its own standalone card now,
+ * always present once there's an activity to show -- it used to be
+ * nested inside the mood check-in card and gated on having answered
+ * today's mood first, which meant skipping the mood tap (or just not
+ * noticing it) hid the recovery pick entirely, with no indication
+ * anything was waiting below.
  */
 // Same wording as Home's and Ask's greeting -- kept in sync by hand
 // rather than shared, matching the existing pattern of a small per-screen
@@ -146,13 +154,6 @@ export default function YouHub() {
   // so this is the first time he sees this question.
   const needsBirthConfirmation =
     (showsRecovery || showsFatherSupport) && authProfile?.birth_method == null;
-
-  // Whether today's mood has been answered yet -- gates the companion
-  // thread below, which deliberately only appears once she's already
-  // taken an action on this screen (see CompanionThreadCard's own notes).
-  // onMoodChange fires on first load too if already answered today, not
-  // just on a fresh tap, so this also covers reopening the app later.
-  const [moodLoggedToday, setMoodLoggedToday] = useState(false);
 
   const [savingBirth, setSavingBirth] = useState(false);
   const handleConfirmBirth = async (value: DeliveryType) => {
@@ -252,28 +253,7 @@ export default function YouHub() {
           recovery check-in (since retired) and never getting the
           lightweight daily touchpoint (or its week-strip "you showed up"
           trail) at all. This is now the only check-in either role sees. */}
-      <MoodCheckInCard
-        profileId={session?.user?.id ?? null}
-        onMoodChange={() => setMoodLoggedToday(true)}
-      >
-        {/* The companion thread -- the one place physical recovery
-            surfaces on her hub now (see CompanionThreadCard's own notes
-            for why "One idea for today" was retired in its favour).
-            Rendered INSIDE the mood check-in card, not underneath it --
-            "while you're here" means here, in the card she's already
-            answering, not a second card right after it. Gated on
-            moodLoggedToday so it only ever appears once she's already
-            taken an action here, never cold; naturally renders nothing
-            while needsBirthConfirmation is true, since there's no plan
-            yet to pull an activity from. */}
-        {!isFather && showsRecovery && moodLoggedToday && (
-          <CompanionThreadCard
-            activity={physicalRecoveryActivity}
-            onSwap={swapPhysicalRecovery}
-            swapping={swappingPhysicalRecovery}
-          />
-        )}
-      </MoodCheckInCard>
+      <MoodCheckInCard profileId={session?.user?.id ?? null} />
 
       {/* Both parents' birth-method questions now sit right here, just
           after the mood check-in -- not buried inside a FOR TODAY section
@@ -293,6 +273,19 @@ export default function YouHub() {
           body="So today's suggestions actually fit where you both are."
           saving={savingBirth}
           onChoose={handleConfirmBirth}
+        />
+      )}
+
+      {/* Her physical-recovery pick -- its own standalone card, not
+          nested inside (or gated on) the mood check-in above. Renders
+          nothing on its own while there's no activity yet (no plan,
+          still needs birth confirmation, or today's cap already met --
+          see CompanionThreadCard). */}
+      {!isFather && showsRecovery && (
+        <CompanionThreadCard
+          activity={physicalRecoveryActivity}
+          onSwap={swapPhysicalRecovery}
+          swapping={swappingPhysicalRecovery}
         />
       )}
 
