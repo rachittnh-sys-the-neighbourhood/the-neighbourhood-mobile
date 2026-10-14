@@ -280,13 +280,26 @@ export default function YouHub() {
           nested inside (or gated on) the mood check-in above. Renders
           nothing on its own while there's no activity yet (no plan,
           still needs birth confirmation, or today's cap already met --
-          see CompanionThreadCard). */}
+          see CompanionThreadCard).
+
+          The wrapping margins here correct a mismatch between this
+          screen's spacing convention and CompanionThreadCard's own:
+          MoodCheckInCard already supplies its own marginBottom (lg)
+          above, which would stack with the card's own marginTop (also
+          lg) into a doubled 40px gap; familyMealsCard below supplies no
+          leading margin of its own at all, expecting whatever precedes
+          it to provide the trailing space. Negating the top and adding
+          the bottom here -- rather than changing CompanionThreadCard
+          itself -- keeps its other call site (you/care.tsx, whose own
+          neighbours follow the opposite convention) correctly spaced. */}
       {!isFather && showsRecovery && (
-        <CompanionThreadCard
-          activity={physicalRecoveryActivity}
-          onSwap={swapPhysicalRecovery}
-          swapping={swappingPhysicalRecovery}
-        />
+        <View style={styles.companionThreadWrap}>
+          <CompanionThreadCard
+            activity={physicalRecoveryActivity}
+            onSwap={swapPhysicalRecovery}
+            swapping={swappingPhysicalRecovery}
+          />
+        </View>
       )}
 
       {isFather ? (
@@ -754,6 +767,14 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  // Cancels CompanionThreadCard's own marginTop (which would otherwise
+  // stack with MoodCheckInCard's marginBottom above it) and supplies the
+  // trailing gap familyMealsCard below expects from whatever precedes it
+  // -- see the comment at this View's call site.
+  companionThreadWrap: {
+    marginTop: -spacing.lg,
+    marginBottom: spacing.lg,
   },
   familyMealsCard: {
     flexDirection: "row",
